@@ -10,7 +10,7 @@ import {
 import { dashboardByRole, type UserRole } from "@/lib/navigation";
 
 const ROLE_STORAGE_KEY = "zfund-demo-role";
-const DEFAULT_ROLE: UserRole = "admin";
+const DEFAULT_ROLE: UserRole = "host";
 
 type RoleContextValue = {
   role: UserRole;
