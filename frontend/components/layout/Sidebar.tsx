@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiderMenu from "./SiderMenu";
 
 // Shared by the desktop sidebar and the mobile drawer.
 export function SidebarContent() {
@@ -9,7 +10,7 @@ export function SidebarContent() {
           ZFund
         </Link>
       </div>
-      <nav className="flex-1 p-4">{/* Sidebar links go here */}</nav>
+      <SiderMenu />
     </>
   );
 }
