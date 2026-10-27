@@ -5,6 +5,13 @@ import { z } from 'zod';
 // Load .env file
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+// z.coerce.boolean() treats the string "false" as true, so parse env flags explicitly.
+const envBoolean = (fallback: boolean) =>
+  z.preprocess(
+    (v) => (typeof v === 'string' ? ['true', '1', 'yes', 'on'].includes(v.trim().toLowerCase()) : v),
+    z.boolean()
+  ).default(fallback);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(2077),
@@ -17,16 +24,16 @@ const envSchema = z.object({
   DB_USERNAME: z.string().default('postgres'),
   DB_PASSWORD: z.string().default('postgres'),
   DB_NAME: z.string().default('zfund_db'),
-  DB_SSL: z.coerce.boolean().default(false),
-  TYPEORM_SYNCHRONIZE: z.coerce.boolean().default(true),
-  TYPEORM_LOGGING: z.coerce.boolean().default(false),
+  DB_SSL: envBoolean(false),
+  TYPEORM_SYNCHRONIZE: envBoolean(true),
+  TYPEORM_LOGGING: envBoolean(false),
 
   // Redis
   REDIS_HOST: z.string().default('127.0.0.1'),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASSWORD: z.string().optional().default(''),
   REDIS_DB: z.coerce.number().default(0),
-  REDIS_ENABLED: z.coerce.boolean().default(false),
+  REDIS_ENABLED: envBoolean(false),
   REDIS_KEY_PREFIX: z.string().default('zfund:'),
 
   // Auth & JWT
@@ -37,7 +44,7 @@ const envSchema = z.object({
   ARGON2_MEMORY_COST: z.coerce.number().default(65536),
   ARGON2_TIME_COST: z.coerce.number().default(3),
   COOKIE_DOMAIN: z.string().default('localhost'),
-  COOKIE_SECURE: z.coerce.boolean().default(false),
+  COOKIE_SECURE: envBoolean(false),
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   // CORS

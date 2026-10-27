@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import adminRoutes from './admin.routes';
 import auditRoutes from './audit.routes';
 import authRoutes from './auth.routes';
 import contributionRoutes from './contribution.routes';
@@ -52,6 +53,9 @@ router.use('/notifications', notificationRoutes);
 
 // Document Storage
 router.use('/documents', documentRoutes);
+
+// Admin Dashboard
+router.use('/admin', adminRoutes);
 
 // Audit Logging
 router.use('/audit', auditRoutes);

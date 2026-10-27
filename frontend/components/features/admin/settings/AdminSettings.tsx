@@ -1,68 +1,137 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/QueryState";
+import { api, type ApiError } from "@/lib/api/client";
+import { tokenStorage } from "@/lib/api/token-storage";
+import { authKeys, useMe } from "@/lib/auth/auth";
 
-type SettingsTab = "profile" | "notifications" | "security";
+type SettingsTab = "profile" | "security";
 
-export default function AdminSettings() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [name, setName] = useState("Jane Doe");
-  const [email, setEmail] = useState("jane@zfund.com");
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [hostAlerts, setHostAlerts] = useState(true);
-  const [notice, setNotice] = useState("");
+const inputClass = "mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold disabled:bg-stone-light disabled:text-steel";
+const errorOf = (error: unknown) => (error as ApiError | null)?.message;
 
-  function saveProfile(event: FormEvent<HTMLFormElement>) {
+function ProfileForm() {
+  const queryClient = useQueryClient();
+  const { data: me, isPending } = useMe();
+
+  const save = useMutation({
+    mutationFn: ({ firstName, lastName }: { firstName: string; lastName: string }) =>
+      api.put(`/users/${me!.id}`, { firstName, lastName }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.me });
+      toast.success("Changes saved successfully.");
+    },
+  });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setNotice("Changes saved successfully.");
+    const form = new FormData(event.currentTarget);
+    save.mutate({ firstName: String(form.get("firstName")).trim(), lastName: String(form.get("lastName")).trim() });
   }
 
-  function selectTab(tab: SettingsTab) {
-    setActiveTab(tab);
-    setNotice("");
+  if (isPending || !me) return <div className="space-y-4 p-5 md:p-6"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>;
+
+  return (
+    <form onSubmit={submit} key={me.id + me.firstName + me.lastName}>
+      <div className="border-b border-navy/10 p-5 md:p-6">
+        <h2 className="font-semibold text-navy">Profile</h2>
+        <p className="mt-1 text-sm text-steel">These details identify you as an administrator.</p>
+      </div>
+      <div className="space-y-5 p-5 md:p-6">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="block text-sm font-medium text-ink">
+            First name
+            <input required minLength={2} name="firstName" defaultValue={me.firstName} className={inputClass} />
+          </label>
+          <label className="block text-sm font-medium text-ink">
+            Last name
+            <input required minLength={2} name="lastName" defaultValue={me.lastName} className={inputClass} />
+          </label>
+        </div>
+        <label className="block text-sm font-medium text-ink">
+          Email address
+          <input type="email" value={me.email} disabled readOnly className={inputClass} />
+        </label>
+        {save.isError && <p role="alert" className="text-sm text-[#a13d3d]">{errorOf(save.error)}</p>}
+        <button type="submit" disabled={save.isPending} className="rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel disabled:opacity-60">
+          {save.isPending ? "Saving…" : "Save changes"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function SecurityForm() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const change = useMutation({
+    mutationFn: (body: { oldPassword: string; newPassword: string }) => api.post("/auth/change-password", body),
+    onSuccess: () => {
+      // The backend revokes existing sessions, so sign in again.
+      toast.success("Password changed. Please sign in again.");
+      tokenStorage.clear();
+      queryClient.clear();
+      router.replace("/login");
+    },
+  });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    change.mutate({ oldPassword: String(form.get("oldPassword")), newPassword: String(form.get("newPassword")) });
   }
 
   return (
-    <div className="w-full max-w-4xl">
-      <div>
-        <nav aria-label="Settings sections" className="flex gap-6 overflow-x-auto border-b border-navy/10">
-          <button type="button" onClick={() => selectTab("profile")} className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${activeTab === "profile" ? "border-gold text-navy" : "border-transparent text-steel hover:text-navy"}`}>Profile</button>
-          <button type="button" onClick={() => selectTab("notifications")} className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${activeTab === "notifications" ? "border-gold text-navy" : "border-transparent text-steel hover:text-navy"}`}>Notifications</button>
-          <button type="button" onClick={() => selectTab("security")} className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${activeTab === "security" ? "border-gold text-navy" : "border-transparent text-steel hover:text-navy"}`}>Security</button>
-        </nav>
-
-        <section className="mt-5 rounded-xl border border-navy/10 bg-white shadow-sm">
-          {notice && <div className="border-b border-[#cfe6d9] bg-[#f1faf4] px-5 py-3 text-sm text-[#287754]">{notice}</div>}
-
-          {activeTab === "profile" && (
-            <form onSubmit={saveProfile}>
-              <div className="border-b border-navy/10 p-5 md:p-6"><h2 className="font-semibold text-navy">Profile</h2><p className="mt-1 text-sm text-steel">These details identify you as an administrator.</p></div>
-              <div className="space-y-5 p-5 md:p-6">
-                <label className="block text-sm font-medium text-ink">Full name<input value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold" /></label>
-                <label className="block text-sm font-medium text-ink">Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold" /></label>
-                <button type="submit" className="rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel">Save changes</button>
-              </div>
-            </form>
-          )}
-
-          {activeTab === "notifications" && (
-            <div>
-              <div className="border-b border-navy/10 p-5 md:p-6"><h2 className="font-semibold text-navy">Notifications</h2><p className="mt-1 text-sm text-steel">Choose which updates you receive.</p></div>
-              <div className="divide-y divide-navy/10 px-5 md:px-6">
-                <label className="flex items-center justify-between gap-4 py-5 text-sm"><span><span className="block font-medium text-ink">Email notifications</span><span className="mt-1 block text-xs text-steel">Receive important account updates.</span></span><input type="checkbox" checked={emailAlerts} onChange={(event) => setEmailAlerts(event.target.checked)} className="h-4 w-4 accent-[#0b2545]" /></label>
-                <label className="flex items-center justify-between gap-4 py-5 text-sm"><span><span className="block font-medium text-ink">Host requests</span><span className="mt-1 block text-xs text-steel">Get notified when a host needs review.</span></span><input type="checkbox" checked={hostAlerts} onChange={(event) => setHostAlerts(event.target.checked)} className="h-4 w-4 accent-[#0b2545]" /></label>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "security" && (
-            <div>
-              <div className="border-b border-navy/10 p-5 md:p-6"><h2 className="font-semibold text-navy">Security</h2><p className="mt-1 text-sm text-steel">Keep your administrator account secure.</p></div>
-              <div className="space-y-3 p-5 md:p-6"><button type="button" className="w-full rounded-lg border border-navy/15 px-4 py-3 text-left text-sm font-medium text-navy hover:bg-stone">Change password<span className="mt-1 block text-xs font-normal text-steel">Update your account password.</span></button><button type="button" className="w-full rounded-lg border border-navy/15 px-4 py-3 text-left text-sm font-medium text-navy hover:bg-stone">Active sessions<span className="mt-1 block text-xs font-normal text-steel">Review where your account is signed in.</span></button></div>
-            </div>
-          )}
-        </section>
+    <form onSubmit={submit}>
+      <div className="border-b border-navy/10 p-5 md:p-6">
+        <h2 className="font-semibold text-navy">Security</h2>
+        <p className="mt-1 text-sm text-steel">Keep your administrator account secure.</p>
       </div>
+      <div className="space-y-5 p-5 md:p-6">
+        <label className="block text-sm font-medium text-ink">
+          Current password
+          <input required type="password" name="oldPassword" autoComplete="current-password" className={inputClass} />
+        </label>
+        <label className="block text-sm font-medium text-ink">
+          New password
+          <input required type="password" name="newPassword" minLength={8} autoComplete="new-password" className={inputClass} />
+          <span className="mt-1 block text-xs font-normal text-steel">At least 8 characters, with an uppercase letter and a number.</span>
+        </label>
+        {change.isError && <p role="alert" className="text-sm text-[#a13d3d]">{errorOf(change.error)}</p>}
+        <button type="submit" disabled={change.isPending} className="rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel disabled:opacity-60">
+          {change.isPending ? "Updating…" : "Change password"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default function AdminSettings() {
+  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const tab = (name: SettingsTab, label: string) => (
+    <button
+      type="button"
+      onClick={() => setActiveTab(name)}
+      className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${activeTab === name ? "border-gold text-navy" : "border-transparent text-steel hover:text-navy"}`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="w-full max-w-4xl">
+      <nav aria-label="Settings sections" className="flex gap-6 overflow-x-auto border-b border-navy/10">
+        {tab("profile", "Profile")}
+        {tab("security", "Security")}
+      </nav>
+      <section className="mt-5 rounded-xl border border-navy/10 bg-white shadow-sm">
+        {activeTab === "profile" ? <ProfileForm /> : <SecurityForm />}
+      </section>
     </div>
   );
 }

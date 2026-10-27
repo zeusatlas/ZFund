@@ -75,7 +75,7 @@ export default function Navbar() {
         {/* Desktop Actions */}
         <div className="hidden items-center gap-5 lg:flex">
           <Link
-            href="/admin"
+            href="/login"
             onClick={() => setMobileOpen(false)}
             className="text-[14px] font-medium text-graphite transition-colors hover:text-off-ink"
           >
@@ -121,7 +121,7 @@ export default function Navbar() {
           </nav>
           <div className="mt-8 flex flex-col gap-3 border-t border-ash pt-6">
             <Link
-              href="/admin"
+              href="/login"
             onClick={() => setMobileOpen(false)}
               className="text-[16px] font-medium text-graphite"
             >
