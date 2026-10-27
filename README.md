@@ -29,7 +29,7 @@ Ensure you have the required development tools and dependencies for the project'
 2. Navigate to the project directory:
 
    ```bash
-   cd ZFund
+   cd ZFund/frontend
    ```
 
 3. Install the project dependencies using the package manager appropriate for the project.
@@ -37,6 +37,12 @@ Ensure you have the required development tools and dependencies for the project'
 4. Configure the required environment variables and application settings.
 
 5. Start the application using the appropriate development command.
+
+## Workflow
+
+1. Create a branch from `main`: `git checkout -b feature/your-feature`
+2. Make your changes and commit them with clear messages
+3. Push and open a pull request for review
 
 ## Configuration
 
