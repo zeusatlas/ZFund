@@ -48,7 +48,7 @@ async function bootstrap(): Promise<void> {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
-    logger.fatal({ error }, 'Fatal error during application startup');
+    logger.fatal({ err: error }, 'Fatal error during application startup');
     process.exit(1);
   }
 }
