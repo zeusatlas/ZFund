@@ -1,34 +1,21 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect } from "react";
 import { dashboardByRole, type UserRole } from "@/lib/navigation";
-
-const ROLE_STORAGE_KEY = "zfund-demo-role";
-const DEFAULT_ROLE: UserRole = "host";
 
 type RoleContextValue = {
   role: UserRole;
-  setRole: (role: UserRole) => void;
 };
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRoleState] = useState<UserRole>(DEFAULT_ROLE);
-
-  function setRole(nextRole: UserRole) {
-    setRoleState(nextRole);
-    window.localStorage.setItem(ROLE_STORAGE_KEY, nextRole);
-  }
+  const pathname = usePathname();
+  const role: UserRole = pathname.startsWith("/dashboard/host") ? "host" : "admin";
 
   return (
-    <RoleContext.Provider value={{ role, setRole }}>
+    <RoleContext.Provider value={{ role }}>
       {children}
     </RoleContext.Provider>
   );
