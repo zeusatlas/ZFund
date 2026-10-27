@@ -54,7 +54,8 @@ export class AuthService {
       lastName: input.lastName,
       phone: input.phone,
       role: input.role || SystemRole.ACCOUNT_OWNER,
-      status: UserStatus.ACTIVE,
+      // Becomes ACTIVE on first successful login.
+      status: UserStatus.PENDING_VERIFICATION,
     });
 
     const savedUser = await this.userRepo.save(user);
@@ -123,8 +124,11 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    // Update lastLoginAt
+    // Update lastLoginAt; a first successful login activates a pending account
     user.lastLoginAt = new Date();
+    if (user.status === UserStatus.PENDING_VERIFICATION) {
+      user.status = UserStatus.ACTIVE;
+    }
     await this.userRepo.save(user);
 
     // Generate tokens

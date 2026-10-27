@@ -12,6 +12,7 @@ import paymentRoutes from './payment.routes';
 import projectRoutes from './project.routes';
 import refundRoutes from './refund.routes';
 import userRoutes from './user.routes';
+import withdrawalRoutes from './withdrawal.routes';
 import ussdFlowRoutes from './ussd-flow.routes';
 import ussdRuntimeRoutes from './ussd-runtime.routes';
 
@@ -53,6 +54,9 @@ router.use('/notifications', notificationRoutes);
 
 // Document Storage
 router.use('/documents', documentRoutes);
+
+// Host Withdrawal Requests
+router.use('/withdrawals', withdrawalRoutes);
 
 // Admin Dashboard
 router.use('/admin', adminRoutes);

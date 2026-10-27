@@ -97,7 +97,7 @@ export default function UserDetails({ userId }: { userId: string }) {
                 </div>
                 <p className="mt-1 text-sm text-steel">Code {fund.eventCode} · {fund.transactions} transactions</p>
                 <p className="mt-1 text-xs font-semibold text-navy">{formatMoney(fund.raised)} raised</p>
-                <Link href={`/admin/users/${host.id}/events/${fund.id}`} className="mt-4 text-xs font-medium text-gold hover:text-navy">
+                <Link href={`/admin/campaigns/${fund.id}`} className="mt-4 text-xs font-medium text-gold hover:text-navy">
                   View details
                 </Link>
               </div>

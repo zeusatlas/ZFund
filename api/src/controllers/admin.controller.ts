@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { NotFoundError } from '../common/errors/app-error';
 import { ApiResponse } from '../common/utils/response';
 import { ContributionStatus } from '../database/entities/contribution.entity';
 import { ProjectStatus } from '../database/entities/project.entity';
@@ -10,6 +11,14 @@ const pageParams = (req: Request, defaultLimit: number) => ({
   limit: Math.min(parseInt(req.query.limit as string, 10) || defaultLimit, 100),
   search: (req.query.search as string | undefined)?.trim() || undefined,
 });
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Treat malformed ids as "not found" instead of letting Postgres reject them. */
+const requireId = (id: string, what: string) => {
+  if (!UUID.test(id)) throw new NotFoundError(`${what} not found`);
+  return id;
+};
 
 const oneOf = <T extends string>(values: Record<string, T>, value: unknown): T | undefined =>
   Object.values(values).includes(value as T) ? (value as T) : undefined;
@@ -64,7 +73,7 @@ export class AdminController {
 
   async getHostDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await adminDashboardService.getHostDetail(req.params.id);
+      const data = await adminDashboardService.getHostDetail(requireId(req.params.id, 'Host'));
       ApiResponse.success(res, data, 'Host retrieved');
     } catch (err) {
       next(err);
@@ -75,8 +84,42 @@ export class AdminController {
     try {
       const { page, limit, search } = pageParams(req, 10);
       const status = oneOf(ProjectStatus, req.query.status);
-      const result = await adminDashboardService.getFunds({ page, limit, search, status });
-      ApiResponse.paginated(res, result.items, page, limit, result.total, 'Funds retrieved');
+      const [result, counts] = await Promise.all([
+        adminDashboardService.getFunds({ page, limit, search, status }),
+        adminDashboardService.getFundCounts(),
+      ]);
+      ApiResponse.success(res, result.items, 'Funds retrieved', 200, {
+        page,
+        limit,
+        total: result.total,
+        totalPages: Math.ceil(result.total / limit) || 1,
+        counts,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getFundDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const data = await adminDashboardService.getFundDetail(requireId(req.params.id, 'Campaign'));
+      ApiResponse.success(res, data, 'Campaign retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getFundContributions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { page, limit, search } = pageParams(req, 10);
+      const status = oneOf(ContributionStatus, req.query.status);
+      const result = await adminDashboardService.getFundContributions(requireId(req.params.id, 'Campaign'), {
+        page,
+        limit,
+        search,
+        status,
+      });
+      ApiResponse.paginated(res, result.items, page, limit, result.total, 'Contributions retrieved');
     } catch (err) {
       next(err);
     }
@@ -86,8 +129,27 @@ export class AdminController {
     try {
       const { page, limit, search } = pageParams(req, 10);
       const status = oneOf(ContributionStatus, req.query.status);
-      const result = await adminDashboardService.getTransactions({ page, limit, search, status });
-      ApiResponse.paginated(res, result.items, page, limit, result.total, 'Transactions retrieved');
+      const [result, counts] = await Promise.all([
+        adminDashboardService.getTransactions({ page, limit, search, status }),
+        adminDashboardService.getTransactionCounts(),
+      ]);
+      ApiResponse.success(res, result.items, 'Transactions retrieved', 200, {
+        page,
+        limit,
+        total: result.total,
+        totalPages: Math.ceil(result.total / limit) || 1,
+        counts,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getActivity(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { page, limit } = pageParams(req, 10);
+      const result = await adminDashboardService.getActivity({ page, limit });
+      ApiResponse.paginated(res, result.items, page, limit, result.total, 'Activity retrieved');
     } catch (err) {
       next(err);
     }

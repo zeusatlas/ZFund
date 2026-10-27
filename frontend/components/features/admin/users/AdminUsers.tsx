@@ -1,15 +1,18 @@
 "use client";
 
-import { MoreHorizontal, Search, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import Pagination from "@/components/ui/Pagination";
+import RowMenu, { type RowMenuItem } from "@/components/ui/RowMenu";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatMoney, timeAgo } from "@/lib/format";
 import { useHosts, useUpdateHostStatus } from "../admin-api";
 import { AddHostModal } from "../dashboard/AddHostModal";
 import type { HostAccount, HostStatus } from "../dashboard/types";
+import HostDetailsModal from "./HostDetailsModal";
 import StatusBadge from "./StatusBadge";
 import UserStats from "./UserStats";
 
@@ -18,15 +21,29 @@ export default function AdminUsers() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [showAddHost, setShowAddHost] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
+  const router = useRouter();
 
   const debouncedSearch = useDebouncedValue(search);
   const { data, isPending, isError, error, refetch, isPlaceholderData } = useHosts({ page, search: debouncedSearch, status });
   const updateStatus = useUpdateHostStatus();
 
   function changeStatus(host: HostAccount, next: HostStatus) {
-    setOpenMenuId(null);
     updateStatus.mutate({ id: host.id, status: next, name: `${host.firstName} ${host.lastName}` });
+  }
+
+  function menuItems(host: HostAccount): RowMenuItem[] {
+    const items: RowMenuItem[] = [
+      { label: "View details", onSelect: () => setDetailsId(host.id) },
+      { label: "Open full profile", onSelect: () => router.push(`/admin/users/${host.id}`) },
+    ];
+    // Accounts turn active on their first sign-in, so pending hosts cannot be approved by hand.
+    if (host.status === "SUSPENDED") {
+      items.push({ label: "Reactivate access", onSelect: () => changeStatus(host, "ACTIVE") });
+    } else {
+      items.push({ label: "Suspend access", danger: true, onSelect: () => changeStatus(host, "SUSPENDED") });
+    }
+    return items;
   }
 
   return (
@@ -115,35 +132,8 @@ export default function AdminUsers() {
                       <td className="px-4 py-4"><StatusBadge status={host.status} /></td>
                       <td className="px-4 py-4 font-medium text-ink">{formatMoney(host.fundsIssued)}</td>
                       <td className="px-4 py-4 text-xs text-steel">{host.lastActiveAt ? timeAgo(host.lastActiveAt) : "Not signed in yet"}</td>
-                      <td className="relative px-5 py-4 text-right">
-                        <button
-                          type="button"
-                          aria-label={`More actions for ${name}`}
-                          aria-expanded={openMenuId === host.id}
-                          onClick={() => setOpenMenuId((current) => (current === host.id ? null : host.id))}
-                          className="rounded-md p-1.5 text-steel hover:bg-stone"
-                        >
-                          <MoreHorizontal size={17} />
-                        </button>
-                        {openMenuId === host.id && (
-                          <div className="absolute right-5 top-12 z-10 w-44 rounded-lg border border-navy/10 bg-white py-1 text-left shadow-lg">
-                            {host.status === "PENDING_VERIFICATION" && (
-                              <button type="button" onClick={() => changeStatus(host, "ACTIVE")} className="block w-full px-3 py-2 text-xs text-ink hover:bg-stone">
-                                Approve host
-                              </button>
-                            )}
-                            {host.status === "ACTIVE" && (
-                              <button type="button" onClick={() => changeStatus(host, "SUSPENDED")} className="block w-full px-3 py-2 text-xs text-crimson hover:bg-stone">
-                                Suspend access
-                              </button>
-                            )}
-                            {host.status === "SUSPENDED" && (
-                              <button type="button" onClick={() => changeStatus(host, "ACTIVE")} className="block w-full px-3 py-2 text-xs text-ink hover:bg-stone">
-                                Reactivate access
-                              </button>
-                            )}
-                          </div>
-                        )}
+                      <td className="px-5 py-4 text-right">
+                        <RowMenu label={`More actions for ${name}`} items={menuItems(host)} />
                       </td>
                     </tr>
                   );
@@ -157,6 +147,7 @@ export default function AdminUsers() {
       </section>
 
       {showAddHost && <AddHostModal onClose={() => setShowAddHost(false)} />}
+      {detailsId && <HostDetailsModal hostId={detailsId} onClose={() => setDetailsId(null)} />}
     </div>
   );
 }

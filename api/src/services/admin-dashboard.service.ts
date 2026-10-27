@@ -78,6 +78,44 @@ export interface TransactionSummary {
   createdAt: Date;
 }
 
+export interface FundCounts {
+  total: number;
+  published: number;
+  draft: number;
+  suspended: number;
+  raised: string;
+}
+
+export interface TransactionCounts {
+  total: number;
+  completed: number;
+  pending: number;
+  failed: number;
+  refunded: number;
+  processed: string;
+}
+
+export interface FundDetail extends FundSummary {
+  description?: string;
+  currency: string;
+  startDate?: Date;
+  endDate?: Date;
+  /** Distinct people with a collected contribution. */
+  contributors: number;
+  averageAmount: string;
+}
+
+export interface ContributionRow {
+  id: string;
+  reference: string;
+  contributorName: string | null;
+  msisdn: string | null;
+  amount: string;
+  status: ContributionStatus;
+  purposeName: string | null;
+  createdAt: Date;
+}
+
 export interface HostDetail {
   host: HostSummary;
   stats: { totalFunds: string; fundsThisMonth: string; transactions: number };
@@ -321,7 +359,7 @@ export class AdminDashboardService {
       hostId: p.ownerId,
       hostName: ownerNames.get(p.ownerId) ?? 'Unknown host',
       raised: raised.get(p.id)?.amount ?? '0.00',
-      targetAmount: p.targetAmount,
+      targetAmount: p.targetAmount == null ? undefined : Number(p.targetAmount).toFixed(2),
       transactions: raised.get(p.id)?.count ?? 0,
       createdAt: p.createdAt,
     }));
@@ -392,6 +430,70 @@ export class AdminDashboardService {
     };
   }
 
+  async getFundDetail(id: string): Promise<FundDetail> {
+    const project = await this.projectRepo.findOne({ where: { id } });
+    if (!project) throw new NotFoundError('Campaign not found');
+
+    const [summary] = await this.toFundSummaries([project]);
+    const collected = await this.contributionRepo
+      .createQueryBuilder('c')
+      .where('c.projectId = :id', { id })
+      .andWhere('c.status IN (:...statuses)', { statuses: COLLECTED_STATUSES })
+      .getMany();
+    const contributors = new Set(collected.map((c) => c.contributorId)).size;
+
+    return {
+      ...summary,
+      description: project.description,
+      currency: project.currency,
+      startDate: project.startDate,
+      endDate: project.endDate,
+      contributors,
+      averageAmount: collected.length ? (Number(summary.raised) / collected.length).toFixed(2) : '0.00',
+    };
+  }
+
+  async getFundContributions(
+    id: string,
+    params: { page?: number; limit?: number; search?: string; status?: ContributionStatus } = {}
+  ): Promise<Page<ContributionRow>> {
+    if (!(await this.projectRepo.count({ where: { id } }))) throw new NotFoundError('Campaign not found');
+
+    const page = params.page || 1;
+    const limit = Math.min(params.limit || 10, 100);
+    const query = this.contributionRepo
+      .createQueryBuilder('c')
+      .leftJoinAndSelect('c.contributor', 'contributor')
+      .leftJoinAndSelect('c.purpose', 'purpose')
+      .where('c.projectId = :id', { id });
+    if (params.status) query.andWhere('c.status = :status', { status: params.status });
+    if (params.search) {
+      query.andWhere(
+        '(LOWER(c.reference) LIKE :s OR LOWER(contributor.name) LIKE :s OR contributor.msisdn LIKE :s)',
+        { s: `%${params.search.toLowerCase()}%` }
+      );
+    }
+    query
+      .orderBy('c.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [rows, total] = await query.getManyAndCount();
+    return {
+      total,
+      items: rows.map((c) => ({
+        id: c.id,
+        reference: c.reference,
+        contributorName: c.contributor?.name ?? null,
+        msisdn: c.contributor?.msisdn ?? null,
+        amount: c.amount,
+        status: c.status,
+        purposeName: c.purpose?.name ?? null,
+        createdAt: c.createdAt,
+      })),
+    };
+  }
+
   async getHostDetail(id: string): Promise<HostDetail> {
     const user = await this.userRepo.findOne({ where: { id, role: SystemRole.ACCOUNT_OWNER } });
     if (!user) throw new NotFoundError('Host not found');
@@ -422,12 +524,57 @@ export class AdminDashboardService {
     };
   }
 
+  async getFundCounts(): Promise<FundCounts> {
+    const countFor = (status: ProjectStatus) => this.projectRepo.count({ where: { status } });
+    const [published, draft, suspended, collected] = await Promise.all([
+      countFor(ProjectStatus.PUBLISHED),
+      countFor(ProjectStatus.DRAFT),
+      countFor(ProjectStatus.SUSPENDED),
+      this.collectedBetween(),
+    ]);
+    return { total: await this.projectRepo.count(), published, draft, suspended, raised: this.sum(collected) };
+  }
+
+  async getTransactionCounts(): Promise<TransactionCounts> {
+    const countFor = (...statuses: ContributionStatus[]) =>
+      this.contributionRepo.count({ where: { status: In(statuses) } });
+    const [completed, pending, failed, refunded, collected] = await Promise.all([
+      countFor(ContributionStatus.CONFIRMED),
+      countFor(ContributionStatus.PENDING, ContributionStatus.INITIATED),
+      countFor(ContributionStatus.FAILED),
+      countFor(ContributionStatus.REFUNDED, ContributionStatus.PARTIALLY_REFUNDED),
+      this.collectedBetween(),
+    ]);
+    return {
+      total: await this.contributionRepo.count(),
+      completed,
+      pending,
+      failed,
+      refunded,
+      processed: this.sum(collected),
+    };
+  }
+
+  async getActivity(params: { page?: number; limit?: number } = {}): Promise<Page<ActivityEntry>> {
+    const page = params.page || 1;
+    const limit = Math.min(params.limit || 10, 100);
+    const [logs, total] = await this.auditRepo.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { items: await this.toActivityEntries(logs), total };
+  }
+
   async getRecentActivity(limit = 4): Promise<ActivityEntry[]> {
     const logs = await this.auditRepo.find({
       order: { createdAt: 'DESC' },
       take: Math.min(limit, 50),
     });
+    return this.toActivityEntries(logs);
+  }
 
+  private async toActivityEntries(logs: AuditLog[]): Promise<ActivityEntry[]> {
     const actorIds = [...new Set(logs.map((l) => l.userId).filter((id): id is string => !!id))];
     const actors = actorIds.length ? await this.userRepo.find({ where: { id: In(actorIds) } }) : [];
     const names = new Map(actors.map((u) => [u.id, `${u.firstName} ${u.lastName}`.trim()]));
