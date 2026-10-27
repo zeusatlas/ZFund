@@ -5,7 +5,6 @@ import { env } from './env';
 import { logger } from './logger';
 
 
-
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: env.DB_HOST,

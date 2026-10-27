@@ -2,16 +2,29 @@
 
 import { FormEvent } from "react";
 import { X } from "lucide-react";
-import type { HostAccount } from "./data";
+import type { ApiError } from "@/lib/api/client";
+import { useAddHost } from "./use-admin-dashboard";
 
-export function AddHostModal({ onClose, onAdd }: { onClose: () => void; onAdd: (host: HostAccount) => void }) {
+const inputClass = "mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold";
+
+export function AddHostModal({ onClose }: { onClose: () => void }) {
+  const addHost = useAddHost();
+  const apiError = addHost.error as unknown as ApiError | null;
+  const fieldError = (field: string) => apiError?.errors?.[field]?.[0];
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const name = String(form.get("name") || "New host");
-    const phone = String(form.get("phone") || "");
-    const initials = name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-    onAdd({ id: `USR-${Date.now().toString().slice(-4)}`, name, phone, initials, status: "Pending", fundsIssued: "GHS 0.00", lastActive: "Awaiting invite" });
+    addHost.mutate(
+      {
+        firstName: String(form.get("firstName")).trim(),
+        lastName: String(form.get("lastName")).trim(),
+        email: String(form.get("email")).trim(),
+        phone: String(form.get("phone") ?? "").trim() || undefined,
+        password: String(form.get("password")),
+      },
+      { onSuccess: onClose },
+    );
   }
 
   return (
@@ -19,7 +32,7 @@ export function AddHostModal({ onClose, onAdd }: { onClose: () => void; onAdd: (
       className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/45 p-4"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && !addHost.isPending) onClose();
       }}
     >
       <div
@@ -30,62 +43,58 @@ export function AddHostModal({ onClose, onAdd }: { onClose: () => void; onAdd: (
       >
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">
-              Host access
-            </p>
-            <h2 id="add-host-title" className="mt-1 text-xl font-semibold text-navy">
-              Add a host account
-            </h2>
-            <p className="mt-1 text-sm text-steel">
-              Send an invitation to a trusted fund host.
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Host access</p>
+            <h2 id="add-host-title" className="mt-1 text-xl font-semibold text-navy">Add a host account</h2>
+            <p className="mt-1 text-sm text-steel">Create an account for a trusted fund host.</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="rounded-lg p-1.5 text-steel hover:bg-stone"
-          >
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="rounded-lg p-1.5 text-steel hover:bg-stone">
             <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-ink">
+              First name
+              <input required minLength={2} name="firstName" autoComplete="off" className={inputClass} placeholder="e.g. Jordan" />
+              {fieldError("firstName") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("firstName")}</span>}
+            </label>
+            <label className="block text-sm font-medium text-ink">
+              Last name
+              <input required minLength={2} name="lastName" autoComplete="off" className={inputClass} placeholder="e.g. Lee" />
+              {fieldError("lastName") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("lastName")}</span>}
+            </label>
+          </div>
+
           <label className="block text-sm font-medium text-ink">
-            Full name
-            <input
-              required
-              name="name"
-              className="mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold"
-              placeholder="e.g. Jordan Lee"
-            />
+            Email address
+            <input required type="email" name="email" autoComplete="off" className={inputClass} placeholder="host@example.com" />
+            {fieldError("email") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("email")}</span>}
           </label>
 
           <label className="block text-sm font-medium text-ink">
-            Phone number
-            <input
-              required
-              type="tel"
-              name="phone"
-              pattern="[+]?[0-9 ()-]{8,}"
-              className="mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold"
-              placeholder="+233 24 000 0000"
-            />
+            Phone number <span className="font-normal text-steel">(optional)</span>
+            <input type="tel" name="phone" pattern="[+]?[0-9 ()-]{8,}" className={inputClass} placeholder="+233 24 000 0000" />
+            {fieldError("phone") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("phone")}</span>}
           </label>
+
+          <label className="block text-sm font-medium text-ink">
+            Temporary password
+            <input required type="password" minLength={8} name="password" autoComplete="new-password" className={inputClass} placeholder="At least 8 characters" />
+            {fieldError("password") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("password")}</span>}
+            <span className="mt-1 block text-xs font-normal text-steel">Share this with the host securely. They should change it after signing in.</span>
+          </label>
+
+          {apiError && !apiError.errors && (
+            <p role="alert" className="rounded-lg bg-[#fbeaea] px-3 py-2 text-sm text-[#a13d3d]">{apiError.message}</p>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-steel hover:bg-stone"
-            >
+            <button type="button" onClick={onClose} disabled={addHost.isPending} className="rounded-lg px-4 py-2.5 text-sm font-medium text-steel hover:bg-stone">
               Cancel
             </button>
-            <button
-              type="submit"
-              className="rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel"
-            >
-              Send invitation
+            <button type="submit" disabled={addHost.isPending} className="rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel disabled:opacity-60">
+              {addHost.isPending ? "Creating…" : "Create host"}
             </button>
           </div>
         </form>

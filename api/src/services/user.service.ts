@@ -66,7 +66,8 @@ export class UserService {
       lastName: input.lastName,
       phone: input.phone,
       role: input.role,
-      status: UserStatus.ACTIVE,
+      // Becomes ACTIVE on first successful login.
+      status: UserStatus.PENDING_VERIFICATION,
     });
 
     const saved = await this.userRepo.save(user);
@@ -126,7 +127,9 @@ export class UserService {
   async updateUserStatus(id: string, status: UserStatus, actorId?: string): Promise<User> {
     const user = await this.getUserById(id);
     const oldStatus = user.status;
-    user.status = status;
+    // Accounts that have never signed in stay pending until their first login.
+    user.status =
+      status === UserStatus.ACTIVE && !user.lastLoginAt ? UserStatus.PENDING_VERIFICATION : status;
 
     const saved = await this.userRepo.save(user);
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import QueryProvider from "@/components/providers/QueryProvider";
 import "./globals.css";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
     >
       <body className={`${manrope.className} min-h-full flex flex-col font-sans`}>
         <QueryProvider>{children}</QueryProvider>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import adminRoutes from './admin.routes';
 import auditRoutes from './audit.routes';
 import authRoutes from './auth.routes';
 import contributionRoutes from './contribution.routes';
@@ -11,6 +12,7 @@ import paymentRoutes from './payment.routes';
 import projectRoutes from './project.routes';
 import refundRoutes from './refund.routes';
 import userRoutes from './user.routes';
+import withdrawalRoutes from './withdrawal.routes';
 import ussdFlowRoutes from './ussd-flow.routes';
 import ussdRuntimeRoutes from './ussd-runtime.routes';
 
@@ -52,6 +54,12 @@ router.use('/notifications', notificationRoutes);
 
 // Document Storage
 router.use('/documents', documentRoutes);
+
+// Host Withdrawal Requests
+router.use('/withdrawals', withdrawalRoutes);
+
+// Admin Dashboard
+router.use('/admin', adminRoutes);
 
 // Audit Logging
 router.use('/audit', auditRoutes);

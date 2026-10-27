@@ -3,7 +3,7 @@
 import { ChevronDown, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useRole } from "@/components/auth/RoleProvider";
+import { useLogout, useMe } from "@/lib/auth/auth";
 
 function initials(name: string) {
   return name
@@ -16,10 +16,11 @@ function initials(name: string) {
 
 export default function UserMenu() {
   const router = useRouter();
-  const { role } = useRole();
-  const user = role === "host"
-    ? { name: "Amelia Rivers", email: "amelia.rivers@zfund.com" }
-    : { name: "Jane Doe", email: "jane@zfund.com" };
+  const { data: me } = useMe();
+  const logout = useLogout();
+  const user = me
+    ? { name: `${me.firstName} ${me.lastName}`.trim(), email: me.email }
+    : { name: "…", email: "" };
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -39,9 +40,8 @@ export default function UserMenu() {
   }, []);
 
   function handleLogout() {
-    // TODO: clear the session / call the logout endpoint once auth exists.
     setOpen(false);
-    router.push("/");
+    logout.mutate(undefined, { onSettled: () => router.replace("/login") });
   }
 
   return (
