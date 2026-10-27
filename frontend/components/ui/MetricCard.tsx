@@ -1,8 +1,9 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 type MetricCardProps = {
   label: string;
-  value: string | number;
+  value: ReactNode;
   detail?: string;
   icon: LucideIcon;
   accent: "green" | "blue" | "gold" | "purple";
@@ -17,7 +18,7 @@ const accents = {
 
 export default function MetricCard({ label, value, detail, icon: Icon, accent }: MetricCardProps) {
   return (
-    <article className={`relative overflow-hidden rounded-xl border border-white/70 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${accents[accent]}`}>
+    <article className={`relative overflow-hidden rounded-0 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${accents[accent]}`}>
       <div className="flex items-start justify-between gap-4">
         <p className="text-sm font-semibold opacity-80">{label}</p>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/70">
