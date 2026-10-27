@@ -31,7 +31,7 @@ function DashboardMockup() {
   const progress = Math.round((raised / goal) * 100);
 
   return (
-    <div className="rounded-[28px] bg-parchment p-7">
+    <div className="w-full space-y-7">
       {/* Campaign header */}
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>

@@ -1,85 +1,63 @@
 import Link from "next/link";
 import { ArrowUpRight, Plus, Wallet, FolderHeart, Users, Radio } from "lucide-react";
 import CampaignList from "@/components/features/host/campaigns/CampaignList";
-import CampaignCount from "@/components/features/host/campaigns/CampaignCount";
 import HostHeading from "@/components/features/host/shared/HostHeading";
 import { hostStats, money } from "@/components/features/host/shared/demo";
 import RefreshData from "@/components/features/host/shared/RefreshData";
+import MetricCard from "@/components/ui/MetricCard";
 
 export default function HostOverview() {
   const stats = [
     {
-      title: "Total money raised",
+      label: "Total money raised",
       value: money(hostStats.raised),
-      note: "All successful contributions",
+      detail: "All successful contributions",
       icon: Wallet,
+      accent: "green" as const,
     },
     {
-      title: "Campaigns created",
-      value: <CampaignCount />,
-      note: "Across all campaign statuses",
+      label: "Campaigns created",
+      value: hostStats.campaigns,
+      detail: "Across all campaign statuses",
       icon: FolderHeart,
+      accent: "blue" as const,
     },
     {
-      title: "Contributors who paid",
+      label: "Contributors who paid",
       value: hostStats.contributors,
-      note: "Unique contributors · Paid only",
+      detail: "Unique contributors · Paid only",
       icon: Users,
+      accent: "gold" as const,
     },
     {
-      title: "Active campaigns",
+      label: "Active campaigns",
       value: hostStats.active,
-      note: "Currently collecting contributions",
+      detail: "Currently collecting contributions",
       icon: Radio,
+      accent: "purple" as const,
     },
   ];
   return (
-    <div className="mx-auto max-w-[1400px] py-3 md:py-5">
+    <div className="w-full space-y-7">
       <HostHeading
         title="Your impact, at a glance."
         description="Keep track of what your community has raised and the campaigns bringing people together."
-      />
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4"><div className="flex flex-wrap gap-3"><Link href="/host/campaigns" className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel"><Plus size={17} aria-hidden="true" />Create campaign</Link><Link href="/host/withdrawals" className="inline-flex items-center gap-2 rounded-xl border border-navy/15 bg-white px-4 py-2.5 text-sm font-medium text-navy hover:bg-stone"><Wallet size={17} aria-hidden="true" />Request withdrawal</Link></div><RefreshData /></div>
+      >
+        <RefreshData />
+      </HostHeading>
       <section
         aria-label="Fundraising statistics"
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
-        {stats.map(({ title, value, note, icon: Icon }, index) => (
-          <article
-            key={title}
-            className={
-              "min-w-0 rounded-2xl border p-5 lg:p-6 " +
-              (index === 0
-                ? "border-navy bg-navy text-white"
-                : "border-navy/10 bg-white text-navy")
-            }
-          >
-            <div className="mb-7 flex items-center justify-between gap-3">
-              <h2
-                className={
-                  "text-sm " + (index === 0 ? "text-white/85" : "text-steel")
-                }
-              >
-                {title}
-              </h2>
-              <Icon
-                aria-hidden="true"
-                size={20}
-                className={index === 0 ? "text-gold" : "text-steel"}
-              />
-            </div>
-            <p className="break-words text-[clamp(24px,2.4vw,34px)] font-medium leading-tight tracking-tight tabular-nums">
-              {value}
-            </p>
-            <p
-              className={
-                "mt-3 text-xs leading-relaxed " +
-                (index === 0 ? "text-white/70" : "text-steel")
-              }
-            >
-              {note}
-            </p>
-          </article>
+        {stats.map(({ label, value, detail, icon: Icon, accent }) => (
+          <MetricCard
+            key={label}
+            label={label}
+            value={value}
+            detail={detail}
+            icon={Icon}
+            accent={accent}
+          />
         ))}
       </section>
       <section className="mt-10">
@@ -92,12 +70,28 @@ export default function HostOverview() {
               Your active fundraisers and how far they have come.
             </p>
           </div>
-          <Link
-            href="/host/campaigns"
-            className="inline-flex items-center gap-2 rounded-lg border border-navy/15 bg-white px-4 py-2.5 text-sm font-medium text-navy hover:bg-stone"
-          >
-            All campaigns <ArrowUpRight aria-hidden="true" size={16} />
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/host/campaigns"
+              className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel"
+            >
+              <Plus size={17} aria-hidden="true" />
+              Create campaign
+            </Link>
+            <Link
+              href="/host/withdrawals"
+              className="inline-flex items-center gap-2 rounded-xl border border-navy/15 bg-white px-4 py-2.5 text-sm font-medium text-navy hover:bg-stone"
+            >
+              <Wallet size={17} aria-hidden="true" />
+              Request withdrawal
+            </Link>
+            <Link
+              href="/host/campaigns"
+              className="inline-flex items-center gap-2 rounded-xl border border-navy/15 bg-white px-4 py-2.5 text-sm font-medium text-navy hover:bg-stone"
+            >
+              All campaigns <ArrowUpRight aria-hidden="true" size={16} />
+            </Link>
+          </div>
         </div>
         <CampaignList compact />
       </section>
