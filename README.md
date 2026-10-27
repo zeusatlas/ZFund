@@ -1,91 +1,69 @@
 # ZFund
 
-Frontend for ZFund, built with [Next.js](https://nextjs.org) (App Router), React, TypeScript and Tailwind CSS v4.
+**A modern platform for funding and financial management.**
 
-## Prerequisites
+ZFund is a digital platform designed to simplify financial operations by providing an organized way to manage funds, track transactions, and oversee financial activities. The project focuses on delivering a secure, scalable, and user-friendly experience for efficient fund management.
 
-- [Node.js](https://nodejs.org) 20 or newer (`node -v` to check)
-- npm (comes with Node)
-- Git
+## Features
 
-## Getting started
+- **Fund Management** — Organize and manage financial resources.
+- **Transaction Tracking** — Maintain visibility into financial activities.
+- **Financial Oversight** — Support transparent and structured fund administration.
+- **Scalable Architecture** — Designed to accommodate future features and growth.
+- **User-Friendly Experience** — Provide an intuitive interface for managing financial operations.
 
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd ZFund
+## Getting Started
 
-# 2. Install dependencies
-npm install
+### Prerequisites
 
-# 3. Start the dev server
-npm run dev
-```
+Ensure you have the required development tools and dependencies for the project's technology stack installed.
 
-Open [http://localhost:3000](http://localhost:3000). The home page links to the dashboard at [/dashboard](http://localhost:3000/dashboard).
+### Installation
 
-## Scripts
+1. Clone the repository:
 
-| Command         | What it does                      |
-| --------------- | --------------------------------- |
-| `npm run dev`   | Start the dev server              |
-| `npm run build` | Create a production build         |
-| `npm run start` | Run the production build          |
-| `npm run lint`  | Lint the code with ESLint         |
+   ```bash
+   git clone <repository-url>
+   ```
 
-Run `npm run lint` and `npm run build` before opening a pull request.
+2. Navigate to the project directory:
 
-## Project structure
+   ```bash
+   cd ZFund
+   ```
 
-```
-app/
-  layout.tsx          Root layout
-  page.tsx            Home page (links to /dashboard)
-  globals.css         Tailwind import and brand colors
-  dashboard/
-    layout.tsx        Dashboard shell: sidebar + header
-    page.tsx          /dashboard (empty, build your pages here)
-components/
-  layout/
-    Sidebar.tsx       Dark blue sidebar
-    Header.tsx        Top header
-    MobileNav.tsx     Hamburger + slide-in sidebar for small screens
-    UserMenu.tsx      Avatar dropdown with log out (placeholder user)
-```
+3. Install the project dependencies using the package manager appropriate for the project.
 
-New pages go in `app/` as folders containing a `page.tsx` (e.g. `app/dashboard/funds/page.tsx` becomes `/dashboard/funds`). Shared UI goes in `components/`. Import with the `@/` alias, e.g. `import Sidebar from "@/components/layout/Sidebar"`.
+4. Configure the required environment variables and application settings.
 
-## Brand colors
-
-Defined in [app/globals.css](app/globals.css) and available as Tailwind utilities (`bg-navy`, `text-gold`, `border-steel`, etc.). Do not hardcode hex values; use these.
-
-| Name       | Hex       | Typical use                  |
-| ---------- | --------- | ---------------------------- |
-| `navy`     | `#0b2545` | Primary buttons, headings    |
-| `steel`    | `#2e4c6d` | Hover states, borders        |
-| `gold`     | `#c08a2e` | Accents, highlights          |
-| `crimson`  | `#a13d3d` | Errors, destructive actions  |
-| `stone`    | `#f5f2ec` | Page background              |
-| `stone-light` | `#faf8f5` | Dashboard main area       |
-| `midnight` | `#10192b` | Sidebar                      |
-| `ink`      | `#1c1f26` | Body text                    |
-
-The app is light mode only. Do not add `dark:` styles.
-
-## Included libraries
-
-- `react-hook-form` + `zod` + `@hookform/resolvers`: forms and validation
-- `axios`: API requests
-- `lucide-react`: icons
-- `sonner`: toast notifications
-- `date-fns`: date formatting
-
-## Note on Next.js version
-
-This project uses a recent Next.js version with changes from older releases. When unsure, check the docs bundled in `node_modules/next/dist/docs/` rather than relying on older tutorials.
+5. Start the application using the appropriate development command.
 
 ## Workflow
 
 1. Create a branch from `main`: `git checkout -b feature/your-feature`
 2. Make your changes and commit them with clear messages
 3. Push and open a pull request for review
+
+## Configuration
+
+Create and configure the necessary environment variables for your development environment. Keep sensitive credentials, API keys, and other secrets out of version control.
+
+## Project Status
+
+ZFund is under development. Features, architecture, and implementation details may evolve as the project progresses.
+
+## Security
+
+Security is an important consideration for ZFund. Report vulnerabilities responsibly and avoid publishing sensitive information, credentials, or private financial data.
+
+## Contributing
+
+Contributions, suggestions, and bug reports are welcome. Please open an issue to discuss significant changes before submitting a pull request.
+
+## License
+
+A license has not yet been specified. All rights are reserved by the copyright holder unless a license is added to this repository.
+
+---
+
+**ZFund** — Simplifying fund management through technology.
