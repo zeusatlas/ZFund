@@ -1,0 +1,101 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import { z } from 'zod';
+
+// Load .env file
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().default(2077),
+  API_BASE_URL: z.string().default('http://localhost:2077'),
+  API_PREFIX: z.string().default('/api/v1'),
+
+  // PostgreSQL
+  DB_HOST: z.string().default('127.0.0.1'),
+  DB_PORT: z.coerce.number().default(5432),
+  DB_USERNAME: z.string().default('postgres'),
+  DB_PASSWORD: z.string().default('postgres'),
+  DB_NAME: z.string().default('zfund_db'),
+  DB_SSL: z.coerce.boolean().default(false),
+  TYPEORM_SYNCHRONIZE: z.coerce.boolean().default(true),
+  TYPEORM_LOGGING: z.coerce.boolean().default(false),
+
+  // Redis
+  REDIS_HOST: z.string().default('127.0.0.1'),
+  REDIS_PORT: z.coerce.number().default(6379),
+  REDIS_PASSWORD: z.string().optional().default(''),
+  REDIS_DB: z.coerce.number().default(0),
+  REDIS_ENABLED: z.coerce.boolean().default(false),
+  REDIS_KEY_PREFIX: z.string().default('zfund:'),
+
+  // Auth & JWT
+  JWT_ACCESS_SECRET: z.string().min(16).default('dev_jwt_access_secret_super_secure_key_change_in_production_123456789'),
+  JWT_REFRESH_SECRET: z.string().min(16).default('dev_jwt_refresh_secret_super_secure_key_change_in_production_987654321'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  ARGON2_MEMORY_COST: z.coerce.number().default(65536),
+  ARGON2_TIME_COST: z.coerce.number().default(3),
+  COOKIE_DOMAIN: z.string().default('localhost'),
+  COOKIE_SECURE: z.coerce.boolean().default(false),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+
+  // CORS
+  CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:5173'),
+
+  // NALO USSD
+  NALO_USER_ID: z.string().default('NALOTest'),
+  NALO_AUTH_TOKEN: z.string().optional().default(''),
+  NALO_DEFAULT_CODE: z.string().default('*920*969#'),
+  NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(120),
+
+  // Paystack
+  PAYSTACK_SECRET_KEY: z.string().default('sk_test_placeholder_key_for_zfund_integration'),
+  PAYSTACK_PUBLIC_KEY: z.string().default('pk_test_placeholder_key_for_zfund_integration'),
+  PAYSTACK_BASE_URL: z.string().default('https://api.paystack.co'),
+  PAYSTACK_WEBHOOK_SECRET: z.string().default('sk_test_placeholder_key_for_zfund_integration'),
+
+  // SMS (mNotify as used in ZDesk, Arkesel, Mock)
+  SMS_PROVIDER: z.enum(['mock', 'mnotify', 'arkesel', 'nalo']).default('mock'),
+  SMS_API_KEY: z.string().optional().default(''),
+  SMS_SENDER_ID: z.string().default('ZFund'),
+  SMS_API_URL: z.string().default('https://sms.arkesel.com/api/v2/sms/send'),
+  MNOTIFY_API_KEY: z.string().optional().default(''),
+  MNOTIFY_URL: z.string().default('https://api.mnotify.com/api/sms/quick'),
+  MNOTIFY_SENDER_ID: z.string().default('ZFund'),
+
+  // Storage
+  UPLOAD_DIR: z.string().default('storage/documents'),
+  MAX_FILE_SIZE_MB: z.coerce.number().default(10),
+  ALLOWED_FILE_TYPES: z.string().default('image/jpeg,image/png,image/webp,application/pdf'),
+
+  // Logger
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().default(10),
+});
+
+export type EnvConfig = z.infer<typeof envSchema>;
+
+function validateEnv(): EnvConfig {
+  const result = envSchema.safeParse(process.env);
+  if (!result.success) {
+    console.error('Invalid environment variables configuration:');
+    console.error(JSON.stringify(result.error.format(), null, 2));
+    throw new Error('Invalid environment configuration');
+  }
+
+  // Safety rule: In production, enforce that TYPEORM_SYNCHRONIZE is not accidentally turned on without explicit intention
+  if (result.data.NODE_ENV === 'production' && result.data.TYPEORM_SYNCHRONIZE) {
+    console.warn(
+      'WARNING: TYPEORM_SYNCHRONIZE is enabled in PRODUCTION environment. Ensure this is intentional and schema changes are audited.'
+    );
+  }
+
+  return result.data;
+}
+
+export const env = validateEnv();

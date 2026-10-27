@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZFund API — Developer Guide & Endpoint Specification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #F1F5F9;
+      --bg-container: #FFFFFF;
+      --bg-sidebar: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --border-subtle: #E2E8F0;
+      --border-strong: #CBD5E1;
+      
+      --text-heading: #0F172A;
+      --text-body: #334155;
+      --text-muted: #64748B;
+      --text-dim: #94A3B8;
+
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --primary-subtle: #EFF6FF;
+      --primary-border: #BFDBFE;
+
+      --get-bg: #ECFDF5;
+      --get-text: #059669;
+      --get-border: #A7F3D0;
+
+      --post-bg: #EFF6FF;
+      --post-text: #2563EB;
+      --post-border: #BFDBFE;
+
+      --put-bg: #FFFBEB;
+      --put-text: #D97706;
+      --put-border: #FDE68A;
+
+      --patch-bg: #F5F3FF;
+      --patch-text: #7C3AED;
+      --patch-border: #DDD6FE;
+
+      --delete-bg: #FEF2F2;
+      --delete-text: #DC2626;
+      --delete-border: #FECACA;
+
+      --code-bg: #0F172A;
+      --code-header: #1E293B;
+      --code-text: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-body);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    /* Outer Wrapper Container */
+    .app-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      background: var(--bg-container);
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: calc(100vh - 48px);
+    }
+
+    /* Top Bar */
+    .topbar {
+      height: 64px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #2563EB 0%, #10B981 100%);
+      border-radius: 8px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    }
+
+    .brand-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-heading);
+      letter-spacing: -0.02em;
+    }
+
+    .port-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      color: #166534;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .port-pill .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background-color: #22C55E;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+    }
+
+    .topbar-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .topbar-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+    .topbar-link:hover {
+      color: var(--primary);
+    }
+
+    /* Main Split Body: Sidebar + Main Content */
+    .docs-layout {
+      display: flex;
+      flex: 1;
+      min-height: calc(100vh - 112px);
+    }
+
+    /* Sidebar */
+    .docs-sidebar {
+      width: 320px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 112px);
+    }
+
+    .sidebar-search {
+      padding: 16px 16px 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .search-input-wrapper {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: #FFFFFF;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 8px 12px 8px 34px;
+      font-size: 0.825rem;
+      color: var(--text-heading);
+      outline: none;
+      transition: all 0.15s ease;
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px 24px 10px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sidebar-nav::-webkit-scrollbar-thumb {
+      background-color: #CBD5E1;
+      border-radius: 3px;
+    }
+
+    .nav-header {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 12px 10px 4px 10px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      color: var(--text-body);
+      text-decoration: none;
+      font-size: 0.825rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      margin-bottom: 1px;
+    }
+
+    .nav-item:hover {
+      background-color: #E2E8F0;
+      color: var(--text-heading);
+    }
+
+    .nav-method {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      min-width: 42px;
+      text-align: center;
+    }
+
+    .nav-method.GET { background: var(--get-bg); color: var(--get-text); border: 1px solid var(--get-border); }
+    .nav-method.POST { background: var(--post-bg); color: var(--post-text); border: 1px solid var(--post-border); }
+    .nav-method.PUT { background: var(--put-bg); color: var(--put-text); border: 1px solid var(--put-border); }
+    .nav-method.PATCH { background: var(--patch-bg); color: var(--patch-text); border: 1px solid var(--patch-border); }
+    .nav-method.DELETE { background: var(--delete-bg); color: var(--delete-text); border: 1px solid var(--delete-border); }
+
+    /* Content Area */
+    .docs-content {
+      flex: 1;
+      padding: 40px 48px;
+      background: #FFFFFF;
+      overflow-y: auto;
+    }
+
+    /* Hero Lead */
+    .hero-lead {
+      margin-bottom: 40px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .hero-title {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: var(--text-heading);
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .hero-description {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 880px;
+      line-height: 1.6;
+    }
+
+    .meta-tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #F8FAFC;
+      border: 1px solid var(--border-strong);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-heading);
+    }
+
+    .meta-tag code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--primary);
+    }
+
+    /* Section Headers */
+    .doc-section {
+      margin-bottom: 48px;
+      scroll-margin-top: 80px;
+    }
+
+    .section-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-subtitle {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* Header Integration Highlight Box */
+    .headers-guide-card {
+      background: #F8FAFC;
+      border: 1px solid var(--primary-border);
+      border-left: 4px solid var(--primary);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .headers-guide-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Cards */
+    .card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Endpoint Card */
+    .endpoint-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      margin-bottom: 28px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+      transition: all 0.2s ease;
+      scroll-margin-top: 80px;
+    }
+
+    .endpoint-card:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    .endpoint-summary {
+      padding: 16px 20px;
+      background: #F8FAFC;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .endpoint-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .method-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .method-badge.GET { background: var(--get-bg); color: var(--get-text); border: 1px solid var(--get-border); }
+    .method-badge.POST { background: var(--post-bg); color: var(--post-text); border: 1px solid var(--post-border); }
+    .method-badge.PUT { background: var(--put-bg); color: var(--put-text); border: 1px solid var(--put-border); }
+    .method-badge.PATCH { background: var(--patch-bg); color: var(--patch-text); border: 1px solid var(--patch-border); }
+    .method-badge.DELETE { background: var(--delete-bg); color: var(--delete-text); border: 1px solid var(--delete-border); }
+
+    .endpoint-route {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-heading);
+    }
+
+    .endpoint-role {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #EEF2F6;
+      color: #475569;
+      border: 1px solid var(--border-strong);
+    }
+    .endpoint-role.public {
+      background: #ECFDF5;
+      color: #065F46;
+      border-color: #A7F3D0;
+    }
+    .endpoint-role.admin {
+      background: #FEF2F2;
+      color: #991B1B;
+      border-color: #FECACA;
+    }
+
+    .endpoint-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .endpoint-body {
+      padding: 22px 24px;
+    }
+
+    /* Tables */
+    .field-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px 0;
+      font-size: 0.85rem;
+    }
+
+    .field-table th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #F8FAFC;
+      border-bottom: 2px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .field-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-body);
+      vertical-align: top;
+    }
+
+    .field-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #2563EB;
+    }
+
+    .field-type {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #7C3AED;
+    }
+
+    .badge-req {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #DC2626;
+      margin-left: 4px;
+    }
+    .badge-opt {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    /* Code Blocks */
+    .code-box {
+      background: var(--code-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 12px 0 20px 0;
+      border: 1px solid var(--code-header);
+    }
+
+    .code-header {
+      background: var(--code-header);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #94A3B8;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #E2E8F0;
+      padding: 3px 9px;
+      border-radius: 4px;
+      font-size: 0.725rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+    .copy-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+    }
+
+    pre {
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.825rem;
+      color: var(--code-text);
+      line-height: 1.5;
+    }
+
+    /* Two column grid for Request / Response */
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 1080px) {
+      .two-col-grid {
+        grid-template-columns: 1fr;
+      }
+      .docs-layout {
+        flex-direction: column;
+      }
+      .docs-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        top: 0;
+      }
+      .docs-content {
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Navigation Bar -->
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="brand-logo">Z</div>
+        <span class="brand-name">ZFund API</span>
+        <span class="port-pill"><span class="pulse-dot"></span> Port 2077</span>
+      </div>
+
+      <nav class="topbar-links">
+        <a href="#headers-guide" class="topbar-link">Setting Headers</a>
+        <a href="#sec-auth" class="topbar-link">Auth</a>
+        <a href="#sec-payments" class="topbar-link">Payments</a>
+        <a href="#sec-ussd" class="topbar-link">USSD</a>
+        <a href="#sec-notifications" class="topbar-link">SMS</a>
+      </nav>
+    </header>
+
+    <!-- Split Layout -->
+    <div class="docs-layout">
+
+      <!-- Left Sidebar Navigation -->
+      <aside class="docs-sidebar">
+        <div class="sidebar-search">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="Filter endpoints..." autocomplete="off">
+          </div>
+        </div>
+
+        <nav class="sidebar-nav" id="sidebarNav">
+          <div class="nav-header">Integration Guides</div>
+          <a href="#headers-guide" class="nav-item">Setting Request Headers</a>
+          <a href="#architecture-overview" class="nav-item">Response Envelope & Port</a>
+
+          <div class="nav-header">System & Health</div>
+          <a href="#ep-get-health" class="nav-item"><span class="nav-method GET">GET</span> /system/health</a>
+          <a href="#ep-get-ready" class="nav-item"><span class="nav-method GET">GET</span> /system/ready</a>
+
+          <div class="nav-header">Authentication & Identity</div>
+          <a href="#ep-post-register" class="nav-item"><span class="nav-method POST">POST</span> /auth/register</a>
+          <a href="#ep-post-login" class="nav-item"><span class="nav-method POST">POST</span> /auth/login</a>
+          <a href="#ep-post-refresh" class="nav-item"><span class="nav-method POST">POST</span> /auth/refresh-token</a>
+          <a href="#ep-post-logout" class="nav-item"><span class="nav-method POST">POST</span> /auth/logout</a>
+          <a href="#ep-get-profile" class="nav-item"><span class="nav-method GET">GET</span> /auth/profile</a>
+          <a href="#ep-post-forgot-pw" class="nav-item"><span class="nav-method POST">POST</span> /auth/forgot-password</a>
+          <a href="#ep-post-reset-pw" class="nav-item"><span class="nav-method POST">POST</span> /auth/reset-password</a>
+          <a href="#ep-post-change-pw" class="nav-item"><span class="nav-method POST">POST</span> /auth/change-password</a>
+
+          <div class="nav-header">User Management</div>
+          <a href="#ep-get-users" class="nav-item"><span class="nav-method GET">GET</span> /users</a>
+          <a href="#ep-get-user-id" class="nav-item"><span class="nav-method GET">GET</span> /users/:id</a>
+          <a href="#ep-post-users" class="nav-item"><span class="nav-method POST">POST</span> /users</a>
+          <a href="#ep-put-users" class="nav-item"><span class="nav-method PUT">PUT</span> /users/:id</a>
+          <a href="#ep-patch-user-role" class="nav-item"><span class="nav-method PATCH">PATCH</span> /users/:id/role</a>
+          <a href="#ep-patch-user-status" class="nav-item"><span class="nav-method PATCH">PATCH</span> /users/:id/status</a>
+
+          <div class="nav-header">Organizations</div>
+          <a href="#ep-get-orgs" class="nav-item"><span class="nav-method GET">GET</span> /organizations</a>
+          <a href="#ep-post-orgs" class="nav-item"><span class="nav-method POST">POST</span> /organizations</a>
+          <a href="#ep-get-org-id" class="nav-item"><span class="nav-method GET">GET</span> /organizations/:id</a>
+          <a href="#ep-put-org-id" class="nav-item"><span class="nav-method PUT">PUT</span> /organizations/:id</a>
+          <a href="#ep-patch-org-verify" class="nav-item"><span class="nav-method PATCH">PATCH</span> /organizations/:id/verify</a>
+          <a href="#ep-post-org-members" class="nav-item"><span class="nav-method POST">POST</span> /organizations/:id/members</a>
+
+          <div class="nav-header">Projects & Campaigns</div>
+          <a href="#ep-get-projects" class="nav-item"><span class="nav-method GET">GET</span> /projects</a>
+          <a href="#ep-post-projects" class="nav-item"><span class="nav-method POST">POST</span> /projects</a>
+          <a href="#ep-get-project-id" class="nav-item"><span class="nav-method GET">GET</span> /projects/:id</a>
+          <a href="#ep-put-project-id" class="nav-item"><span class="nav-method PUT">PUT</span> /projects/:id</a>
+          <a href="#ep-patch-project-status" class="nav-item"><span class="nav-method PATCH">PATCH</span> /projects/:id/status</a>
+          <a href="#ep-post-project-purposes" class="nav-item"><span class="nav-method POST">POST</span> /projects/:id/purposes</a>
+          <a href="#ep-post-project-payments" class="nav-item"><span class="nav-method POST">POST</span> /projects/:id/payment-methods</a>
+
+          <div class="nav-header">Contributions</div>
+          <a href="#ep-get-contributions" class="nav-item"><span class="nav-method GET">GET</span> /contributions</a>
+          <a href="#ep-get-contribution-id" class="nav-item"><span class="nav-method GET">GET</span> /contributions/:id</a>
+
+          <div class="nav-header">Payments & Webhooks</div>
+          <a href="#ep-post-payments-initiate" class="nav-item"><span class="nav-method POST">POST</span> /payments/initiate</a>
+          <a href="#ep-get-payments-verify" class="nav-item"><span class="nav-method GET">GET</span> /payments/verify/:reference</a>
+          <a href="#ep-get-payments-list" class="nav-item"><span class="nav-method GET">GET</span> /payments</a>
+          <a href="#ep-post-payments-webhook" class="nav-item"><span class="nav-method POST">POST</span> /payments/webhook/paystack</a>
+
+          <div class="nav-header">Refunds & Approvals</div>
+          <a href="#ep-get-refunds" class="nav-item"><span class="nav-method GET">GET</span> /refunds</a>
+          <a href="#ep-post-refunds" class="nav-item"><span class="nav-method POST">POST</span> /refunds</a>
+          <a href="#ep-patch-refund-review" class="nav-item"><span class="nav-method PATCH">PATCH</span> /refunds/:id/review</a>
+          <a href="#ep-post-refund-process" class="nav-item"><span class="nav-method POST">POST</span> /refunds/:id/process</a>
+
+          <div class="nav-header">USSD Runtime (NALO)</div>
+          <a href="#ep-post-ussd-nalo" class="nav-item"><span class="nav-method POST">POST</span> /ussd/nalo</a>
+
+          <div class="nav-header">USSD Flow Builder</div>
+          <a href="#ep-get-ussd-flows" class="nav-item"><span class="nav-method GET">GET</span> /ussd/flows</a>
+          <a href="#ep-post-ussd-flows" class="nav-item"><span class="nav-method POST">POST</span> /ussd/flows</a>
+          <a href="#ep-post-ussd-menus" class="nav-item"><span class="nav-method POST">POST</span> /ussd/flows/versions/:id/menus</a>
+          <a href="#ep-post-ussd-options" class="nav-item"><span class="nav-method POST">POST</span> /ussd/flows/menus/:id/options</a>
+          <a href="#ep-post-ussd-publish" class="nav-item"><span class="nav-method POST">POST</span> /ussd/flows/:id/publish</a>
+
+          <div class="nav-header">Financial Ledger</div>
+          <a href="#ep-get-financial-summary" class="nav-item"><span class="nav-method GET">GET</span> /financial/summary</a>
+          <a href="#ep-get-financial-ledger" class="nav-item"><span class="nav-method GET">GET</span> /financial/ledger</a>
+
+          <div class="nav-header">Notifications & SMS</div>
+          <a href="#ep-get-notifications" class="nav-item"><span class="nav-method GET">GET</span> /notifications</a>
+          <a href="#ep-post-notifications-retry" class="nav-item"><span class="nav-method POST">POST</span> /notifications/:id/retry</a>
+          <a href="#ep-post-notifications-test" class="nav-item"><span class="nav-method POST">POST</span> /notifications/test-sms</a>
+
+          <div class="nav-header">Documents & KYC</div>
+          <a href="#ep-post-documents-upload" class="nav-item"><span class="nav-method POST">POST</span> /documents/upload</a>
+          <a href="#ep-get-documents" class="nav-item"><span class="nav-method GET">GET</span> /documents</a>
+          <a href="#ep-get-document-id" class="nav-item"><span class="nav-method GET">GET</span> /documents/:id</a>
+          <a href="#ep-get-document-download" class="nav-item"><span class="nav-method GET">GET</span> /documents/:id/download</a>
+          <a href="#ep-patch-document-review" class="nav-item"><span class="nav-method PATCH">PATCH</span> /documents/:id/review</a>
+
+          <div class="nav-header">Audit Logs</div>
+          <a href="#ep-get-audit" class="nav-item"><span class="nav-method GET">GET</span> /audit</a>
+        </nav>
+      </aside>
+
+      <!-- Right Main Content Area -->
+      <main class="docs-content">
+
+        <!-- Hero Lead -->
+        <div class="hero-lead">
+          <h1 class="hero-title">ZFund Backend API Specification</h1>
+          <p class="hero-description">
+            Complete frontend developer reference for integrating React, Next.js, and Mobile clients with the ZFund contribution engine, database-driven USSD engine, Paystack mobile money gateway, and mNotify SMS provider.
+          </p>
+          <div class="meta-tags-row">
+            <span class="meta-tag">⚡ Base URL: <code>http://localhost:2077/api/v1</code></span>
+            <span class="meta-tag">🔒 Auth: <code>Bearer JWT</code> (Argon2id)</span>
+            <span class="meta-tag">📱 USSD Gateway: <code>*920*969#</code></span>
+            <span class="meta-tag">💬 SMS: <code>mNotify Quick API</code></span>
+          </div>
+        </div>
+
+        <!-- SPECIAL SECTION: HOW TO SET REQUEST HEADERS -->
+        <section class="doc-section" id="headers-guide">
+          <div class="headers-guide-card">
+            <div class="headers-guide-title">
+              <span>📋</span> Frontend Guide: How to Set Request Headers
+            </div>
+            <p style="color: var(--text-body); font-size: 0.925rem; margin-bottom: 16px;">
+              Every request made by your frontend (Vite/React, Next.js, or mobile apps) must include standard HTTP headers depending on the type of operation:
+            </p>
+
+            <table class="field-table">
+              <thead>
+                <tr>
+                  <th>Header Name</th>
+                  <th>Value Format</th>
+                  <th>When Required</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="field-name">Authorization</td>
+                  <td><code>Bearer &lt;access_token&gt;</code></td>
+                  <td><span class="badge-req">Protected Routes</span></td>
+                  <td>Pass the 15-minute access token obtained from <code>/auth/login</code> or <code>/auth/register</code>.</td>
+                </tr>
+                <tr>
+                  <td class="field-name">Content-Type</td>
+                  <td><code>application/json</code></td>
+                  <td><span class="badge-req">POST, PUT, PATCH</span></td>
+                  <td>Required for all endpoints accepting JSON payloads.</td>
+                </tr>
+                <tr>
+                  <td class="field-name">Content-Type</td>
+                  <td><code>multipart/form-data</code></td>
+                  <td><span class="badge-req">Document Upload</span></td>
+                  <td>Required when posting file uploads to <code>/documents/upload</code> using <code>FormData</code>.</td>
+                </tr>
+                <tr>
+                  <td class="field-name">x-correlation-id</td>
+                  <td><code>uuid / string</code></td>
+                  <td><span class="badge-opt">Optional</span></td>
+                  <td>Pass client-generated ID to trace requests in backend structured logs.</td>
+                </tr>
+                <tr>
+                  <td class="field-name">x-paystack-signature</td>
+                  <td><code>HMAC SHA512 string</code></td>
+                  <td><span class="badge-req">Paystack Webhooks</span></td>
+                  <td>Webhook validation signature generated by Paystack servers.</td>
+                </tr>
+                <tr>
+                  <td class="field-name">x-nalo-token</td>
+                  <td><code>string</code></td>
+                  <td><span class="badge-opt">USSD Gateway</span></td>
+                  <td>Pre-shared token for NALO USSD aggregator webhooks.</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Ready-to-copy Axios Code Snippet -->
+            <div class="code-box">
+              <div class="code-header">
+                <span>Frontend Example: Axios Client with Auto-Refresh Interceptor (Port 2077)</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copy Code</button>
+              </div>
+              <pre><code>import axios from 'axios';
+
+// 1. Create configured Axios instance
+export const api = axios.create({
+  baseURL: 'http://localhost:2077/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  withCredentials: true, // Enables sending and receiving HTTP-only refresh cookies
+});
+
+// 2. Request Interceptor: Attach Access Token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('zfund_access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 3. Response Interceptor: Auto-Refresh Expired Token on 401
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const refreshRes = await axios.post(
+          'http://localhost:2077/api/v1/auth/refresh-token',
+          {},
+          { withCredentials: true }
+        );
+        const newAccessToken = refreshRes.data.data.accessToken;
+        localStorage.setItem('zfund_access_token', newAccessToken);
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest); // Retry original failed call
+      } catch (refreshErr) {
+        localStorage.removeItem('zfund_access_token');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION: Unified Response Envelope -->
+        <section class="doc-section" id="architecture-overview">
+          <div class="section-title">Unified Response Envelope</div>
+          <div class="section-subtitle">Consistent JSON contract returned by all endpoints on Port 2077</div>
+
+          <div class="two-col-grid">
+            <div class="code-box">
+              <div class="code-header"><span>Standard Success Response (200 / 201)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{
+  "success": true,
+  "message": "Projects retrieved successfully",
+  "data": [
+    {
+      "id": "e4b6d47b-1234-4567-89ab-cdef01234567",
+      "name": "Cathedral Building Fund",
+      "eventCode": "1001",
+      "status": "PUBLISHED",
+      "currency": "GHS"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  },
+  "timestamp": "2026-10-27T17:40:00.000Z",
+  "correlationId": "zfund-req-84192b"
+}</code></pre>
+            </div>
+
+            <div class="code-box">
+              <div class="code-header"><span>Standard Error Response (400 / 401 / 403 / 404 / 422)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{
+  "success": false,
+  "message": "Validation failed on request body",
+  "errors": [
+    {
+      "field": "amount",
+      "message": "Amount must be valid decimal (e.g. 50.00)"
+    }
+  ],
+  "timestamp": "2026-10-27T17:40:00.000Z",
+  "correlationId": "zfund-err-198f2a"
+}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION: System & Health -->
+        <section class="doc-section" id="sec-system">
+          <div class="section-title">1. System & Health</div>
+          <div class="section-subtitle">Liveness and database readiness probes</div>
+
+          <!-- GET /system/health -->
+          <article class="endpoint-card" id="ep-get-health">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/system/health</span>
+                <span class="endpoint-role public">Public</span>
+              </div>
+              <span class="endpoint-desc">Process uptime and memory diagnostics</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Service healthy",
+  "data": {
+    "status": "UP",
+    "uptimeSeconds": 851.2,
+    "timestamp": "2026-10-27T17:40:00.000Z",
+    "memory": { "heapUsed": "42.1MB", "heapTotal": "58.3MB" }
+  }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+
+          <!-- GET /system/ready -->
+          <article class="endpoint-card" id="ep-get-ready">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/system/ready</span>
+                <span class="endpoint-role public">Public</span>
+              </div>
+              <span class="endpoint-desc">Deep readiness probe verifying PostgreSQL database connectivity</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Service ready to accept traffic",
+  "data": {
+    "database": "CONNECTED",
+    "status": "READY"
+  }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Authentication -->
+        <section class="doc-section" id="sec-auth">
+          <div class="section-title">2. Authentication & Identity</div>
+          <div class="section-subtitle">User registration, login, token refresh rotation, and logout</div>
+
+          <!-- POST /auth/register -->
+          <article class="endpoint-card" id="ep-post-register">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/auth/register</span>
+                <span class="endpoint-role public">Public (Rate-limited)</span>
+              </div>
+              <span class="endpoint-desc">Register a new organization account owner</span>
+            </div>
+            <div class="endpoint-body">
+              <table class="field-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="field-name">email</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Valid email address</td></tr>
+                  <tr><td class="field-name">password</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Min 8 chars, 1 uppercase letter, 1 number</td></tr>
+                  <tr><td class="field-name">firstName</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>First name (min 2 chars)</td></tr>
+                  <tr><td class="field-name">lastName</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Last name (min 2 chars)</td></tr>
+                  <tr><td class="field-name">phone</td><td class="field-type">string</td><td><span class="badge-opt">Optional</span></td><td>Phone number (e.g. 233240000001)</td></tr>
+                </tbody>
+              </table>
+
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "email": "pastor.kwame@harvestchurch.org",
+  "password": "Password123!",
+  "firstName": "Kwame",
+  "lastName": "Mensah",
+  "phone": "233241234567"
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response: 201 Created</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "e4b6d47b-1234-4567-89ab-cdef01234567",
+      "email": "pastor.kwame@harvestchurch.org",
+      "firstName": "Kwame",
+      "lastName": "Mensah",
+      "role": "ACCOUNT_OWNER"
+    },
+    "tokens": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsIn...",
+      "refreshToken": "4a7f29c0-9d01-44eb-..."
+    }
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- POST /auth/login -->
+          <article class="endpoint-card" id="ep-post-login">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/auth/login</span>
+                <span class="endpoint-role public">Public (Rate-limited)</span>
+              </div>
+              <span class="endpoint-desc">Sign in with email and password</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "email": "pastor.kwame@harvestchurch.org",
+  "password": "Password123!"
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "success": true,
+  "message": "Authentication successful",
+  "data": {
+    "user": {
+      "id": "e4b6d47b-1234-4567-89ab-cdef01234567",
+      "email": "pastor.kwame@harvestchurch.org",
+      "firstName": "Kwame",
+      "lastName": "Mensah",
+      "role": "ACCOUNT_OWNER"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsIn...",
+    "refreshToken": "4a7f29c0-9d01-44eb-...",
+    "expiresIn": 900
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- POST /auth/refresh-token -->
+          <article class="endpoint-card" id="ep-post-refresh">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/auth/refresh-token</span>
+                <span class="endpoint-role public">Public</span>
+              </div>
+              <span class="endpoint-desc">Rotate refresh token and issue new 15-minute access token</span>
+            </div>
+            <div class="endpoint-body">
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Pass <code>{ "refreshToken": "..." }</code> in body, or rely on the HTTP-only cookie automatically passed by the browser.
+              </p>
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
+    "refreshToken": "9f214ac3-4412-4fe1-9988-1234...",
+    "expiresIn": 900
+  }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+
+          <!-- GET /auth/profile -->
+          <article class="endpoint-card" id="ep-get-profile">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/auth/profile</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">Fetch currently authenticated user identity</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "id": "e4b6d47b-1234-4567-89ab-cdef01234567",
+    "email": "pastor.kwame@harvestchurch.org",
+    "firstName": "Kwame",
+    "lastName": "Mensah",
+    "role": "ACCOUNT_OWNER",
+    "phone": "233241234567",
+    "status": "ACTIVE"
+  }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Organizations -->
+        <section class="doc-section" id="sec-orgs">
+          <div class="section-title">3. Organizations & Verification</div>
+          <div class="section-subtitle">Tenant entities (churches, NGOs, educational institutions)</div>
+
+          <!-- POST /organizations -->
+          <article class="endpoint-card" id="ep-post-orgs">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/organizations</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">Create a new tenant organization</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "name": "Harvest International Ministries",
+  "slug": "harvest-international",
+  "contactEmail": "info@harvestintl.org",
+  "contactPhone": "233302123456",
+  "registrationNumber": "CG-98765-2024",
+  "address": "Spintex Road, Accra, Ghana"
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response: 201 Created</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "success": true,
+  "message": "Organization created successfully",
+  "data": {
+    "id": "1d3a492f-5321-4d32-b7a4-842df1209abc",
+    "name": "Harvest International Ministries",
+    "slug": "harvest-international",
+    "verificationStatus": "UNVERIFIED",
+    "createdAt": "2026-10-27T17:40:00.000Z"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- PATCH /organizations/:id/verify -->
+          <article class="endpoint-card" id="ep-patch-org-verify">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge PATCH">PATCH</span>
+                <span class="endpoint-route">/api/v1/organizations/:id/verify</span>
+                <span class="endpoint-role admin">VERIFICATION_OFFICER, SUPER_ADMIN</span>
+              </div>
+              <span class="endpoint-desc">Approve or reject organization KYC verification</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "status": "VERIFIED"
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Projects -->
+        <section class="doc-section" id="sec-projects">
+          <div class="section-title">4. Projects & Campaigns</div>
+          <div class="section-subtitle">Fundraising projects, event codes (*920*969*EVENT_CODE#), and purposes</div>
+
+          <!-- POST /projects -->
+          <article class="endpoint-card" id="ep-post-projects">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/projects</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">Create a campaign with an assigned numeric USSD event code</span>
+            </div>
+            <div class="endpoint-body">
+              <table class="field-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="field-name">name</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Campaign name (e.g. Cathedral Sanctuary Fund)</td></tr>
+                  <tr><td class="field-name">eventCode</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>3-10 digit unique numeric code (e.g. <code>1001</code>)</td></tr>
+                  <tr><td class="field-name">currency</td><td class="field-type">string</td><td><span class="badge-opt">Default: GHS</span></td><td>ISO-4217 currency code</td></tr>
+                  <tr><td class="field-name">targetAmount</td><td class="field-type">string</td><td><span class="badge-opt">Optional</span></td><td>Decimal monetary target (e.g. <code>50000.00</code>)</td></tr>
+                  <tr><td class="field-name">minAmount</td><td class="field-type">string</td><td><span class="badge-opt">Default: 1.00</span></td><td>Minimum single gift amount</td></tr>
+                  <tr><td class="field-name">maxAmount</td><td class="field-type">string</td><td><span class="badge-opt">Default: 10000.00</span></td><td>Maximum single gift amount</td></tr>
+                  <tr><td class="field-name">welcomeMessage</td><td class="field-type">string</td><td><span class="badge-opt">Optional</span></td><td>USSD welcome prompt (max 120 chars)</td></tr>
+                </tbody>
+              </table>
+
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "name": "New Cathedral Sanctuary Fund",
+  "eventCode": "1001",
+  "currency": "GHS",
+  "targetAmount": "100000.00",
+  "minAmount": "5.00",
+  "maxAmount": "5000.00",
+  "welcomeMessage": "Welcome to New Cathedral Fund"
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response: 201 Created</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "success": true,
+  "message": "Project created successfully",
+  "data": {
+    "id": "78b4a2e1-4567-8901-abcd-ef0123456789",
+    "name": "New Cathedral Sanctuary Fund",
+    "eventCode": "1001",
+    "status": "DRAFT",
+    "currency": "GHS",
+    "totalRaised": "0.00"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Payments -->
+        <section class="doc-section" id="sec-payments">
+          <div class="section-title">5. Payments & Paystack Webhooks</div>
+          <div class="section-subtitle">Mobile money and card transaction initiation and webhook reconciliation</div>
+
+          <!-- POST /payments/initiate -->
+          <article class="endpoint-card" id="ep-post-payments-initiate">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/payments/initiate</span>
+                <span class="endpoint-role public">Public / Authenticated</span>
+              </div>
+              <span class="endpoint-desc">Initiate a mobile money or card contribution</span>
+            </div>
+            <div class="endpoint-body">
+              <table class="field-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="field-name">projectId</td><td class="field-type">UUID</td><td><span class="badge-req">Required</span></td><td>Target campaign project ID</td></tr>
+                  <tr><td class="field-name">amount</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Decimal amount string (e.g. <code>50.00</code>)</td></tr>
+                  <tr><td class="field-name">msisdn</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Mobile money phone number (e.g. <code>233240000001</code>)</td></tr>
+                  <tr><td class="field-name">channel</td><td class="field-type">enum</td><td><span class="badge-opt">Default: MOBILE_MONEY</span></td><td><code>MOBILE_MONEY</code>, <code>CARD</code></td></tr>
+                  <tr><td class="field-name">purposeId</td><td class="field-type">UUID</td><td><span class="badge-opt">Optional</span></td><td>Assigned purpose (e.g. Tithe)</td></tr>
+                </tbody>
+              </table>
+
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "projectId": "78b4a2e1-4567-8901-abcd-ef0123456789",
+  "amount": "50.00",
+  "msisdn": "233240000001",
+  "name": "Kwame Mensah",
+  "channel": "MOBILE_MONEY"
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "success": true,
+  "message": "Payment initiated successfully",
+  "data": {
+    "reference": "ZF-M-1740675200-ABCD",
+    "authorizationUrl": "https://checkout.paystack.com/0a1b2c3d",
+    "status": "PENDING",
+    "amount": "50.00",
+    "currency": "GHS"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- GET /payments/verify/:reference -->
+          <article class="endpoint-card" id="ep-get-payments-verify">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/payments/verify/:reference</span>
+                <span class="endpoint-role public">Public</span>
+              </div>
+              <span class="endpoint-desc">Verify real-time status of payment reference</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Payment verified",
+  "data": {
+    "reference": "ZF-M-1740675200-ABCD",
+    "status": "SUCCESS",
+    "amount": "50.00",
+    "currency": "GHS",
+    "paidAt": "2026-10-27T17:41:00.000Z"
+  }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: USSD Engine -->
+        <section class="doc-section" id="sec-ussd">
+          <div class="section-title">6. Database-Driven USSD Engine</div>
+          <div class="section-subtitle">NALO USSD Gateway integration contract and multi-turn menu runtime</div>
+
+          <!-- POST /ussd/nalo -->
+          <article class="endpoint-card" id="ep-post-ussd-nalo">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/ussd/nalo</span>
+                <span class="endpoint-role public">Public (Rate-limited)</span>
+              </div>
+              <span class="endpoint-desc">Callback endpoint called by NALO Gateway (*920*969#)</span>
+            </div>
+            <div class="endpoint-body">
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 14px;">
+                Receives NALO standard payload and returns 120-character screens with session continuation (<code>MSGTYPE: true</code>) or end (<code>MSGTYPE: false</code>).
+              </p>
+
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>NALO Inbound Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "USERID": "NALOUser",
+  "MSISDN": "233240000001",
+  "USERDATA": "*920*969*1001#",
+  "MSGTYPE": true
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response to NALO (Max 120 Chars)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "USERID": "NALOUser",
+  "MSISDN": "233240000001",
+  "MSG": "Welcome to Church Fund\n1. Tithe\n2. Offering\n3. Building",
+  "MSGTYPE": true
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Notifications -->
+        <section class="doc-section" id="sec-notifications">
+          <div class="section-title">7. Notifications & mNotify SMS Gateway</div>
+          <div class="section-subtitle">Dispatched notifications, automatic template rendering, and instant live test SMS</div>
+
+          <!-- POST /notifications/test-sms -->
+          <article class="endpoint-card" id="ep-post-notifications-test">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/notifications/test-sms</span>
+                <span class="endpoint-role admin">SUPER_ADMIN, PLATFORM_ADMIN</span>
+              </div>
+              <span class="endpoint-desc">Dispatch an instant live SMS via mNotify gateway</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "recipient": "233241234567",
+  "message": "Hello from ZFund! Your SMS configuration on Port 2077 is active."
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "success": true,
+  "message": "Test SMS sent successfully",
+  "data": {
+    "success": true,
+    "provider": "MNOTIFY",
+    "providerMessageId": "mnotify-msg-9812",
+    "status": "sent"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: User Management -->
+        <section class="doc-section" id="sec-users">
+          <div class="section-title">8. User Management</div>
+          <div class="section-subtitle">Admin endpoints for managing system users, statuses, and role-based access control</div>
+
+          <!-- GET /users -->
+          <article class="endpoint-card" id="ep-get-users">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/users</span>
+                <span class="endpoint-role admin">SUPER_ADMIN, PLATFORM_ADMIN, AUDITOR</span>
+              </div>
+              <span class="endpoint-desc">List users with pagination, role, and search filters</span>
+            </div>
+            <div class="endpoint-body">
+              <table class="field-table">
+                <thead><tr><th>Query Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="field-name">page</td><td>number</td><td>1</td><td>Current page number</td></tr>
+                  <tr><td class="field-name">limit</td><td>number</td><td>20</td><td>Items per page (max 100)</td></tr>
+                  <tr><td class="field-name">role</td><td>string</td><td>-</td><td>Filter by SystemRole (e.g. <code>ACCOUNT_OWNER</code>)</td></tr>
+                  <tr><td class="field-name">status</td><td>string</td><td>-</td><td>Filter by UserStatus (<code>ACTIVE</code>, <code>SUSPENDED</code>, <code>PENDING_VERIFICATION</code>)</td></tr>
+                </tbody>
+              </table>
+
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "id": "e4b6d47b-1234-4567-89ab-cdef01234567",
+      "email": "pastor.kwame@harvestchurch.org",
+      "firstName": "Kwame",
+      "lastName": "Mensah",
+      "role": "ACCOUNT_OWNER",
+      "status": "ACTIVE",
+      "phone": "233241234567",
+      "createdAt": "2026-10-27T17:40:00.000Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+
+          <!-- PATCH /users/:id/role -->
+          <article class="endpoint-card" id="ep-patch-user-role">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge PATCH">PATCH</span>
+                <span class="endpoint-route">/api/v1/users/:id/role</span>
+                <span class="endpoint-role admin">SUPER_ADMIN Only</span>
+              </div>
+              <span class="endpoint-desc">Elevate or reassign system user role</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "role": "PLATFORM_ADMIN"
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Contributions -->
+        <section class="doc-section" id="sec-contributions">
+          <div class="section-title">9. Contributions</div>
+          <div class="section-subtitle">Read-only ledger of confirmed and pending contributions across all projects</div>
+
+          <!-- GET /contributions -->
+          <article class="endpoint-card" id="ep-get-contributions">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/contributions</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">List contributions with filters by project, status, and phone</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Contributions retrieved successfully",
+  "data": [
+    {
+      "id": "3c98124b-5678-90ab-cdef-1234567890ab",
+      "amount": "100.00",
+      "currency": "GHS",
+      "status": "CONFIRMED",
+      "contributorMsisdn": "233240000001",
+      "contributorName": "Kwame Mensah",
+      "project": { "id": "78b4a2e1-4567-8901-abcd-ef0123456789", "name": "Cathedral Building Fund" }
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 1 }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Refunds -->
+        <section class="doc-section" id="sec-refunds">
+          <div class="section-title">10. Refunds & Financial Reconciliation</div>
+          <div class="section-subtitle">Multi-step refund workflows: Request &rarr; Review &rarr; Paystack Reversal</div>
+
+          <!-- POST /refunds -->
+          <article class="endpoint-card" id="ep-post-refunds">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/refunds</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">Initiate a partial or full refund request</span>
+            </div>
+            <div class="endpoint-body">
+              <table class="field-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="field-name">contributionId</td><td class="field-type">UUID</td><td><span class="badge-req">Required</span></td><td>Target confirmed contribution</td></tr>
+                  <tr><td class="field-name">amount</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Decimal amount (must not exceed remaining refundable balance)</td></tr>
+                  <tr><td class="field-name">reason</td><td class="field-type">string</td><td><span class="badge-req">Required</span></td><td>Detailed explanation for audit trail</td></tr>
+                </tbody>
+              </table>
+
+              <div class="two-col-grid">
+                <div class="code-box">
+                  <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "contributionId": "3c98124b-5678-90ab-cdef-1234567890ab",
+  "amount": "40.00",
+  "reason": "Accidental duplicate contribution by church member"
+}</code></pre>
+                </div>
+                <div class="code-box">
+                  <div class="code-header"><span>Response: 201 Created</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <pre><code>{
+  "success": true,
+  "message": "Refund requested successfully",
+  "data": {
+    "id": "89ab12cd-34ef-5678-90ab-cdef12345678",
+    "contributionId": "3c98124b-5678-90ab-cdef-1234567890ab",
+    "amount": "40.00",
+    "status": "PENDING_APPROVAL"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- PATCH /refunds/:id/review -->
+          <article class="endpoint-card" id="ep-patch-refund-review">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge PATCH">PATCH</span>
+                <span class="endpoint-route">/api/v1/refunds/:id/review</span>
+                <span class="endpoint-role admin">FINANCE_OFFICER, SUPER_ADMIN</span>
+              </div>
+              <span class="endpoint-desc">Approve or reject a submitted refund request</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "status": "APPROVED",
+  "approvalNotes": "Approved following donor request verification"
+}</code></pre>
+              </div>
+            </div>
+          </article>
+
+          <!-- POST /refunds/:id/process -->
+          <article class="endpoint-card" id="ep-post-refund-process">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/refunds/:id/process</span>
+                <span class="endpoint-role admin">FINANCE_OFFICER, SUPER_ADMIN</span>
+              </div>
+              <span class="endpoint-desc">Execute gateway payout and update double-entry ledger</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Refund processed successfully",
+  "data": {
+    "refundId": "89ab12cd-34ef-5678-90ab-cdef12345678",
+    "status": "COMPLETED",
+    "contributionStatus": "PARTIALLY_REFUNDED",
+    "refundedAmount": "40.00"
+  }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: USSD Flow Builder -->
+        <section class="doc-section" id="sec-ussd-flow">
+          <div class="section-title">11. USSD Flow & Menu Builder</div>
+          <div class="section-subtitle">Visual menu builder: Configure dynamic USSD trees, options, and actions in database</div>
+
+          <!-- POST /ussd/flows -->
+          <article class="endpoint-card" id="ep-post-ussd-flows">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/ussd/flows</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">Create a new USSD interactive menu flow</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "name": "General Church USSD Menu",
+  "description": "Standard contribution and giving menu flow",
+  "projectId": "78b4a2e1-4567-8901-abcd-ef0123456789"
+}</code></pre>
+              </div>
+            </div>
+          </article>
+
+          <!-- POST /ussd/flows/versions/:id/menus -->
+          <article class="endpoint-card" id="ep-post-ussd-menus">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/ussd/flows/versions/:versionId/menus</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">Add a menu step (e.g. WELCOME, ENTER_AMOUNT, CONFIRM)</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "menuKey": "WELCOME",
+  "title": "Main Menu",
+  "prompt": "Welcome to Church Fund\n1. Tithe\n2. Offering",
+  "menuType": "SELECT",
+  "displayOrder": 1
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Financial Ledger -->
+        <section class="doc-section" id="sec-financial">
+          <div class="section-title">12. Financial Ledger & Accounting</div>
+          <div class="section-subtitle">Double-entry immutable ledger, platform fee splits, and organization balances</div>
+
+          <!-- GET /financial/summary -->
+          <article class="endpoint-card" id="ep-get-financial-summary">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/financial/summary</span>
+                <span class="endpoint-role">Bearer Token Required</span>
+              </div>
+              <span class="endpoint-desc">Get aggregated balances, gross contributions, fees, and net payouts</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Financial summary retrieved",
+  "data": {
+    "totalContributions": "125400.00",
+    "totalRefunds": "850.00",
+    "netRaised": "124550.00",
+    "platformFees": "2491.00",
+    "netPayable": "122059.00",
+    "currency": "GHS"
+  }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Documents -->
+        <section class="doc-section" id="sec-documents">
+          <div class="section-title">13. Document Storage & KYC</div>
+          <div class="section-subtitle">Encrypted document uploads and verification review</div>
+
+          <!-- POST /documents/upload -->
+          <article class="endpoint-card" id="ep-post-documents-upload">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge POST">POST</span>
+                <span class="endpoint-route">/api/v1/documents/upload</span>
+                <span class="endpoint-role">Bearer Token (multipart/form-data)</span>
+              </div>
+              <span class="endpoint-desc">Upload registration documents, certificates, or identity files</span>
+            </div>
+            <div class="endpoint-body">
+              <table class="field-table">
+                <thead><tr><th>Form Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="field-name">file</td><td>File Binary</td><td><span class="badge-req">Required</span></td><td>PDF, JPEG, PNG, or WEBP (max 10MB)</td></tr>
+                  <tr><td class="field-name">entityType</td><td>string</td><td><span class="badge-req">Required</span></td><td><code>ORGANIZATION</code>, <code>PROJECT</code>, or <code>USER</code></td></tr>
+                  <tr><td class="field-name">entityId</td><td>UUID</td><td><span class="badge-req">Required</span></td><td>ID of target record</td></tr>
+                  <tr><td class="field-name">documentType</td><td>string</td><td><span class="badge-req">Required</span></td><td><code>BUSINESS_REGISTRATION</code>, <code>TAX_CERTIFICATE</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECTION: Audit Logs -->
+        <section class="doc-section" id="sec-audit">
+          <div class="section-title">14. Audit Logs</div>
+          <div class="section-subtitle">Immutable compliance trail recording all administrative actions</div>
+
+          <!-- GET /audit -->
+          <article class="endpoint-card" id="ep-get-audit">
+            <div class="endpoint-summary">
+              <div class="endpoint-left">
+                <span class="method-badge GET">GET</span>
+                <span class="endpoint-route">/api/v1/audit</span>
+                <span class="endpoint-role admin">SUPER_ADMIN, PLATFORM_ADMIN, AUDITOR</span>
+              </div>
+              <span class="endpoint-desc">Query security, authorization, and financial event audit entries</span>
+            </div>
+            <div class="endpoint-body">
+              <div class="code-box">
+                <div class="code-header"><span>Response: 200 OK</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "success": true,
+  "message": "Audit logs retrieved",
+  "data": [
+    {
+      "id": "7fa89012-3456-789a-bcde-f0123456789a",
+      "action": "USER_ROLE_UPDATED",
+      "actorId": "e4b6d47b-1234-4567-89ab-cdef01234567",
+      "targetEntity": "User",
+      "targetId": "1d3a492f-5321-4d32-b7a4-842df1209abc",
+      "ipAddress": "127.0.0.1",
+      "timestamp": "2026-10-27T17:41:00.000Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 1 }
+}</code></pre>
+              </div>
+            </div>
+          </article>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Interactive JavaScript -->
+  <script>
+    // Live Search Filter
+    const searchInput = document.getElementById('searchInput');
+    const endpointCards = document.querySelectorAll('.endpoint-card');
+    const navItems = document.querySelectorAll('#sidebarNav .nav-item');
+
+    searchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase().trim();
+
+      endpointCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = (!term || text.includes(term)) ? 'block' : 'none';
+      });
+
+      navItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = (!term || text.includes(term)) ? 'flex' : 'none';
+      });
+    });
+
+    // Copy to clipboard
+    function copyCode(btn) {
+      const pre = btn.closest('.code-box').querySelector('pre code');
+      if (!pre) return;
+      navigator.clipboard.writeText(pre.innerText).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.background = '#2563EB';
+        btn.style.color = '#fff';
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 1800);
+      });
+    }
+  </script>
+</body>
+</html>
