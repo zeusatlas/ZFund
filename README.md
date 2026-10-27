@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ZFund
 
-## Getting Started
+Frontend for ZFund, built with [Next.js](https://nextjs.org) (App Router), React, TypeScript and Tailwind CSS v4.
 
-First, run the development server:
+## Prerequisites
+
+- [Node.js](https://nodejs.org) 20 or newer (`node -v` to check)
+- npm (comes with Node)
+- Git
+
+## Getting started
 
 ```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd ZFund
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The home page links to the dashboard at [/dashboard](http://localhost:3000/dashboard).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command         | What it does                      |
+| --------------- | --------------------------------- |
+| `npm run dev`   | Start the dev server              |
+| `npm run build` | Create a production build         |
+| `npm run start` | Run the production build          |
+| `npm run lint`  | Lint the code with ESLint         |
 
-## Learn More
+Run `npm run lint` and `npm run build` before opening a pull request.
 
-To learn more about Next.js, take a look at the following resources:
+## Project structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/
+  layout.tsx          Root layout
+  page.tsx            Home page (links to /dashboard)
+  globals.css         Tailwind import and brand colors
+  dashboard/
+    layout.tsx        Dashboard shell: sidebar + header
+    page.tsx          /dashboard (empty, build your pages here)
+components/
+  layout/
+    Sidebar.tsx       Dark blue sidebar
+    Header.tsx        Top header
+    MobileNav.tsx     Hamburger + slide-in sidebar for small screens
+    UserMenu.tsx      Avatar dropdown with log out (placeholder user)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+New pages go in `app/` as folders containing a `page.tsx` (e.g. `app/dashboard/funds/page.tsx` becomes `/dashboard/funds`). Shared UI goes in `components/`. Import with the `@/` alias, e.g. `import Sidebar from "@/components/layout/Sidebar"`.
 
-## Deploy on Vercel
+## Brand colors
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Defined in [app/globals.css](app/globals.css) and available as Tailwind utilities (`bg-navy`, `text-gold`, `border-steel`, etc.). Do not hardcode hex values; use these.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Name       | Hex       | Typical use                  |
+| ---------- | --------- | ---------------------------- |
+| `navy`     | `#0b2545` | Primary buttons, headings    |
+| `steel`    | `#2e4c6d` | Hover states, borders        |
+| `gold`     | `#c08a2e` | Accents, highlights          |
+| `crimson`  | `#a13d3d` | Errors, destructive actions  |
+| `stone`    | `#f5f2ec` | Page background              |
+| `stone-light` | `#faf8f5` | Dashboard main area       |
+| `midnight` | `#10192b` | Sidebar                      |
+| `ink`      | `#1c1f26` | Body text                    |
+
+The app is light mode only. Do not add `dark:` styles.
+
+## Included libraries
+
+- `react-hook-form` + `zod` + `@hookform/resolvers`: forms and validation
+- `axios`: API requests
+- `lucide-react`: icons
+- `sonner`: toast notifications
+- `date-fns`: date formatting
+
+## Note on Next.js version
+
+This project uses a recent Next.js version with changes from older releases. When unsure, check the docs bundled in `node_modules/next/dist/docs/` rather than relying on older tutorials.
+
+## Workflow
+
+1. Create a branch from `main`: `git checkout -b feature/your-feature`
+2. Make your changes and commit them with clear messages
+3. Push and open a pull request for review
