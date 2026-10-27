@@ -1,5 +1,6 @@
 // Re-export all entities and enums for centralized domain access
 export * from './entities/audit-log.entity';
+export * from './entities/withdrawal-request.entity';
 export * from './entities/contribution.entity';
 export * from './entities/contributor.entity';
 export * from './entities/document-record.entity';
@@ -78,6 +79,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { RolePermission } from './entities/role-permission.entity';
 import { Role } from './entities/role.entity';
 import { User } from './entities/user.entity';
+import { WithdrawalRequest } from './entities/withdrawal-request.entity';
 
 export const allEntities = [
   // Identity & Access
@@ -122,6 +124,9 @@ export const allEntities = [
 
   // Refunds
   Refund,
+
+  // Withdrawals
+  WithdrawalRequest,
 
   // Financial Ledger & Reconciliation
   FinancialLedgerAccount,

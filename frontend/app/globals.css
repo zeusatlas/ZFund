@@ -20,6 +20,13 @@
   --color-off-ink: #14140f;
   --color-smoke: #b9b9b7;
 
+  /* Softer elevation: lighter than Tailwind's defaults, applies to every shadow-* utility. */
+  --shadow-sm: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --shadow-md: 0 2px 6px -1px rgb(16 24 40 / 0.07);
+  --shadow-lg: 0 6px 14px -4px rgb(16 24 40 / 0.1);
+  --shadow-xl: 0 10px 20px -6px rgb(16 24 40 / 0.12);
+  --shadow-2xl: 0 16px 32px -8px rgb(16 24 40 / 0.18);
+
   --font-sans: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -56,6 +63,14 @@ body {
 :focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 4px;
+}
+
+/* Form fields show focus with a single gold border, not border plus outline. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--color-gold);
 }
 
 @media (prefers-reduced-motion: reduce) {

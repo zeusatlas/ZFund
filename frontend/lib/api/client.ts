@@ -1,9 +1,9 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { tokenStorage } from "./token-storage";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:2077/api";
-const REFRESH_PATH = "/auth/refresh";
-const LOGIN_PATH = "/";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:2077/api/v1";
+const REFRESH_PATH = "/auth/refresh-token";
+const LOGIN_PATH = "/login";
 
 export type ApiError = {
   status: number;
@@ -28,18 +28,25 @@ async function refreshAccessToken(): Promise<string> {
   const refreshToken = tokenStorage.getRefresh();
   if (!refreshToken) throw new Error("No refresh token");
   const { data } = await refreshClient.post(REFRESH_PATH, { refreshToken });
-  // Adjust these field names to match the backend response.
-  const access: string = data.accessToken;
-  tokenStorage.set(access, data.refreshToken);
+  // Backend wraps payloads in { success, message, data }.
+  const access: string = data.data.accessToken;
+  tokenStorage.set(access, data.data.refreshToken);
   return access;
 }
 
-function toApiError(error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>): ApiError {
+type ErrorBody = { message?: string; errors?: { field: string; message: string }[] };
+
+function toApiError(error: AxiosError<ErrorBody>): ApiError {
   if (!error.response) {
     return { status: 0, message: error.code === "ECONNABORTED" ? "The request timed out." : "Network error. Check your connection." };
   }
   const { status, data } = error.response;
-  return { status, message: data?.message ?? error.message, errors: data?.errors };
+  // Backend sends validation errors as [{ field, message }]; group them by field.
+  const errors = data?.errors?.reduce<Record<string, string[]>>((acc, { field, message }) => {
+    (acc[field] ??= []).push(message);
+    return acc;
+  }, {});
+  return { status, message: data?.message ?? error.message, errors };
 }
 
 api.interceptors.request.use((config) => {
@@ -50,7 +57,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
+  async (error: AxiosError<ErrorBody>) => {
     const original = error.config as RetriableConfig | undefined;
     const isRefreshCall = original?.url?.includes(REFRESH_PATH);
 

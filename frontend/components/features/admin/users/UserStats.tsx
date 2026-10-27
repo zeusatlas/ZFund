@@ -1,35 +1,23 @@
 import { CircleDollarSign, Clock3, UserCheck, Users } from "lucide-react";
-import type { HostAccount } from "../dashboard/data";
 import MetricCard from "@/components/ui/MetricCard";
+import { formatCount, formatMoney } from "@/lib/format";
+import type { HostCounts } from "../admin-api";
 
-export default function UserStats({ hosts }: { hosts: HostAccount[] }) {
-  const activeHosts = hosts.filter((host) => host.status === "Active").length;
-  const pendingHosts = hosts.filter((host) => host.status === "Pending").length;
-  const totalFunds = hosts.reduce((total, host) => {
-    return total + Number(host.fundsIssued.replace("GHS ", "").replace(/,/g, ""));
-  }, 0);
+const accents = ["blue", "green", "gold", "purple"] as const;
 
+export default function UserStats({ counts }: { counts?: HostCounts }) {
+  const dash = "–";
   const stats = [
-    { label: "Total hosts", value: hosts.length, icon: Users },
-    { label: "Active hosts", value: activeHosts, icon: UserCheck },
-    { label: "Pending requests", value: pendingHosts, icon: Clock3 },
-    {
-      label: "Funds issued",
-      value: `GHS ${totalFunds.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`,
-      icon: CircleDollarSign,
-    },
+    { label: "Total hosts", value: counts ? formatCount(counts.total) : dash, icon: Users },
+    { label: "Active hosts", value: counts ? formatCount(counts.active) : dash, icon: UserCheck },
+    { label: "Pending requests", value: counts ? formatCount(counts.pending) : dash, icon: Clock3 },
+    { label: "Funds issued", value: counts ? formatMoney(counts.fundsIssued) : dash, icon: CircleDollarSign },
   ];
 
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {stats.map(({ label, value, icon: Icon }, index) => (
-        <MetricCard
-          key={label}
-          label={label}
-          value={value}
-          icon={Icon}
-          accent={["blue", "green", "gold", "purple"][index] as "blue" | "green" | "gold" | "purple"}
-        />
+        <MetricCard key={label} label={label} value={value} icon={Icon} accent={accents[index]} />
       ))}
     </section>
   );

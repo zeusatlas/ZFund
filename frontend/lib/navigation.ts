@@ -3,6 +3,7 @@ import { Activity, Banknote } from "lucide-react";
 import {
   BarChart3,
   CircleDollarSign,
+  Megaphone,
   FileText,
   LayoutDashboard,
   Settings,
@@ -21,9 +22,9 @@ export type MenuItem = {
 export const adminMenu: MenuItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Users", href: "/admin/users", icon: Users },
-  { label: "Activity", href: "/admin/activity", icon: Activity },
-  { label: "Withdrawals", href: "/admin/withdrawals", icon: Banknote },
-  { label: "Funds", href: "/admin/funds", icon: CircleDollarSign },
+  { label: "Campaigns", href: "/admin/campaigns", icon: Megaphone },
+  { label: "Activity logs", href: "/admin/activity", icon: Activity },
+  { label: "Withdrawal requests", href: "/admin/withdrawals", icon: Banknote },
   {
     label: "Transactions",
     href: "/admin/transactions",
