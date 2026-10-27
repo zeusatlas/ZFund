@@ -3,9 +3,7 @@
 import { ChevronDown, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
-// Placeholder user until auth is wired up.
-const user = { name: "Jane Doe", email: "jane@zfund.com" };
+import { useRole } from "@/components/auth/RoleProvider";
 
 function initials(name: string) {
   return name
@@ -18,6 +16,10 @@ function initials(name: string) {
 
 export default function UserMenu() {
   const router = useRouter();
+  const { role } = useRole();
+  const user = role === "host"
+    ? { name: "Amelia Rivers", email: "amelia.rivers@zfund.com" }
+    : { name: "Jane Doe", email: "jane@zfund.com" };
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
