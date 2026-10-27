@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Activity, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Activity, Banknote, LayoutDashboard, Settings, Users } from "lucide-react";
 
 export type UserRole = "admin" | "host";
 
@@ -13,6 +13,7 @@ export const adminMenu: MenuItem[] = [
   { label: "Dashboard", href: "/dashboard/admin", icon: LayoutDashboard },
   { label: "Users", href: "/dashboard/admin/users", icon: Users },
   { label: "Activity", href: "/dashboard/admin/activity", icon: Activity },
+  { label: "Withdrawals", href: "/dashboard/admin/withdrawals", icon: Banknote },
   { label: "Settings", href: "/dashboard/admin/settings", icon: Settings },
 ];
 
