@@ -5,6 +5,14 @@ import { campaignTotals, dateLabel, money, type CampaignStatus } from "@/compone
 
 import { useCampaigns } from "@/components/features/host/campaigns/use-campaigns";
 import CreateCampaignModal from "@/components/features/host/campaigns/CreateCampaignModal";
+import Select from "react-select";
+import { getSelectStyles } from "@/components/ui/selectStyles";
+
+const sortOptions = [
+  { value: "newest", label: "Newest first" },
+  { value: "raised", label: "Most raised" },
+  { value: "name", label: "Campaign name" },
+];
 
 function StatusBadge({ status }: { status: CampaignStatus }) {
   const style = status === "Active" ? "bg-emerald-50 text-emerald-800" : status === "Completed" ? "bg-navy/10 text-navy" : "bg-stone text-steel";
@@ -28,7 +36,19 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
       <p role="status" className={notice ? "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900" : "sr-only"}>{notice}</p>
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1"><Search aria-hidden="true" size={18} className="pointer-events-none absolute left-4 top-3.5 text-steel" /><label htmlFor="campaign-search" className="sr-only">Search campaigns</label><input id="campaign-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search by campaign, location or ID" className="w-full rounded-xl border border-navy/15 bg-white py-3 pl-11 pr-4 text-sm text-navy placeholder:text-steel/75" /></div>
-        <div className="w-full sm:w-auto"><label htmlFor="campaign-sort" className="sr-only">Sort campaigns</label><select id="campaign-sort" value={sort} onChange={event => setSort(event.target.value)} className="w-full rounded-xl border border-navy/15 bg-white px-4 py-3 text-sm text-navy sm:min-w-44"><option value="newest">Newest first</option><option value="raised">Most raised</option><option value="name">Campaign name</option></select></div>
+        <div className="w-full sm:w-52">
+          <label htmlFor="campaign-sort" className="sr-only">Sort campaigns</label>
+          <Select
+            inputId="campaign-sort"
+            instanceId="campaign-sort-select"
+            value={sortOptions.find(opt => opt.value === sort)}
+            onChange={opt => { if (opt) setSort(opt.value); }}
+            options={sortOptions}
+            isSearchable={false}
+            styles={getSelectStyles({ minHeight: "46px" })}
+            aria-label="Sort campaigns"
+          />
+        </div>
       </div>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by campaign status">{["All", "Active", "Completed", "Draft"].map(filter => <button type="button" key={filter} aria-pressed={status === filter} onClick={() => setStatus(filter)} className={"rounded-full px-4 py-2 text-sm transition-colors " + (status === filter ? "bg-navy text-white" : "bg-white text-steel hover:bg-stone")}>{filter} <span className="ml-2 opacity-75">{filter === "All" ? campaigns.length : campaigns.filter(c => c.status === filter).length}</span></button>)}</div>
       <p role="status" className="text-sm text-steel">Showing {filtered.length} of {campaigns.length} campaigns</p>

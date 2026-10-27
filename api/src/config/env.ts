@@ -5,6 +5,17 @@ import { z } from 'zod';
 // Load .env file
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+// Helper to parse boolean strings correctly (z.coerce.boolean parses any non-empty string like "false" as true)
+const booleanEnv = (defaultValue: boolean = false) =>
+  z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => {
+      if (val === undefined || val === '') return defaultValue;
+      if (typeof val === 'boolean') return val;
+      return val.toLowerCase() === 'true' || val === '1';
+    });
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(2077),
@@ -17,16 +28,16 @@ const envSchema = z.object({
   DB_USERNAME: z.string().default('postgres'),
   DB_PASSWORD: z.string().default('postgres'),
   DB_NAME: z.string().default('zfund_db'),
-  DB_SSL: z.coerce.boolean().default(false),
-  TYPEORM_SYNCHRONIZE: z.coerce.boolean().default(true),
-  TYPEORM_LOGGING: z.coerce.boolean().default(false),
+  DB_SSL: booleanEnv(false),
+  TYPEORM_SYNCHRONIZE: booleanEnv(true),
+  TYPEORM_LOGGING: booleanEnv(false),
 
   // Redis
   REDIS_HOST: z.string().default('127.0.0.1'),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASSWORD: z.string().optional().default(''),
   REDIS_DB: z.coerce.number().default(0),
-  REDIS_ENABLED: z.coerce.boolean().default(false),
+  REDIS_ENABLED: booleanEnv(false),
   REDIS_KEY_PREFIX: z.string().default('zfund:'),
 
   // Auth & JWT
@@ -37,7 +48,7 @@ const envSchema = z.object({
   ARGON2_MEMORY_COST: z.coerce.number().default(65536),
   ARGON2_TIME_COST: z.coerce.number().default(3),
   COOKIE_DOMAIN: z.string().default('localhost'),
-  COOKIE_SECURE: z.coerce.boolean().default(false),
+  COOKIE_SECURE: booleanEnv(false),
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   // CORS
