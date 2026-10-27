@@ -29,7 +29,7 @@ Ensure you have the required development tools and dependencies for the project'
 2. Navigate to the project directory:
 
    ```bash
-   cd ZFund
+   cd ZFund/frontend
    ```
 
 3. Install the project dependencies using the package manager appropriate for the project.
