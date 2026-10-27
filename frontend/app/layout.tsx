@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Outfit, Geist_Mono } from "next/font/google";
+import { Manrope, Geist_Mono } from "next/font/google";
+import QueryProvider from "@/components/providers/QueryProvider";
 import "./globals.css";
 
-const outfit = Outfit({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-outfit",
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -26,10 +27,10 @@ export default function RootLayout({
   return (
     <html
       lang="en-GH"
-      className={`${outfit.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className={`${outfit.className} min-h-full flex flex-col font-sans`}>
-        {children}
+      <body className={`${manrope.className} min-h-full flex flex-col font-sans`}>
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

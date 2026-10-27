@@ -310,7 +310,7 @@ export default function Home() {
 
               <div className="flex flex-wrap items-center gap-5">
                 <Link
-                  href="/dashboard"
+                  href="/admin"
                   className="inline-flex items-center gap-2 rounded-[28px] bg-lime px-6 py-3.5 text-[15px] font-medium text-off-ink transition-opacity hover:opacity-85"
                 >
                   Host a campaign
@@ -411,7 +411,7 @@ export default function Home() {
 
           <div className="mt-10">
             <Link
-              href="/dashboard"
+              href="/admin"
               className="inline-flex items-center gap-2 rounded-full bg-lime px-6 py-3.5 text-[15px] font-medium text-off-ink transition-opacity hover:opacity-85"
             >
               Open host dashboard
@@ -527,14 +527,14 @@ export default function Home() {
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
-              href="/dashboard"
+              href="/admin"
               className="inline-flex items-center gap-2 rounded-[28px] bg-off-ink px-8 py-4 text-[15px] font-medium text-white transition-opacity hover:opacity-85"
             >
               Host a campaign
               <ArrowRight size={17} />
             </Link>
             <Link
-              href="/dashboard"
+              href="/admin"
               className="border-b border-off-ink pb-0.5 text-[15px] font-medium text-off-ink"
             >
               Sign in to dashboard

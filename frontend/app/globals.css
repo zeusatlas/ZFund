@@ -20,7 +20,7 @@
   --color-off-ink: #14140f;
   --color-smoke: #b9b9b7;
 
-  --font-sans: var(--font-outfit), "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -31,7 +31,7 @@
 body {
   background: var(--color-stone);
   color: var(--color-ink);
-  font-family: var(--font-outfit), "Outfit", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ── Perk Eyebrow Label Utility ──────────────────────────────────────────── */

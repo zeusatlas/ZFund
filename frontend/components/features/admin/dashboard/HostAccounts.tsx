@@ -1,0 +1,12 @@
+import Link from "next/link";
+import { ChevronRight, MoreHorizontal } from "lucide-react";
+import type { HostAccount } from "./data";
+
+function StatusPill({ status }: { status: HostAccount["status"] }) {
+  const styles = { Active: "bg-[#e9f4ef] text-[#287754]", Pending: "bg-[#fff4dc] text-[#a26c12]", Suspended: "bg-[#fbeaea] text-[#a13d3d]" };
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}>{status}</span>;
+}
+
+export function HostAccounts({ hosts }: { hosts: HostAccount[] }) {
+  return <article className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-navy/10 p-5 md:p-6"><div><h2 className="font-semibold text-navy">Host accounts</h2><p className="mt-1 text-sm text-steel">Manage the people authorized to generate funds.</p></div><Link href="/admin/users" className="inline-flex items-center gap-1 text-xs font-medium text-gold hover:text-navy">View all hosts <ChevronRight size={14} /></Link></div><div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left"><thead className="bg-stone-light text-xs uppercase tracking-wide text-steel"><tr><th className="px-5 py-3 font-medium">Host</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Funds issued</th><th className="px-4 py-3 font-medium">Last active</th><th className="px-5 py-3" /></tr></thead><tbody className="divide-y divide-navy/10">{hosts.slice(0, 2).map((host) => <tr key={host.id} className="text-sm"><td className="px-5 py-4"><Link href={`/admin/users/${host.id}`} className="flex items-center gap-3 rounded-md hover:text-gold"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-xs font-medium text-white">{host.initials}</span><div><p className="font-medium text-ink">{host.name}</p><p className="mt-0.5 text-xs text-steel">{host.phone}</p></div></Link></td><td className="px-4 py-4"><StatusPill status={host.status} /></td><td className="px-4 py-4 font-medium text-ink">{host.fundsIssued}</td><td className="px-4 py-4 text-xs text-steel">{host.lastActive}</td><td className="px-5 py-4 text-right"><button type="button" aria-label={`More actions for ${host.name}`} className="rounded-md p-1.5 text-steel hover:bg-stone"><MoreHorizontal size={17} /></button></td></tr>)}</tbody></table></div></article>;
+}

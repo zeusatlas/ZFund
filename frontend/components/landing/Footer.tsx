@@ -8,10 +8,10 @@ const columns = {
     { href: "/security", label: "Security" },
   ],
   Account: [
-    { href: "/dashboard", label: "Host dashboard" },
-    { href: "/dashboard/admin", label: "Admin console" },
-    { href: "/dashboard", label: "Sign in" },
-    { href: "/dashboard", label: "Create account" },
+    { href: "/admin", label: "Host dashboard" },
+    { href: "/admin", label: "Admin console" },
+    { href: "/admin", label: "Sign in" },
+    { href: "/admin", label: "Create account" },
   ],
   Legal: [
     { href: "#", label: "Privacy Policy" },

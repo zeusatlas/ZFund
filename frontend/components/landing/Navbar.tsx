@@ -75,14 +75,14 @@ export default function Navbar() {
         {/* Desktop Actions */}
         <div className="hidden items-center gap-5 lg:flex">
           <Link
-            href="/dashboard"
+            href="/admin"
             onClick={() => setMobileOpen(false)}
             className="text-[14px] font-medium text-graphite transition-colors hover:text-off-ink"
           >
             Sign in
           </Link>
           <Link
-            href="/dashboard"
+            href="/admin"
             onClick={() => setMobileOpen(false)}
             className="rounded-full bg-lime px-5 py-2 text-[14px] font-medium text-off-ink transition-opacity hover:opacity-85"
           >
@@ -121,14 +121,14 @@ export default function Navbar() {
           </nav>
           <div className="mt-8 flex flex-col gap-3 border-t border-ash pt-6">
             <Link
-              href="/dashboard"
+              href="/admin"
             onClick={() => setMobileOpen(false)}
               className="text-[16px] font-medium text-graphite"
             >
               Sign in
             </Link>
             <Link
-              href="/dashboard"
+              href="/admin"
             onClick={() => setMobileOpen(false)}
               className="rounded-full bg-lime px-5 py-3 text-center text-[15px] font-medium text-off-ink"
             >

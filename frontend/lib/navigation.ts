@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { Activity, Banknote } from "lucide-react";
 import {
   BarChart3,
   CircleDollarSign,
@@ -17,36 +18,36 @@ export type MenuItem = {
   icon: LucideIcon;
 };
 
-// Keep menu definitions separate from the component so adding or removing an
-// item does not require changing the sidebar rendering logic.
 export const adminMenu: MenuItem[] = [
-  { label: "Dashboard", href: "/dashboard/admin", icon: LayoutDashboard },
-  { label: "Users", href: "/dashboard/admin/users", icon: Users },
-  { label: "Funds", href: "/dashboard/admin/funds", icon: CircleDollarSign },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Users", href: "/admin/users", icon: Users },
+  { label: "Activity", href: "/admin/activity", icon: Activity },
+  { label: "Withdrawals", href: "/admin/withdrawals", icon: Banknote },
+  { label: "Funds", href: "/admin/funds", icon: CircleDollarSign },
   {
     label: "Transactions",
-    href: "/dashboard/admin/transactions",
+    href: "/admin/transactions",
     icon: FileText,
   },
-  { label: "Reports", href: "/dashboard/admin/reports", icon: BarChart3 },
-  { label: "Settings", href: "/dashboard/admin/settings", icon: Settings },
+  { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+  { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export const hostMenu: MenuItem[] = [
-  { label: "Dashboard", href: "/dashboard/host", icon: LayoutDashboard },
+  { label: "Dashboard", href: "/host", icon: LayoutDashboard },
   {
     label: "Campaigns",
-    href: "/dashboard/host/campaigns",
+    href: "/host/campaigns",
     icon: CircleDollarSign,
   },
   {
     label: "Transactions",
-    href: "/dashboard/host/transactions",
+    href: "/host/transactions",
     icon: FileText,
   },
-  { label: "Withdrawals", href: "/dashboard/host/withdrawals", icon: Wallet },
-  { label: "Reports", href: "/dashboard/host/reports", icon: BarChart3 },
-  { label: "Settings", href: "/dashboard/host/settings", icon: Settings },
+  { label: "Withdrawals", href: "/host/withdrawals", icon: Wallet },
+  { label: "Reports", href: "/host/reports", icon: BarChart3 },
+  { label: "Settings", href: "/host/settings", icon: Settings },
 ];
 
 export const menuByRole: Record<UserRole, MenuItem[]> = {
@@ -55,6 +56,6 @@ export const menuByRole: Record<UserRole, MenuItem[]> = {
 };
 
 export const dashboardByRole: Record<UserRole, string> = {
-  admin: "/dashboard/admin",
-  host: "/dashboard/host",
+  admin: "/admin",
+  host: "/host",
 };
