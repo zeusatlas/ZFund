@@ -73,7 +73,7 @@ export function AddHostModal({ onClose }: { onClose: () => void }) {
 
           <label className="block text-sm font-medium text-ink">
             Phone number
-            <input required type="tel" name="phone" autoComplete="off" pattern="[+]?[0-9 ()-]{9,}" className={inputClass} placeholder="+233 24 000 0000" />
+            <input required type="tel" name="phone" autoComplete="off" pattern="[+]?[0-9 ()-]{9,}" className={inputClass} placeholder="0541234567" />
             {fieldError("phone") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("phone")}</span>}
             <span className="mt-1 block text-xs font-normal text-steel">We&apos;ll text their email and phone number to this number. They sign in with those and a code sent by SMS.</span>
           </label>

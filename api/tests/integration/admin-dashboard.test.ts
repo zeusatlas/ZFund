@@ -73,6 +73,14 @@ describe('Admin dashboard endpoints', () => {
       .get('/api/v1/admin/dashboard/fund-trend?period=30d')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(daily.body.data.buckets).toHaveLength(30);
+
+    for (const [period, count] of [['3m', 13], ['6m', 26]] as const) {
+      const weekly = await request(app)
+        .get(`/api/v1/admin/dashboard/fund-trend?period=${period}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(weekly.body.data.period).toBe(period);
+      expect(weekly.body.data.buckets).toHaveLength(count);
+    }
   });
 
   it('lists hosts with funds issued and shows new hosts after creation', async () => {

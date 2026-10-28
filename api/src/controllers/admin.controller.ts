@@ -35,7 +35,8 @@ export class AdminController {
 
   async getFundTrend(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const period: TrendPeriod = req.query.period === '30d' ? '30d' : '12m';
+      const requested = req.query.period as TrendPeriod;
+      const period: TrendPeriod = ['30d', '3m', '6m', '12m'].includes(requested) ? requested : '12m';
       const data = await adminDashboardService.getFundTrend(period);
       ApiResponse.success(res, data, 'Fund trend retrieved');
     } catch (err) {

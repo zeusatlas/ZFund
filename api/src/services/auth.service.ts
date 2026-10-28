@@ -26,9 +26,11 @@ import {
   VerifyOtpInput,
 } from '../schemas/auth.schemas';
 
-const OTP_TTL_MINUTES = 5;
+const OTP_TTL_MINUTES = 2;
 const OTP_MAX_ATTEMPTS = 5;
-const OTP_RESEND_SECONDS = 30;
+const OTP_WARN_AFTER_ATTEMPTS = 3;
+// A new code can only be requested once the current one has run out.
+const OTP_RESEND_SECONDS = OTP_TTL_MINUTES * 60;
 
 export interface AuthTokens {
   accessToken: string;
@@ -103,18 +105,20 @@ export class AuthService {
       throw new ForbiddenError('Account is suspended. Please contact platform administration.');
     }
 
-    if (!user.otpHash || !user.otpExpiresAt || user.otpExpiresAt.getTime() < Date.now()) throw invalid;
-
     if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
-      user.otpHash = null;
-      await this.userRepo.save(user);
-      throw invalid;
+      throw new TooManyRequestsError(
+        'Too many incorrect attempts. You can request a new code after some time.'
+      );
     }
+
+    if (!user.otpHash || !user.otpExpiresAt || user.otpExpiresAt.getTime() < Date.now()) throw invalid;
 
     const expected = Buffer.from(user.otpHash);
     const actual = Buffer.from(this.hashOtp(user.id, input.code));
     if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
       user.otpAttempts += 1;
+      const locked = user.otpAttempts >= OTP_MAX_ATTEMPTS;
+      if (locked) user.otpHash = null;
       await this.userRepo.save(user);
       await this.recordAuthEvent({
         userId: user.id,
@@ -122,8 +126,17 @@ export class AuthService {
         email: user.email,
         ipAddress,
         userAgent,
-        metadata: { reason: 'INVALID_OTP' },
+        metadata: { reason: locked ? 'OTP_LOCKED' : 'INVALID_OTP' },
       });
+      if (locked) {
+        throw new TooManyRequestsError(
+          'Too many incorrect attempts. You can request a new code after some time.'
+        );
+      }
+      if (user.otpAttempts >= OTP_WARN_AFTER_ATTEMPTS) {
+        const left = OTP_MAX_ATTEMPTS - user.otpAttempts;
+        throw new UnauthorizedError(`Invalid code. You have ${left} attempt${left === 1 ? '' : 's'} left.`);
+      }
       throw invalid;
     }
 
