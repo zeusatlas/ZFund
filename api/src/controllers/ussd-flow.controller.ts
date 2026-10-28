@@ -89,6 +89,19 @@ export class UssdFlowController {
       next(err);
     }
   }
+
+  async initializeProjectFlow(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const flow = await ussdFlowService.initializeProjectFlow(
+        req.params.projectId,
+        req.body,
+        req.user?.id
+      );
+      ApiResponse.success(res, flow, 'USSD Flow initialized and published successfully', 201);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const ussdFlowController = new UssdFlowController();

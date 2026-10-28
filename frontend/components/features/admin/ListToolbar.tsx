@@ -1,4 +1,5 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
+import FilterSelect from "@/components/ui/FilterSelect";
 
 type ListToolbarProps = {
   search: string;
@@ -19,23 +20,16 @@ export default function ListToolbar({ search, onSearch, searchLabel, status, onS
           onChange={(event) => onSearch(event.target.value)}
           placeholder={searchLabel}
           aria-label={searchLabel}
-          className="field pl-9"
+          className="w-full rounded-lg border border-navy/15 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-gold"
         />
       </div>
-      <div className="relative w-full sm:w-auto">
-        <SlidersHorizontal size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-steel" />
-        <select
-          value={status}
-          onChange={(event) => onStatus(event.target.value)}
-          aria-label="Filter by status"
-          className="field appearance-none pl-9 pr-8 sm:w-48"
-        >
-          <option value="">All statuses</option>
-          {statuses.map((item) => (
-            <option key={item.value} value={item.value}>{item.label}</option>
-          ))}
-        </select>
-      </div>
+      <FilterSelect
+        label="Filter by status"
+        className="w-full sm:w-48"
+        value={status}
+        onChange={onStatus}
+        options={[{ value: "", label: "All statuses" }, ...statuses]}
+      />
     </div>
   );
 }

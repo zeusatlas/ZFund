@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { ArrowRight, Menu, X, Zap } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import HostCtaLink from "@/components/landing/HostCtaLink";
 
 const navLinks = [
@@ -19,10 +19,12 @@ export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const onHome = pathname === HOME;
+  // The marketing landing exists at both "/" and "/home" (two variants),
+  // so section links must scroll within whichever one is open.
+  const onLanding = pathname === "/" || pathname === HOME;
 
   function goToSection(event: ReactMouseEvent<HTMLAnchorElement>, hash: string) {
-    if (!onHome) {
+    if (!onLanding) {
       setMobileOpen(false);
       return; // let Next.js navigate to /home#...
     }
@@ -65,24 +67,17 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "border-b border-ash/60 bg-parchment/90 shadow-sm backdrop-blur-xl"
-          : "border-b border-transparent bg-parchment"
-      }`}
+      className="marketing-nav sticky z-50"
+      data-scrolled={scrolled}
     >
       <div className="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-5 sm:px-6">
 
         {/* Wordmark */}
         <Link
-          href={HOME}
-          className="flex items-center gap-2.5 group"
+          href="/"
+          className="brand text-off-ink"
         >
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-lime text-sm font-bold text-off-ink shadow-md transition-transform group-hover:scale-105">
-            R
-            <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </span>
-          <span className="text-[18px] font-bold tracking-tight text-off-ink">RaiseFundz</span>
+          RaiseFundz
         </Link>
 
         {/* Desktop Nav */}
@@ -90,7 +85,7 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={onHome ? link.href : `${HOME}${link.href}`}
+              href={onLanding ? link.href : `${HOME}${link.href}`}
               onClick={(event) => goToSection(event, link.href)}
               className="rounded-full px-4 py-2 text-[13px] font-medium text-graphite transition-all duration-200 hover:bg-parchment hover:text-off-ink hover:shadow-sm"
             >
@@ -107,7 +102,10 @@ export default function Navbar() {
           >
             Sign in
           </Link>
-          <HostCtaLink className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-5 py-2.5 text-[14px] font-semibold text-parchment shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg">
+          <HostCtaLink
+            onClick={() => setMobileOpen(false)}
+            className="pill pill-primary"
+          >
             Host a campaign
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
           </HostCtaLink>
@@ -119,7 +117,7 @@ export default function Navbar() {
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           aria-controls="mobile-navigation"
-          className="rounded-xl border border-ash bg-white/60 p-2 text-off-ink transition-colors hover:bg-parchment lg:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-off-ink lg:hidden"
           onClick={() => setMobileOpen((o) => !o)}
         >
           {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -128,21 +126,12 @@ export default function Navbar() {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div
-          id="mobile-navigation"
-          className="animate-drawer-in absolute inset-x-0 top-[68px] max-h-[calc(100dvh-68px)] overflow-y-auto border-t border-ash/60 bg-parchment/98 px-5 pb-10 pt-6 backdrop-blur-xl lg:hidden"
-        >
-          {/* Live indicator mobile */}
-          <div className="mb-6 flex items-center gap-2 rounded-2xl bg-white/70 px-4 py-3">
-            <Zap size={14} className="text-lime" fill="currentColor" />
-            <span className="text-[13px] font-medium text-graphite">Donations happening right now across Ghana</span>
-          </div>
-
-          <nav aria-label="Mobile navigation" className="flex flex-col gap-1">
+        <div id="mobile-navigation" className="mobile-menu-panel overflow-y-auto bg-parchment px-6 pb-8 pt-6 lg:hidden">
+          <nav aria-label="Mobile navigation" className="flex flex-col gap-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                href={onHome ? link.href : `${HOME}${link.href}`}
+                href={onLanding ? link.href : `${HOME}${link.href}`}
                 className="flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-medium text-graphite transition-colors hover:bg-white/70 hover:text-off-ink"
                 onClick={(event) => goToSection(event, link.href)}
               >

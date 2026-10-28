@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
+import FilterSelect from "@/components/ui/FilterSelect";
 import Pagination from "@/components/ui/Pagination";
 import RowMenu, { type RowMenuItem } from "@/components/ui/RowMenu";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -50,13 +51,13 @@ export default function AdminUsers() {
     <div className="w-full space-y-6">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="page-title">Host accounts</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Host accounts</h1>
           <p className="mt-2 text-sm text-steel">Manage the users who are allowed to generate funds.</p>
         </div>
         <button
           type="button"
           onClick={() => setShowAddHost(true)}
-          className="btn-primary w-fit"
+          className="inline-flex w-fit items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white transition hover:bg-steel"
         >
           <UserPlus size={17} />
           Add host
@@ -65,7 +66,7 @@ export default function AdminUsers() {
 
       <UserStats counts={data?.meta.counts} />
 
-      <section className="overflow-hidden surface-card">
+      <section className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-navy/10 p-4 sm:flex-row sm:items-center sm:justify-between md:p-5">
           <div className="relative w-full sm:max-w-xs">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-steel" />
@@ -77,23 +78,24 @@ export default function AdminUsers() {
               }}
               placeholder="Search hosts"
               aria-label="Search host accounts"
-              className="field pl-9"
+              className="w-full rounded-lg border border-navy/15 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-gold"
             />
           </div>
-          <select
+          <FilterSelect
+            label="Filter by status"
+            className="w-full sm:w-48"
             value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
+            onChange={(value) => {
+              setStatus(value);
               setPage(1);
             }}
-            aria-label="Filter by status"
-            className="field w-auto"
-          >
-            <option value="">All statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="PENDING_VERIFICATION">Pending</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
+            options={[
+              { value: "", label: "All statuses" },
+              { value: "ACTIVE", label: "Active" },
+              { value: "PENDING_VERIFICATION", label: "Pending" },
+              { value: "SUSPENDED", label: "Suspended" },
+            ]}
+          />
         </div>
 
         {isPending ? (
@@ -105,7 +107,7 @@ export default function AdminUsers() {
         ) : (
           <div className={`overflow-x-auto transition-opacity ${isPlaceholderData ? "opacity-60" : ""}`}>
             <table className="w-full min-w-[680px] text-left">
-              <thead className="border-b border-navy/10 bg-stone-light text-[10px] font-semibold uppercase tracking-[0.1em] text-steel">
+              <thead className="bg-stone-light text-xs uppercase tracking-wide text-steel">
                 <tr>
                   <th className="px-5 py-3 font-medium">Host</th>
                   <th className="px-4 py-3 font-medium">Status</th>

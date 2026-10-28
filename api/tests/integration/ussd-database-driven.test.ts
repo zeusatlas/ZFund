@@ -10,6 +10,7 @@ import { UssdFlow, UssdFlowStatus } from '../../src/database/entities/ussd-flow.
 import { UssdMenuOption, UssdOptionType } from '../../src/database/entities/ussd-menu-option.entity';
 import { UssdMenu, UssdMenuType } from '../../src/database/entities/ussd-menu.entity';
 import { User, UserStatus } from '../../src/database/entities/user.entity';
+import { CryptoUtil } from '../../src/common/utils/crypto';
 import { paystackProvider } from '../../src/services/paystack.provider';
 import { closeTestDatabase, setupTestDatabase } from '../test-db';
 
@@ -19,6 +20,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
   let testFlow: UssdFlow;
   let testVersion: UssdFlowVersion;
   let welcomeMenu: UssdMenu;
+  let authToken: string;
 
   beforeAll(async () => {
     await setupTestDatabase();
@@ -43,6 +45,12 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         status: UserStatus.ACTIVE,
       })
     );
+
+    authToken = CryptoUtil.generateAccessToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
     const org = await orgRepo.save(
       orgRepo.create({
@@ -471,5 +479,86 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
     expect(turn5.status).toBe(200);
     expect(turn5.body.MSGTYPE).toBe(false);
     expect(turn5.body.MSG).toContain('Payment cancelled.');
+  });
+
+  it('should 1-click initialize and publish a dynamic USSD flow for a new campaign', async () => {
+    // 1. Create a brand new project with event code 2002
+    const projectRepo = AppDataSource.getRepository(Project);
+    const newProject = await projectRepo.save(
+      projectRepo.create({
+        name: 'St. Peter Youth Camp',
+        organizationId: testProject.organizationId,
+        ownerId: testProject.ownerId,
+        eventCode: '2002',
+        currency: 'GHS',
+        minAmount: '5.00',
+        maxAmount: '5000.00',
+        status: ProjectStatus.PUBLISHED,
+        acceptsContributions: true,
+      })
+    );
+
+    // 2. Call USSD flow 1-click initialize endpoint
+    const initRes = await request(app)
+      .post(`/api/v1/ussd/flows/projects/${newProject.id}/initialize`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        welcomePrompt: 'Welcome to St. Peter Youth Camp Appeal.\nSelect:',
+        purposes: [
+          { label: 'Camp Registration' },
+          { label: 'Sponsor a Youth' },
+        ],
+      });
+
+    expect(initRes.status).toBe(201);
+    expect(initRes.body.success).toBe(true);
+    expect(initRes.body.data.status).toBe(UssdFlowStatus.PUBLISHED);
+
+    // 3. Dial the new campaign shortcode (*920*969*2002#) on USSD runtime
+    const dialRes = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233249001122',
+        USERDATA: '*920*969*2002#',
+        MSGTYPE: true,
+      });
+
+    expect(dialRes.status).toBe(200);
+    expect(dialRes.body.MSGTYPE).toBe(true);
+    expect(dialRes.body.MSG).toContain('Welcome to St. Peter Youth Camp Appeal.');
+    expect(dialRes.body.MSG).toContain('1. Camp Registration');
+    expect(dialRes.body.MSG).toContain('2. Sponsor a Youth');
+    expect(dialRes.body.MSG).toContain('3. Exit');
+  });
+
+  it('should dynamically update a menu prompt via PUT /api/v1/ussd/flows/menus/:menuId without server restart', async () => {
+    // 1. Update the welcome menu prompt via the API
+    const updateRes = await request(app)
+      .put(`/api/v1/ussd/flows/menus/${welcomeMenu.id}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        prompt: 'Welcome to Holy Trinity 2026 Golden Jubilee!\nSelect:',
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.prompt).toBe('Welcome to Holy Trinity 2026 Golden Jubilee!\nSelect:');
+
+    // Invalidate Redis cache to simulate live reload
+    await cache.del(`ussd:flow:project:${testProject.id}`);
+
+    // 2. Next contributor dials *920*969*1001# immediately sees updated prompt!
+    const dialRes = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233243334455',
+        USERDATA: '*920*969*1001#',
+        MSGTYPE: true,
+      });
+
+    expect(dialRes.status).toBe(200);
+    expect(dialRes.body.MSG).toContain('Welcome to Holy Trinity 2026 Golden Jubilee!');
   });
 });

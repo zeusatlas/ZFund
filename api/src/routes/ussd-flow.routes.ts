@@ -8,6 +8,7 @@ import {
   createFlowSchema,
   createMenuSchema,
   createOptionSchema,
+  initializeProjectFlowSchema,
   publishFlowSchema,
   updateMenuSchema,
   updateOptionSchema,
@@ -55,8 +56,20 @@ router.get('/versions/:versionId/validate', (req, res, next) =>
 );
 
 router.post(
+  '/projects/:projectId/initialize',
+  validate({ body: initializeProjectFlowSchema }),
+  (req, res, next) => ussdFlowController.initializeProjectFlow(req, res, next)
+);
+
+router.post(
   '/:id/versions/:versionId/publish',
-  requireRole(SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN, SystemRole.ORG_ADMIN, SystemRole.PROJECT_MANAGER),
+  requireRole(
+    SystemRole.SUPER_ADMIN,
+    SystemRole.PLATFORM_ADMIN,
+    SystemRole.ORG_ADMIN,
+    SystemRole.PROJECT_MANAGER,
+    SystemRole.ACCOUNT_OWNER
+  ),
   validate({ body: publishFlowSchema }),
   (req, res, next) => ussdFlowController.publishFlow(req, res, next)
 );

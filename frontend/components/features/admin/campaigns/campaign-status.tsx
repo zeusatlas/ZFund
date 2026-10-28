@@ -1,7 +1,9 @@
 const styles: Record<string, { label: string; className: string }> = {
-  PUBLISHED: { label: "Published", className: "bg-success-soft text-success" },
-  DRAFT: { label: "Draft", className: "bg-warning-soft text-warning" },
-  SUSPENDED: { label: "Suspended", className: "bg-danger-soft text-crimson" },
+  PUBLISHED: { label: "Published", className: "bg-[#e9f4ef] text-[#287754]" },
+  PENDING_REVIEW: { label: "Pending approval", className: "bg-[#fdebd3] text-[#a2530f]" },
+  APPROVED: { label: "Approved", className: "bg-[#e9f4ef] text-[#287754]" },
+  DRAFT: { label: "Draft", className: "bg-[#fff4dc] text-[#a26c12]" },
+  SUSPENDED: { label: "Suspended", className: "bg-[#fbeaea] text-[#a13d3d]" },
 };
 
 export function CampaignStatusBadge({ status }: Readonly<{ status: string }>) {

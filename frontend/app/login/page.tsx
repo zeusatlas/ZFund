@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowRight, KeyRound, Smartphone } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import AuthShell from "@/components/auth/AuthShell";
 import OtpInput from "@/components/auth/OtpInput";
@@ -8,9 +9,9 @@ import { adminRoles, useRequestOtp, useVerifyOtp } from "@/lib/auth/auth";
 import type { ApiError } from "@/lib/api/client";
 
 const inputClass =
-  "mt-2 w-full rounded-2xl border border-navy/15 bg-stone-light px-4 py-3.5 text-sm text-ink outline-none transition-colors placeholder:text-steel/60 focus:border-gold focus:bg-white";
+  "auth-input";
 const buttonClass =
-  "w-full rounded-2xl bg-navy px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-steel disabled:cursor-not-allowed disabled:opacity-60";
+  "auth-submit";
 const CODE_LENGTH = 6;
 const CODE_SECONDS = 120; // matches how long the code stays valid
 const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -74,20 +75,17 @@ export default function LoginPage() {
     <AuthShell>
       {identity ? (
         <>
-          <p className="text-eyebrow text-gold">Secure sign in</p>
-          <h1 className="mt-3 text-[32px] font-semibold tracking-[-1px] text-navy">Enter your code</h1>
-          <p className="mt-3 text-sm leading-relaxed text-steel">
+          <div className="auth-step"><span className="auth-step-icon"><Smartphone size={20} aria-hidden="true" /></span><span>Step 02 / Verify your number</span></div>
+          <h1>Check your phone</h1>
+          <p className="auth-description">
             We sent a {CODE_LENGTH}-digit code to <span className="font-medium text-navy">{identity.phone}</span>.
-          </p>
-          <p role="timer" aria-live="off" className="mt-4 text-sm font-medium text-navy">
-            {cooldown > 0 ? `Code expires in ${formatTime(cooldown)}` : "Your code has expired. Request a new one below."}
           </p>
 
           <form onSubmit={submitCode} className="mt-8 space-y-5">
             <OtpInput value={code} onChange={setCode} disabled={locked || cooldown === 0} />
-            {error && <p role="alert" className="text-sm text-crimson">{error}</p>}
+            {error && <p role="alert" className="auth-error">{error}</p>}
             <button type="submit" disabled={verifyOtp.isPending || locked || cooldown === 0 || code.length < CODE_LENGTH} className={buttonClass}>
-              {verifyOtp.isPending ? "Verifying…" : "Verify and sign in"}
+              {verifyOtp.isPending ? "Verifying…" : <>Verify and sign in <ArrowRight size={16} aria-hidden="true" /></>}
             </button>
           </form>
 
@@ -104,9 +102,9 @@ export default function LoginPage() {
         </>
       ) : (
         <>
-          <p className="text-eyebrow text-gold">Host and admin access</p>
-          <h1 className="mt-3 text-[32px] font-semibold tracking-[-1px] text-navy">Welcome back</h1>
-          <p className="mt-3 text-sm leading-relaxed text-steel">
+          <div className="auth-step"><span className="auth-step-icon"><KeyRound size={20} aria-hidden="true" /></span><span>Step 01 / Your account</span></div>
+          <h1>Welcome back.</h1>
+          <p className="auth-description">
             Enter the email and phone number your administrator registered. We&apos;ll text you a code.
           </p>
 
@@ -119,13 +117,13 @@ export default function LoginPage() {
               Phone number
               <input required type="tel" name="phone" autoComplete="tel" placeholder="0541234567" className={inputClass} />
             </label>
-            {error && <p role="alert" className="text-sm text-crimson">{error}</p>}
+            {error && <p role="alert" className="auth-error">{error}</p>}
             <button type="submit" disabled={requestOtp.isPending} className={buttonClass}>
-              {requestOtp.isPending ? "Sending code…" : "Send code"}
+              {requestOtp.isPending ? "Sending code…" : <>Send sign-in code <ArrowRight size={16} aria-hidden="true" /></>}
             </button>
           </form>
 
-          <p className="mt-8 rounded-2xl bg-stone-light px-4 py-3 text-xs leading-relaxed text-steel">
+          <p className="auth-access-note">
             Accounts are created by your RaiseFundz administrator. Need access? Contact them to be added.
           </p>
         </>

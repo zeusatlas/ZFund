@@ -9,7 +9,9 @@ import Pagination from "@/components/ui/Pagination";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatCount, formatMoney } from "@/lib/format";
-import { useCampaign, useCampaignContributions } from "../admin-api";
+import { useQueryClient } from "@tanstack/react-query";
+import { updateProjectStatus } from "@/lib/api/projects";
+import { adminRoot, useCampaign, useCampaignContributions } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
 
@@ -96,6 +98,22 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
 export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: string }>) {
   const { data: campaign, isPending, isError, error, refetch } = useCampaign(campaignId);
   const [tab, setTab] = useState<Tab>("overview");
+  const queryClient = useQueryClient();
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+
+  async function review(status: "PUBLISHED" | "DRAFT") {
+    setReviewing(true);
+    setReviewError("");
+    try {
+      await updateProjectStatus(campaignId, status);
+      await queryClient.invalidateQueries({ queryKey: adminRoot });
+    } catch (err) {
+      setReviewError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not update this campaign.");
+    } finally {
+      setReviewing(false);
+    }
+  }
 
   const back = (
     <Link href="/admin/campaigns" className="inline-flex items-center gap-2 text-sm font-medium text-steel hover:text-navy">
@@ -154,6 +172,16 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
             </p>
           </div>
         </div>
+        {campaign.status === "PENDING_REVIEW" && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#f0d3ae] bg-[#fdf6ea] p-4">
+            <p className="text-sm text-ink">This campaign is waiting for your approval before it can accept contributions.</p>
+            <div className="flex gap-2">
+              <button type="button" disabled={reviewing} onClick={() => review("DRAFT")} className="rounded-lg border border-navy/15 px-4 py-2 text-sm font-medium text-navy hover:bg-white disabled:opacity-50">Send back</button>
+              <button type="button" disabled={reviewing} onClick={() => review("PUBLISHED")} className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy/90 disabled:opacity-50">Approve &amp; publish</button>
+            </div>
+            {reviewError && <p className="w-full text-sm text-crimson">{reviewError}</p>}
+          </div>
+        )}
         {percent !== null && (
           <div className="mt-5 max-w-xl">
             <ProgressBar percent={percent} />

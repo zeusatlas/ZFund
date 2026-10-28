@@ -41,9 +41,22 @@ export const publishFlowSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const initializeProjectFlowSchema = z.object({
+  welcomePrompt: z.string().max(120).optional(),
+  purposes: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(50),
+        purposeId: z.string().uuid().optional(),
+      })
+    )
+    .optional(),
+});
+
 export type CreateFlowInput = z.infer<typeof createFlowSchema>;
 export type CreateMenuInput = z.infer<typeof createMenuSchema>;
 export type UpdateMenuInput = z.infer<typeof updateMenuSchema>;
 export type CreateOptionInput = z.infer<typeof createOptionSchema>;
 export type UpdateOptionInput = z.infer<typeof updateOptionSchema>;
 export type PublishFlowInput = z.infer<typeof publishFlowSchema>;
+export type InitializeProjectFlowInput = z.infer<typeof initializeProjectFlowSchema>;

@@ -1,0 +1,390 @@
+name: Deploy ZFund to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - production
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # ─────────────────────────────────────────────
+      # Checkout
+      # ─────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ─────────────────────────────────────────────
+      # Detect changed files
+      # ─────────────────────────────────────────────
+      - name: Detect changed paths
+        id: changes
+        shell: bash
+        run: |
+          set -e
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 Detecting changed files"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          BEFORE_SHA="${{ github.event.before }}"
+          AFTER_SHA="${{ github.sha }}"
+          ZERO_SHA="0000000000000000000000000000000000000000"
+
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "$ZERO_SHA" ] || ! git cat-file -e "$BEFORE_SHA" 2>/dev/null; then
+            echo "⚠️ No valid previous commit to diff against (first push, force-push, or manual run)"
+            echo "⚠️ Treating everything as changed"
+            : > changed_files.txt
+            TREAT_ALL_CHANGED=true
+          else
+            git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" > changed_files.txt
+            TREAT_ALL_CHANGED=false
+          fi
+
+          echo "Changed files:"
+          cat changed_files.txt || true
+          echo ""
+
+          if [ "$TREAT_ALL_CHANGED" = "true" ]; then
+            echo "api=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "api_packages=true" >> "$GITHUB_OUTPUT"
+            echo "frontend_packages=true" >> "$GITHUB_OUTPUT"
+            echo "🔧 Backend API: forced true"
+            echo "🎨 Frontend: forced true"
+            echo "📦 Backend packages: forced true"
+            echo "📦 Frontend packages: forced true"
+          else
+            if grep -qE '^api/' changed_files.txt; then
+              echo "api=true" >> "$GITHUB_OUTPUT"
+              echo "🔧 Backend changes detected"
+            else
+              echo "api=false" >> "$GITHUB_OUTPUT"
+              echo "⏭️ No backend changes"
+            fi
+
+            if grep -qE '^frontend/' changed_files.txt; then
+              echo "frontend=true" >> "$GITHUB_OUTPUT"
+              echo "🎨 Frontend changes detected"
+            else
+              echo "frontend=false" >> "$GITHUB_OUTPUT"
+              echo "⏭️ No frontend changes"
+            fi
+
+            if grep -qE '^api/(package\.json|package-lock\.json)$' changed_files.txt; then
+              echo "api_packages=true" >> "$GITHUB_OUTPUT"
+              echo "📦 Backend package changes detected"
+            else
+              echo "api_packages=false" >> "$GITHUB_OUTPUT"
+              echo "⏭️ No backend package changes"
+            fi
+
+            if grep -qE '^frontend/(package\.json|package-lock\.json)$' changed_files.txt; then
+              echo "frontend_packages=true" >> "$GITHUB_OUTPUT"
+              echo "📦 Frontend package changes detected"
+            else
+              echo "frontend_packages=false" >> "$GITHUB_OUTPUT"
+              echo "⏭️ No frontend package changes"
+            fi
+          fi
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 Deployment decisions recorded above"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      # ─────────────────────────────────────────────
+      # Deploy to VPS
+      # ─────────────────────────────────────────────
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          command_timeout: 30m
+
+          script: |
+            set -e
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🚀 ZFund Deployment Started"
+            echo "🕐 $(date)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            PROJECT_DIR="/home/projects/ZFund"
+            BACKEND_DIR="$PROJECT_DIR/api"
+            FRONTEND_DIR="$PROJECT_DIR/frontend"
+            FRONTEND_PUBLIC="/home/raisefundz.com/public_html"
+
+            API_CHANGED="${{ steps.changes.outputs.api }}"
+            FRONTEND_CHANGED="${{ steps.changes.outputs.frontend }}"
+            API_PACKAGES_CHANGED="${{ steps.changes.outputs.api_packages }}"
+            FRONTEND_PACKAGES_CHANGED="${{ steps.changes.outputs.frontend_packages }}"
+
+            DEPLOY_BRANCH="${{ github.ref_name }}"
+            if [ -z "$DEPLOY_BRANCH" ]; then
+              DEPLOY_BRANCH="main"
+            fi
+
+            echo ""
+            echo "📋 Deployment configuration:"
+            echo "   Project Directory: $PROJECT_DIR"
+            echo "   Target Branch:     $DEPLOY_BRANCH"
+            echo "   API Subdomain:     api.raisefundz.com ($BACKEND_DIR -> PM2: zfund-api :2077)"
+            echo "   Frontend Apex:     raisefundz.com ($FRONTEND_DIR -> PM2: zfund-frontend :2088)"
+            echo "   Public Web Root:   $FRONTEND_PUBLIC"
+            echo "   Backend changed:   $API_CHANGED"
+            echo "   Frontend changed:  $FRONTEND_CHANGED"
+            echo "   API packages:      $API_PACKAGES_CHANGED"
+            echo "   Frontend packages: $FRONTEND_PACKAGES_CHANGED"
+
+            cd "$PROJECT_DIR"
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📥 Pulling latest code from branch: $DEPLOY_BRANCH"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            git fetch origin "$DEPLOY_BRANCH"
+            git checkout "$DEPLOY_BRANCH"
+            git reset --hard "origin/$DEPLOY_BRANCH"
+
+            echo "✅ Repository updated to latest $DEPLOY_BRANCH"
+
+            # ─────────────────────────────────────────
+            # Backend API deployment (api.raisefundz.com)
+            # ─────────────────────────────────────────
+            if [ "$API_CHANGED" = "true" ]; then
+
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "🔧 Deploying Backend API (api.raisefundz.com)"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+              cd "$BACKEND_DIR"
+
+              echo "📍 Backend directory:"
+              pwd
+
+              echo ""
+              echo "📦 Installing backend dependencies (npm ci, deterministic from lockfile)..."
+
+              if [ -f package-lock.json ]; then
+                npm ci
+              else
+                npm install
+              fi
+
+              echo "✅ Backend dependencies installed"
+
+              echo ""
+              echo "🏗️ Building backend TypeScript..."
+
+              npm run build
+
+              echo "✅ Backend build completed"
+
+              if [ ! -f "dist/server.js" ]; then
+                echo "❌ ERROR: dist/server.js was not created"
+                exit 1
+              fi
+
+              echo "✅ Backend build verified (dist/server.js present)"
+
+              echo ""
+              echo "♻️ Restarting API (PM2: zfund-api)..."
+
+              if pm2 describe zfund-api > /dev/null 2>&1; then
+                echo "🔄 Existing PM2 process found"
+                pm2 restart zfund-api --update-env
+              else
+                echo "🆕 PM2 process does not exist, starting zfund-api..."
+                pm2 start dist/server.js --name zfund-api
+              fi
+
+              echo ""
+              echo "⏳ Waiting for API to start..."
+              sleep 3
+
+              echo ""
+              echo "📊 API PM2 status:"
+              pm2 status zfund-api
+
+              echo ""
+              echo "📋 API logs:"
+              pm2 logs zfund-api --lines 20 --nostream || true
+
+              echo ""
+              echo "✅ Backend API deployment complete"
+
+            else
+
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "⏭️ No Backend Changes"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            fi
+
+            # ─────────────────────────────────────────
+            # Frontend deployment (raisefundz.com)
+            # ─────────────────────────────────────────
+            if [ "$FRONTEND_CHANGED" = "true" ]; then
+
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "🎨 Deploying Frontend (raisefundz.com)"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+              cd "$FRONTEND_DIR"
+
+              echo "📍 Frontend directory:"
+              pwd
+
+              FRONTEND_NEEDS_INSTALL="$FRONTEND_PACKAGES_CHANGED"
+
+              if [ ! -d node_modules ]; then
+                echo "⚠️ node_modules missing (first deploy or wiped) — forcing install"
+                FRONTEND_NEEDS_INSTALL="true"
+              fi
+
+              if [ "$FRONTEND_NEEDS_INSTALL" = "true" ]; then
+
+                echo ""
+                echo "📦 Installing frontend dependencies..."
+
+                if [ -f package-lock.json ]; then
+                  npm ci
+                else
+                  npm install
+                fi
+
+                echo "✅ Frontend dependencies installed"
+
+              else
+
+                echo "⏭️ Frontend package files did not change and node_modules already present"
+                echo "⏭️ Skipping dependency installation"
+
+              fi
+
+              echo ""
+              echo "🧹 Cleaning previous build..."
+
+              rm -rf .next dist out
+
+              echo "🏗️ Building frontend (Next.js with API URL: https://api.raisefundz.com/api/v1)..."
+
+              export NEXT_PUBLIC_API_URL="https://api.raisefundz.com/api/v1"
+
+              npm run build
+
+              echo "✅ Frontend build completed"
+
+              if [ ! -d ".next" ] && [ ! -d "out" ] && [ ! -d "dist" ]; then
+                echo "❌ ERROR: Neither .next, out, nor dist directory was created"
+                exit 1
+              fi
+
+              echo "✅ Frontend build verified"
+
+              # ─────────────────────────────────────────
+              # Next.js Server Management via PM2 (Port 2088)
+              # ─────────────────────────────────────────
+              echo ""
+              echo "♻️ Restarting Frontend PM2 process (zfund-frontend)..."
+
+              if pm2 describe zfund-frontend > /dev/null 2>&1; then
+                echo "🔄 Existing PM2 process found"
+                pm2 restart zfund-frontend --update-env
+              else
+                echo "🆕 PM2 process does not exist, starting zfund-frontend..."
+                PORT=2088 pm2 start npm --name zfund-frontend -- start
+              fi
+
+              echo ""
+              echo "⏳ Waiting for Frontend to start..."
+              sleep 3
+
+              echo ""
+              echo "📊 Frontend PM2 status:"
+              pm2 status zfund-frontend
+
+              echo ""
+              echo "📋 Frontend logs:"
+              pm2 logs zfund-frontend --lines 20 --nostream || true
+
+              # ─────────────────────────────────────────
+              # Public HTML & Reverse Proxy Configuration
+              # ─────────────────────────────────────────
+              echo ""
+              echo "🌐 Configuring Web Public Root: $FRONTEND_PUBLIC"
+              mkdir -p "$FRONTEND_PUBLIC"
+
+              # If static export files exist (e.g. out/ or dist/), copy them
+              if [ -d "out" ] && [ -f "out/index.html" ]; then
+                echo "📁 Static export detected in out/ — publishing static files..."
+                cp -r out/. "$FRONTEND_PUBLIC"/
+              elif [ -d "dist" ] && [ -f "dist/index.html" ]; then
+                echo "📁 Static export detected in dist/ — publishing static files..."
+                cp -r dist/. "$FRONTEND_PUBLIC"/
+              fi
+
+              # Write reverse proxy .htaccess to route raisefundz.com to PM2 port 2088
+              {
+                echo "Options -MultiViews"
+                echo "RewriteEngine On"
+                echo ""
+                echo "# Allow direct access to physical files/directories if present"
+                echo "RewriteCond %{REQUEST_FILENAME} -f [OR]"
+                echo "RewriteCond %{REQUEST_FILENAME} -d"
+                echo "RewriteRule ^ - [L]"
+                echo ""
+                echo "# Reverse proxy all web traffic to Next.js running on port 2088"
+                echo 'RewriteRule ^(.*)$ http://127.0.0.1:2088/$1 [P,L]'
+                echo "RequestHeader set X-Forwarded-Proto https"
+              } > "$FRONTEND_PUBLIC/.htaccess"
+
+              echo "✅ Reverse proxy .htaccess configured in $FRONTEND_PUBLIC"
+              echo "✅ Frontend deployment complete"
+
+            else
+
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "⏭️ No Frontend Changes"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            fi
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "💾 Saving PM2 processes"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            pm2 save
+
+            echo "✅ PM2 processes saved"
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📊 Final PM2 Process List"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            pm2 list
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ Deployment Finished Successfully"
+            echo "🕐 $(date)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+

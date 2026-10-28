@@ -1,87 +1,48 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowUpRight, ShieldCheck, Smartphone, TrendingUp } from "lucide-react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { ArrowLeft, ArrowUpRight, HeartHandshake, Sprout, Users, GraduationCap, ShieldCheck } from "lucide-react";
+import gsap from "gsap";
+import "./auth.css";
 
-const highlights = [
-  { icon: Smartphone, text: "Donors give by USSD from any phone" },
-  { icon: TrendingUp, text: "Watch contributions arrive in real time" },
-  { icon: ShieldCheck, text: "Every withdrawal reviewed before release" },
-];
+export default function AuthShell({ children }: { children: ReactNode }) {
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const media = gsap.matchMedia();
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.from(".auth-story > h2, .auth-story > p, .auth-community", {
+        y: 24, opacity: 0, duration: 0.9, stagger: 0.14, ease: "power3.out",
+        clearProps: "transform,opacity",
+      });
+    }, root);
+    return () => media.revert();
+  }, []);
 
-/** Full-screen split layout: brand panel on the left, form on the right. */
-export default function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-stone-light lg:grid lg:grid-cols-[0.92fr_1.08fr]">
-      <aside className="relative hidden overflow-hidden bg-navy text-white lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
-        <div
-          aria-hidden="true"
-          className="absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full bg-gold/20 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-40 -left-24 h-[460px] w-[460px] rounded-full bg-midnight blur-2xl"
-        />
-
-        <Link
-          href="/home"
-          className="relative inline-flex w-fit items-center gap-3 text-[20px] font-semibold tracking-tight"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-sm text-navy">
-            R
-          </span>
-          RaiseFundz
-        </Link>
-
-        <div className="relative max-w-md">
-          <p className="text-eyebrow mb-5 text-gold">Fundraising for Ghana</p>
-          <h2 className="text-[clamp(40px,4vw,60px)] font-medium leading-[0.98] tracking-[-2px]">
-            One trusted place for every contribution.
-          </h2>
-          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-white/60">
-            Sign in to manage campaigns, follow contributions as they arrive, and keep
-            every cedi accounted for.
-          </p>
-          <ul className="mt-10 space-y-4">
-            {highlights.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3 text-[15px] text-white/75">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10">
-                  <Icon size={17} className="text-gold" />
-                </span>
-                {text}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <p className="relative flex items-center gap-2 text-xs text-white/40">
-          <ShieldCheck size={14} className="text-gold" />
-          Secured with one-time codes — no passwords to remember.
-        </p>
-      </aside>
-
-      <section className="flex items-center px-5 py-8 sm:px-10 lg:px-12 xl:px-24">
-        <div className="mx-auto w-full max-w-[480px]">
-          <div className="mb-8 flex items-center justify-between">
-            <Link
-              href="/home"
-              className="inline-flex items-center gap-2 text-[18px] font-semibold tracking-tight text-navy lg:hidden"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-xs text-navy">
-                R
-              </span>
-              RaiseFundz
-            </Link>
-            <Link
-              href="/home"
-              className="ml-auto inline-flex items-center gap-1.5 text-sm text-steel transition-colors hover:text-navy"
-            >
-              Back to home <ArrowUpRight size={15} />
-            </Link>
+    <div className="auth-page" ref={root}>
+      <header className="auth-header">
+        <Link href="/" className="auth-brand">RaiseFundz<span aria-hidden="true">.</span></Link>
+        <Link href="/" className="auth-home"><ArrowLeft size={15} /> Back to home</Link>
+      </header>
+      <main className="auth-layout">
+        <aside className="auth-story">
+          <div className="auth-story-label"><span /> A shared purpose starts here</div>
+          <h2>Your people.<br />Your purpose.<br />One place.</h2>
+          <p>Come back to the causes you care about, and the community bringing them to life.</p>
+          <div className="auth-community" aria-hidden="true">
+            <div className="auth-people"><span><Users size={25} /></span><span><GraduationCap size={25} /></span><span><HeartHandshake size={25} /></span></div>
+            <div className="auth-connection" />
+            <div className="auth-purpose"><Sprout size={25} /><span>Good things grow<br /><strong>when we give together.</strong></span></div>
           </div>
-          <div className="rounded-[32px] border border-navy/10 bg-white p-6 shadow-sm sm:p-9">
-            {children}
-          </div>
-        </div>
-      </section>
-    </main>
+          <div className="auth-story-bottom"><span>Built around Ghana’s communities.</span><Link href="/how-it-works" aria-label="Explore how RaiseFundz works"><ArrowUpRight size={21} /></Link></div>
+        </aside>
+        <section className="auth-workspace" aria-label="Sign in">
+          <div className="auth-card">{children}</div>
+          <p className="auth-assurance"><ShieldCheck size={16} /> Your code is yours. Never share it.</p>
+        </section>
+      </main>
+      <footer className="auth-footer"><span>Shared goals. Clearer fundraising.</span><Link href="/security">Trust &amp; security <ArrowUpRight size={13} /></Link></footer>
+    </div>
   );
 }
