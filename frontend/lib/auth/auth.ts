@@ -8,6 +8,7 @@ import { tokenStorage } from "@/lib/api/token-storage";
 export type AuthUser = {
   id: string;
   email: string;
+  phone?: string;
   firstName: string;
   lastName: string;
   role: string;
