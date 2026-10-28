@@ -81,10 +81,10 @@ export async function runSeeds(): Promise<void> {
   }
 
   // 3. Seed Super Admin Account
-  const adminEmail = 'admin@zfund.org';
+  const adminEmail = 'admin@zfund.com';
   const existingAdmin = await userRepo.findOne({ where: { email: adminEmail } });
   if (!existingAdmin) {
-    const passwordHash = await CryptoUtil.hashPassword('SuperAdminZFund2026!');
+    const passwordHash = await CryptoUtil.hashPassword('Admin@2026!');
     await userRepo.save(
       userRepo.create({
         email: adminEmail,
