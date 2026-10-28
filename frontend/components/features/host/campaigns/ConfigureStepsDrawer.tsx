@@ -37,12 +37,19 @@ export interface PurposeItem {
   isExpanded?: boolean;
 }
 
+export interface ConfigurableCampaign {
+  id: string;
+  name: string;
+  eventCode?: string;
+  currency?: string;
+  welcomeMessage?: string;
+}
 export function ConfigureStepsDrawer({
   campaign,
   open,
   onClose,
 }: {
-  campaign: Campaign | null;
+  campaign: ConfigurableCampaign | null;
   open: boolean;
   onClose: () => void;
 }) {
@@ -137,6 +144,12 @@ export function ConfigureStepsDrawer({
                     </span>
                   )}
                 </button>
+                {flowData?.version && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 border border-emerald-200">
+                    <CheckCircle2 size={12} className="text-emerald-600" />
+                    v{flowData.version.versionNumber} Live &amp; Synced
+                  </span>
+                )}
               </div>
             </div>
 
@@ -172,7 +185,7 @@ export function ConfigureStepsDrawer({
 }
 
 interface ConfigureStepsFormProps {
-  campaign: Campaign;
+  campaign: ConfigurableCampaign;
   dialCode: string;
   flowData?: UssdFlowResponse;
   onClose: () => void;

@@ -69,7 +69,7 @@ function StatusBadge({
     style = "bg-sky-50 text-sky-800 border border-sky-200/60";
   } else if (status === "Active" || rawStatus === "PUBLISHED" || rawStatus === "APPROVED") {
     label = "Active";
-    style = "bg-emerald-50 text-emerald-800";
+    style = "bg-success-soft text-success";
   } else if (status === "Completed" || rawStatus === "COMPLETED") {
     label = "Completed";
     style = "bg-navy/10 text-navy";
@@ -284,7 +284,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search by name, location, category or USSD code"
-                className="w-full rounded-xl border border-navy/15 bg-white py-3 pl-11 pr-4 text-sm text-navy placeholder:text-steel/75"
+                className="field py-3 pl-11 pr-4"
               />
             </div>
 
@@ -362,8 +362,8 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                   className={
                     "rounded-full px-4 py-2 text-sm transition-colors " +
                     (status === filter
-                      ? "bg-navy text-white"
-                      : "bg-white text-steel hover:bg-stone")
+                      ? "bg-navy text-white shadow-sm"
+                      : "border border-navy/10 bg-white text-steel hover:bg-stone hover:text-navy")
                   }
                 >
                   {filter} <span className="ml-2 opacity-75">{count}</span>
@@ -424,7 +424,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                 setQuery("");
                 setStatus("All");
               }}
-              className="mt-5 rounded-lg bg-navy px-4 py-2 text-sm text-white hover:bg-steel"
+              className="mt-5 btn-primary"
             >
               Clear filters
             </button>
@@ -660,7 +660,19 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
           eyebrow={viewingCampaign.category}
           onClose={() => setViewingCampaign(null)}
           footer={
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  const camp = viewingCampaign;
+                  setViewingCampaign(null);
+                  setConfiguringFlowCampaign(camp);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-navy/20 bg-white px-4 py-2 text-sm font-medium text-navy hover:bg-stone transition-colors shadow-2xs"
+              >
+                <SlidersHorizontal size={14} className="text-steel" />
+                Configure USSD steps
+              </button>
               <button
                 type="button"
                 onClick={() => setViewingCampaign(null)}

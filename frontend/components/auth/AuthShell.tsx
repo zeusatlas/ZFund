@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ShieldCheck, Smartphone, TrendingUp } from "lucide-react";
+import "./auth.css";
 
 const highlights = [
   { icon: Smartphone, text: "Donors give by USSD from any phone" },
@@ -7,8 +11,7 @@ const highlights = [
   { icon: ShieldCheck, text: "Every withdrawal reviewed before release" },
 ];
 
-/** Full-screen split layout: brand panel on the left, form on the right. */
-export default function AuthShell({ children }: { children: React.ReactNode }) {
+export default function AuthShell({ children }: { children: ReactNode }) {
   return (
     <main className="grid min-h-screen bg-white lg:grid-cols-[1.05fr_1fr]">
       <aside className="relative hidden overflow-hidden bg-off-ink text-white lg:flex lg:flex-col lg:justify-between lg:p-14">
@@ -22,7 +25,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
         />
 
         <Link href="/" className="relative text-[22px] font-medium tracking-tight">
-          RaiseFunds
+          RaiseFundz
         </Link>
 
         <div className="relative max-w-md">
@@ -56,7 +59,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
       <section className="flex items-center px-6 py-12 sm:px-10 lg:px-16 xl:px-24">
         <div className="w-full max-w-[420px] text-left">
           <Link href="/" className="mb-10 block text-[20px] font-medium tracking-tight text-off-ink lg:hidden">
-            RaiseFunds
+            RaiseFundz
           </Link>
           {children}
         </div>
