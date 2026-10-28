@@ -20,6 +20,10 @@ router.get('/categories', optionalAuthenticate, (req, res, next) =>
   projectController.getCategories(req, res, next)
 );
 
+router.get('/next-code', optionalAuthenticate, (req, res, next) =>
+  projectController.getNextCode(req, res, next)
+);
+
 router.get('/:id', optionalAuthenticate, (req, res, next) =>
   projectController.getProjectById(req, res, next)
 );
@@ -36,6 +40,10 @@ router.put(
   authenticate,
   validate({ body: updateProjectSchema }),
   (req, res, next) => projectController.updateProject(req, res, next)
+);
+
+router.delete('/:id', authenticate, (req, res, next) =>
+  projectController.deleteProject(req, res, next)
 );
 
 router.patch(

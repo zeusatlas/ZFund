@@ -21,6 +21,15 @@ export class ProjectController {
     }
   }
 
+  async getNextCode(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const code = await projectService.getNextProjectCode();
+      ApiResponse.success(res, { code }, 'Next campaign code retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getProjects(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string, 10) || 1;
@@ -68,6 +77,15 @@ export class ProjectController {
         req.user!.role
       );
       ApiResponse.success(res, project, 'Project updated');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteProject(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await projectService.deleteProject(req.params.id, req.user!.id, req.user!.role);
+      ApiResponse.success(res, null, 'Campaign deleted successfully');
     } catch (err) {
       next(err);
     }

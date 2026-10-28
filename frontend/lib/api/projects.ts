@@ -61,7 +61,7 @@ export interface BackendProject {
 export interface CreateProjectInput {
   name: string;
   description?: string;
-  eventCode: string;
+  eventCode?: string;
   currency?: string;
   targetAmount?: string;
   minAmount?: string;
@@ -127,6 +127,10 @@ export async function updateProject(id: string, input: UpdateProjectInput): Prom
   return data.data;
 }
 
+export async function deleteProject(id: string): Promise<void> {
+  await api.delete(`/projects/${id}`);
+}
+
 export interface CategoriesResponse {
   success: boolean;
   message: string;
@@ -136,6 +140,17 @@ export interface CategoriesResponse {
 export async function getProjectCategories(): Promise<ProjectCategory[]> {
   const { data } = await api.get<CategoriesResponse>("/projects/categories");
   return data.data ?? [];
+}
+
+export interface NextCodeResponse {
+  success: boolean;
+  message: string;
+  data: { code: string };
+}
+
+export async function getNextProjectCode(): Promise<string> {
+  const { data } = await api.get<NextCodeResponse>("/projects/next-code");
+  return data.data?.code || "1001";
 }
 
 export async function updateProjectStatus(

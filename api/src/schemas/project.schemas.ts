@@ -11,7 +11,8 @@ export const createProjectSchema = z.object({
     .string()
     .min(3, 'Event code must be at least 3 digits')
     .max(10, 'Event code max 10 digits')
-    .regex(/^[0-9]+$/, 'Event code must contain only digits'),
+    .regex(/^[0-9]+$/, 'Event code must contain only digits')
+    .optional(),
   currency: z.string().length(3).default('GHS'),
   targetAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Invalid monetary format').optional(),
   minAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).default('1.00'),

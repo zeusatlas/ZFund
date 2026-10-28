@@ -7,10 +7,14 @@ import {
   getProjects,
   getProjectById,
   createProject,
+  updateProject,
+  deleteProject,
   updateProjectStatus,
   getProjectCategories,
+  getNextProjectCode,
   type BackendProject,
   type CreateProjectInput,
+  type UpdateProjectInput,
   type ProjectStatus,
 } from "@/lib/api/projects";
 
@@ -73,6 +77,39 @@ export function useProjectCategoriesQuery() {
   });
 }
 
+export function computeNextCampaignCode(
+  campaignsOrProjects: Array<{ eventCode?: string | null }>
+): string {
+  for (const item of campaignsOrProjects) {
+    const code = item.eventCode?.trim();
+    if (code && /^\d{4}$/.test(code)) {
+      const num = parseInt(code, 10);
+      if (!isNaN(num) && num >= 1000 && num <= 9999) {
+        return (num + 1).toString();
+      }
+    }
+  }
+
+  const numericCodes = campaignsOrProjects
+    .map((c) => parseInt(c.eventCode || "", 10))
+    .filter((n) => !isNaN(n) && n >= 1000 && n <= 9999);
+
+  if (numericCodes.length > 0) {
+    return (Math.max(...numericCodes) + 1).toString();
+  }
+
+  return "1001";
+}
+
+export function useNextCampaignCodeQuery(enabled = true) {
+  return useQuery({
+    queryKey: ["projects", "next-code"],
+    queryFn: getNextProjectCode,
+    enabled,
+    staleTime: 0,
+  });
+}
+
 export function useCampaignsList(params?: { search?: string; status?: string }) {
   const query = useProjectsQuery(params);
   const campaigns = useMemo(() => {
@@ -119,6 +156,30 @@ export function useUpdateProjectStatusMutation() {
   return useMutation({
     mutationFn: ({ id, status, notes }: { id: string; status: ProjectStatus; notes?: string }) =>
       updateProjectStatus(id, status, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useUpdateProjectMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateProjectInput }) =>
+      updateProject(id, input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project", variables.id] });
+    },
+  });
+}
+
+export function useDeleteProjectMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteProject(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },

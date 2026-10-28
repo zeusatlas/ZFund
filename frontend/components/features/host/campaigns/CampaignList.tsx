@@ -11,13 +11,21 @@ import {
   RotateCcw,
   Loader2,
   FolderPlus,
+  Pencil,
+  Trash2,
+  Eye,
 } from "lucide-react";
-import { dateLabel, money, type CampaignStatus } from "@/components/features/host/shared/demo";
+import { toast } from "sonner";
+import { dateLabel, money, type Campaign, type CampaignStatus } from "@/components/features/host/shared/demo";
 import {
   useCampaignsList,
   useUpdateProjectStatusMutation,
+  useDeleteProjectMutation,
 } from "@/components/features/host/campaigns/use-campaigns";
 import CreateCampaignModal from "@/components/features/host/campaigns/CreateCampaignModal";
+import EditCampaignDrawer from "@/components/features/host/campaigns/EditCampaignModal";
+import Modal from "@/components/ui/Modal";
+import RowMenu, { type RowMenuItem } from "@/components/ui/RowMenu";
 import Select from "react-select";
 import { getSelectStyles } from "@/components/ui/selectStyles";
 
@@ -67,18 +75,60 @@ function StatusBadge({
 export default function CampaignList({ compact = false }: { compact?: boolean }) {
   const { campaigns, isLoading, isError, error, refetch } = useCampaignsList();
   const updateStatusMutation = useUpdateProjectStatusMutation();
+  const deleteMutation = useDeleteProjectMutation();
 
-  const [notice, setNotice] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [sort, setSort] = useState("newest");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [deletingCampaign, setDeletingCampaign] = useState<Campaign | null>(null);
+  const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
+
+  function toggleDetails(id: string) {
+    setOpenDetails((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  }
+
+  function getCampaignMenuItems(campaign: Campaign): RowMenuItem[] {
+    const isDraft = campaign.status === "Draft" || campaign.rawStatus === "DRAFT";
+    const isOpen = Boolean(openDetails[campaign.id]);
+
+    const items: RowMenuItem[] = [
+      {
+        label: isOpen ? "Close details" : "View details",
+        icon: <Eye size={14} className="text-steel" />,
+        onSelect: () => toggleDetails(campaign.id),
+      },
+    ];
+
+    if (isDraft) {
+      items.push(
+        {
+          label: "Edit campaign",
+          icon: <Pencil size={14} className="text-steel" />,
+          onSelect: () => setEditingCampaign(campaign),
+        },
+        {
+          label: "Delete campaign",
+          icon: <Trash2 size={14} className="text-crimson" />,
+          danger: true,
+          onSelect: () => setDeletingCampaign(campaign),
+        }
+      );
+    }
+
+    return items;
+  }
 
   function handleCopyUssd(e: React.MouseEvent, id: string, code: string) {
     e.preventDefault();
     e.stopPropagation();
     navigator.clipboard.writeText(`*920*969*${code}#`);
     setCopiedId(id);
+    toast.success(`Copied dial string *920*969*${code}# to clipboard!`);
     setTimeout(() => setCopiedId(null), 2000);
   }
 
@@ -87,17 +137,38 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
     e.stopPropagation();
     try {
       await updateStatusMutation.mutateAsync({ id, status: "PUBLISHED" });
-      setNotice("Campaign published successfully! It is now active and ready for contributions.");
+      toast.success("Campaign published successfully! It is now live on the USSD network.");
+      refetch();
     } catch {
       // If direct transition requires review, try PENDING_REVIEW
       try {
         await updateStatusMutation.mutateAsync({ id, status: "PENDING_REVIEW" });
-        setNotice("Campaign submitted for review.");
+        toast.success("Campaign submitted for review.");
+        refetch();
       } catch (err: unknown) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const apiErr = err as any;
-        setNotice(apiErr?.response?.data?.message || "Failed to update campaign status.");
+        const msg = apiErr?.response?.data?.message || apiErr?.message || "Failed to update campaign status.";
+        toast.error(msg);
       }
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deletingCampaign) return;
+    try {
+      await deleteMutation.mutateAsync(deletingCampaign.id);
+      toast.success(`Campaign "${deletingCampaign.name}" deleted successfully.`);
+      setDeletingCampaign(null);
+      refetch();
+    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiErr = err as any;
+      const msg =
+        apiErr?.response?.data?.message ||
+        apiErr?.message ||
+        "Failed to delete campaign from database.";
+      toast.error(msg);
     }
   }
 
@@ -142,31 +213,14 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
               </p>
             </div>
             <CreateCampaignModal
-              onCreated={(name) => {
+              onCreated={() => {
                 setQuery("");
                 setStatus("All");
                 setSort("newest");
-                setNotice(`"${name}" was created successfully and saved in the database.`);
                 refetch();
               }}
             />
           </div>
-
-          {notice && (
-            <p
-              role="status"
-              className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 flex items-center justify-between"
-            >
-              <span>{notice}</span>
-              <button
-                type="button"
-                onClick={() => setNotice("")}
-                className="text-xs text-emerald-700 underline hover:no-underline"
-              >
-                Dismiss
-              </button>
-            </p>
-          )}
 
           {isError && (
             <div className="rounded-xl border border-crimson/20 bg-crimson/5 p-4 text-sm text-crimson flex items-center justify-between gap-4">
@@ -276,8 +330,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
             </p>
             <div className="mt-5">
               <CreateCampaignModal
-                onCreated={(name) => {
-                  setNotice(`"${name}" was created successfully and saved in the database.`);
+                onCreated={() => {
                   refetch();
                 }}
               />
@@ -313,10 +366,18 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
             return (
               <details
                 key={campaign.id}
+                open={Boolean(openDetails[campaign.id])}
+                onToggle={(e) => {
+                  const isOpen = (e.currentTarget as HTMLDetailsElement).open;
+                  setOpenDetails((prev) => {
+                    if (prev[campaign.id] === isOpen) return prev;
+                    return { ...prev, [campaign.id]: isOpen };
+                  });
+                }}
                 className="group border-b border-navy/10 last:border-b-0"
               >
                 <summary className="cursor-pointer list-none p-5 transition-colors hover:bg-stone-light [&::-webkit-details-marker]:hidden md:p-6">
-                  <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(180px,1fr)_120px]">
+                  <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(180px,1fr)_160px]">
                     <div className="flex min-w-0 items-start gap-4">
                       <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-stone text-navy sm:flex">
                         <FolderHeart aria-hidden="true" size={21} />
@@ -386,18 +447,22 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                       </p>
                     </div>
 
-                    {/* Status & Toggle */}
-                    <div className="flex items-center justify-between gap-3 lg:block lg:text-right">
+                    {/* Status & Ellipsis Actions Menu */}
+                    <div className="flex items-center justify-between gap-3 lg:flex lg:items-center lg:justify-end">
                       <StatusBadge
                         status={campaign.status}
                         rawStatus={campaign.rawStatus}
                       />
-                      <span className="mt-3 text-xs text-steel group-open:hidden lg:block">
-                        View details +
-                      </span>
-                      <span className="mt-3 hidden text-xs text-steel group-open:block">
-                        Close details −
-                      </span>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <RowMenu
+                          label={`Actions for ${campaign.name}`}
+                          items={getCampaignMenuItems(campaign)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </summary>
@@ -410,8 +475,8 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                     <p className="mt-2 max-w-xl text-sm leading-relaxed text-steel">
                       {campaign.description || "No description provided for this campaign."}
                     </p>
-                    {campaign.rawStatus === "DRAFT" && (
-                      <div className="mt-4">
+                    {(campaign.status === "Draft" || campaign.rawStatus === "DRAFT") && (
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
                         <button
                           type="button"
                           onClick={(e) => handlePublishDraft(e, campaign.id)}
@@ -419,6 +484,22 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                           className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-steel transition-colors disabled:opacity-50"
                         >
                           {updateStatusMutation.isPending ? "Updating..." : "Publish Campaign to USSD"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingCampaign(campaign)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-navy/20 bg-white px-3 py-1.5 text-xs font-medium text-navy hover:bg-stone transition-colors"
+                        >
+                          <Pencil size={13} />
+                          Edit campaign
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingCampaign(campaign)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-crimson/20 bg-white px-3 py-1.5 text-xs font-medium text-crimson hover:bg-crimson/5 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                          Delete campaign
                         </button>
                       </div>
                     )}
@@ -428,12 +509,6 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                       <dt className="text-steel">USSD Dial Code</dt>
                       <dd className="mt-1 font-mono font-medium text-navy">
                         {campaign.eventCode ? `*920*969*${campaign.eventCode}#` : "Not assigned"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-steel">Database ID</dt>
-                      <dd className="mt-1 font-mono text-xs text-steel truncate" title={campaign.id}>
-                        {campaign.id}
                       </dd>
                     </div>
                     <div>
@@ -457,6 +532,67 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
           })
         )}
       </div>
+
+      {/* Edit Draft Campaign Drawer */}
+      <EditCampaignDrawer
+        campaign={editingCampaign}
+        open={Boolean(editingCampaign)}
+        onClose={() => setEditingCampaign(null)}
+        onUpdated={() => {
+          refetch();
+        }}
+      />
+
+      {/* Delete Draft Campaign Confirmation Modal */}
+      {deletingCampaign && (
+        <Modal
+          title="Delete draft campaign"
+          eyebrow="Confirm Deletion"
+          onClose={() => {
+            if (!deleteMutation.isPending) setDeletingCampaign(null);
+          }}
+          footer={
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeletingCampaign(null)}
+                disabled={deleteMutation.isPending}
+                className="rounded-xl border border-navy/20 bg-white px-4 py-2.5 text-sm font-medium hover:bg-stone disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-xl bg-crimson px-4 py-2.5 text-sm font-medium text-white hover:bg-crimson/90 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Delete campaign
+                  </>
+                )}
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-steel">
+              Are you sure you want to permanently delete{" "}
+              <strong className="text-navy">{deletingCampaign.name}</strong>?
+            </p>
+            <p className="text-xs text-steel leading-relaxed">
+              This campaign is currently in <span className="font-semibold text-navy">Draft</span> status. Deleting it will permanently remove the record from PostgreSQL.
+            </p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

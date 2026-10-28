@@ -9,6 +9,7 @@ import { PaymentMethodType, ProjectPaymentMethod } from '../database/entities/pr
 import { Project, ProjectStatus } from '../database/entities/project.entity';
 import { ProjectCategory } from '../database/entities/project-category.entity';
 import { Contribution, ContributionStatus } from '../database/entities/contribution.entity';
+import { ProjectSetting } from '../database/entities/project-setting.entity';
 import {
   ConfigurePaymentMethodsInput,
   ConfigurePurposesInput,
@@ -25,16 +26,64 @@ export class ProjectService {
   private get purposeRepo() { return AppDataSource.getRepository(ContributionPurpose); }
   private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
   private get contributionRepo() { return AppDataSource.getRepository(Contribution); }
+  private get settingRepo() { return AppDataSource.getRepository(ProjectSetting); }
 
   async getCategories(): Promise<ProjectCategory[]> {
     return this.categoryRepo.find({ where: { isActive: true }, order: { name: 'ASC' } });
   }
 
+  async getNextProjectCode(): Promise<string> {
+    const recentProjects = await this.projectRepo
+      .createQueryBuilder('project')
+      .select(['project.eventCode', 'project.createdAt'])
+      .orderBy('project.createdAt', 'DESC')
+      .take(100)
+      .getMany();
+
+    let lastCodeNumber: number | null = null;
+    for (const p of recentProjects) {
+      const code = p.eventCode?.trim();
+      if (code && /^\d{4}$/.test(code)) {
+        const num = parseInt(code, 10);
+        if (!isNaN(num) && num >= 1000 && num <= 9999) {
+          lastCodeNumber = num;
+          break;
+        }
+      }
+    }
+
+    const allProjects = await this.projectRepo
+      .createQueryBuilder('project')
+      .select(['project.eventCode'])
+      .getMany();
+
+    const existingCodes = new Set(allProjects.map((p) => p.eventCode?.trim()).filter(Boolean));
+    const all4DigitNumbers = Array.from(existingCodes)
+      .filter((c): c is string => !!c && /^\d{4}$/.test(c))
+      .map((c) => parseInt(c, 10))
+      .filter((n) => !isNaN(n) && n >= 1000 && n <= 9999);
+
+    const maxCode = all4DigitNumbers.length > 0 ? Math.max(...all4DigitNumbers) : 1000;
+
+    let candidate = lastCodeNumber !== null ? lastCodeNumber + 1 : (maxCode >= 1001 ? maxCode + 1 : 1001);
+
+    while (existingCodes.has(candidate.toString())) {
+      candidate++;
+    }
+
+    return candidate.toString();
+  }
+
   async createProject(input: CreateProjectInput, ownerId: string): Promise<Project> {
-    // Verify eventCode uniqueness
-    const existingCode = await this.projectRepo.findOne({ where: { eventCode: input.eventCode } });
-    if (existingCode) {
-      throw new ConflictError(`USSD Event Code '${input.eventCode}' is already assigned to another project.`);
+    let eventCode = input.eventCode?.trim();
+    if (!eventCode) {
+      eventCode = await this.getNextProjectCode();
+    } else {
+      // Verify eventCode uniqueness
+      const existingCode = await this.projectRepo.findOne({ where: { eventCode } });
+      if (existingCode) {
+        throw new ConflictError(`Campaign code '${eventCode}' is already assigned to another project.`);
+      }
     }
 
     const project = this.projectRepo.create({
@@ -43,7 +92,7 @@ export class ProjectService {
       organizationId: input.organizationId,
       ownerId,
       categoryId: input.categoryId,
-      eventCode: input.eventCode,
+      eventCode,
       currency: input.currency || 'GHS',
       targetAmount: input.targetAmount,
       minAmount: input.minAmount || '1.00',
@@ -297,6 +346,33 @@ export class ProjectService {
     return saved;
   }
 
+  async deleteProject(id: string, userId: string, userRole: string): Promise<void> {
+    const project = await this.getProjectById(id, userId, userRole);
+    if (project.status !== ProjectStatus.DRAFT) {
+      throw new BadRequestError('Only draft campaigns can be deleted.');
+    }
+
+    const count = await this.contributionRepo.count({ where: { projectId: id } });
+    if (count > 0) {
+      throw new BadRequestError('Cannot delete a campaign that already has contributions.');
+    }
+
+    await this.memberRepo.delete({ projectId: id });
+    await this.paymentMethodRepo.delete({ projectId: id });
+    await this.projectPurposeRepo.delete({ projectId: id });
+    await this.settingRepo.delete({ projectId: id });
+    await this.projectRepo.delete(id);
+
+    await auditService.log({
+      userId,
+      organizationId: project.organizationId,
+      entityType: 'PROJECT',
+      entityId: project.id,
+      action: 'DELETE_PROJECT',
+      oldValues: { name: project.name, eventCode: project.eventCode, status: project.status },
+    });
+  }
+
   async updateProjectStatus(
     id: string,
     input: UpdateProjectStatusInput,
@@ -352,6 +428,9 @@ export class ProjectService {
     return saved;
   }
 
+  
+
+
   async configurePurposes(
     projectId: string,
     input: ConfigurePurposesInput,
@@ -394,6 +473,9 @@ export class ProjectService {
     return saved;
   }
 
+  
+
+
   async configurePaymentMethods(
     projectId: string,
     input: ConfigurePaymentMethodsInput,
@@ -428,6 +510,9 @@ export class ProjectService {
 
     return saved;
   }
+
+  
+
 }
 
 export const projectService = new ProjectService();
