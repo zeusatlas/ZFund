@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database';
 import { cache } from '../config/redis';
 import { BadRequestError, NotFoundError } from '../common/errors/app-error';
 import { auditService } from './audit.service';
+import { Project } from '../database/entities/project.entity';
 import { UssdFlowVersion, UssdFlowVersionStatus } from '../database/entities/ussd-flow-version.entity';
 import { UssdFlow, UssdFlowStatus } from '../database/entities/ussd-flow.entity';
 import { UssdMenuOption, UssdOptionType } from '../database/entities/ussd-menu-option.entity';
@@ -12,6 +13,7 @@ import {
   CreateFlowInput,
   CreateMenuInput,
   CreateOptionInput,
+  InitializeProjectFlowInput,
   PublishFlowInput,
   UpdateMenuInput,
   UpdateOptionInput,
@@ -22,6 +24,7 @@ export class UssdFlowService {
   private get versionRepo() { return AppDataSource.getRepository(UssdFlowVersion); }
   private get menuRepo() { return AppDataSource.getRepository(UssdMenu); }
   private get optionRepo() { return AppDataSource.getRepository(UssdMenuOption); }
+  private get projectRepo() { return AppDataSource.getRepository(Project); }
 
   async createFlow(input: CreateFlowInput, actorId?: string): Promise<UssdFlow> {
     const flow = this.flowRepo.create({
@@ -343,6 +346,178 @@ export class UssdFlowService {
     }
 
     return { flow, version };
+  }
+
+  /**
+   * One-click initialization: Auto-configures and publishes a complete 4-step dynamic USSD flow
+   * for any project/campaign (Welcome with purposes, Amount input, Confirmation, Payment OTP).
+   */
+  async initializeProjectFlow(
+    projectId: string,
+    input?: InitializeProjectFlowInput,
+    actorId?: string
+  ): Promise<UssdFlow> {
+    const project = await this.projectRepo.findOne({
+      where: { id: projectId },
+      relations: ['purposes', 'purposes.purpose'],
+    });
+
+    if (!project) {
+      throw new NotFoundError('Project not found');
+    }
+
+    let flow = await this.flowRepo.findOne({ where: { projectId: project.id } });
+    if (!flow) {
+      flow = await this.flowRepo.save(
+        this.flowRepo.create({
+          name: `${project.name} USSD Flow`,
+          description: `USSD donation flow for ${project.name} (*920*969*${project.eventCode}#)`,
+          projectId: project.id,
+          status: UssdFlowStatus.DRAFT,
+        })
+      );
+    }
+
+    const versionCount = await this.versionRepo.count({ where: { flowId: flow.id } });
+    const version = await this.versionRepo.save(
+      this.versionRepo.create({
+        flowId: flow.id,
+        versionNumber: (versionCount || 0) + 1,
+        status: UssdFlowVersionStatus.DRAFT,
+        notes: 'Initial automated campaign flow setup',
+      })
+    );
+
+    // 1. Welcome Menu
+    const welcomePrompt =
+      input?.welcomePrompt ||
+      project.welcomeMessage ||
+      `Welcome to ${project.name}.\nSelect:`;
+
+    const welcomeMenu = await this.menuRepo.save(
+      this.menuRepo.create({
+        flowVersionId: version.id,
+        menuKey: 'WELCOME',
+        title: `${project.name} Menu`,
+        prompt: welcomePrompt.slice(0, 120),
+        menuType: UssdMenuType.SELECT,
+        displayOrder: 1,
+        isActive: true,
+      })
+    );
+
+    // Options from input or project.purposes
+    const purposeList: Array<{ label: string; purposeId?: string }> =
+      input?.purposes && input.purposes.length > 0
+        ? input.purposes
+        : project.purposes && project.purposes.length > 0
+        ? project.purposes.map((p) => ({
+            label: p.customName || p.purpose?.name || 'Contribution',
+            purposeId: p.purposeId,
+          }))
+        : [
+            { label: 'Offering' },
+            { label: 'Tithe' },
+          ];
+
+    let optionOrder = 1;
+    for (const p of purposeList) {
+      await this.optionRepo.save(
+        this.optionRepo.create({
+          menuId: welcomeMenu.id,
+          displayOrder: optionOrder,
+          optionKey: String(optionOrder),
+          label: p.label.slice(0, 50),
+          optionType: UssdOptionType.ACTION,
+          actionReference: 'SELECT_PURPOSE',
+          targetMenuKey: 'AMOUNT_INPUT',
+          validationConfig: p.purposeId ? { purposeId: p.purposeId } : {},
+          isActive: true,
+        })
+      );
+      optionOrder++;
+    }
+
+    // Exit option
+    await this.optionRepo.save(
+      this.optionRepo.create({
+        menuId: welcomeMenu.id,
+        displayOrder: optionOrder,
+        optionKey: String(optionOrder),
+        label: 'Exit',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'EXIT',
+        isActive: true,
+      })
+    );
+
+    // 2. Amount Input Menu
+    await this.menuRepo.save(
+      this.menuRepo.create({
+        flowVersionId: version.id,
+        menuKey: 'AMOUNT_INPUT',
+        title: 'Enter Amount',
+        prompt: `Enter Amount in ${project.currency || 'GHS'}:`,
+        menuType: UssdMenuType.INPUT,
+        displayOrder: 2,
+        isActive: true,
+      })
+    );
+
+    // 3. Confirm Payment Menu
+    const confirmMenu = await this.menuRepo.save(
+      this.menuRepo.create({
+        flowVersionId: version.id,
+        menuKey: 'CONFIRM_PAYMENT',
+        title: 'Confirm Contribution',
+        prompt: `Contribute ${project.currency || 'GHS'} {amount} to ${project.name}?`,
+        menuType: UssdMenuType.SELECT,
+        displayOrder: 3,
+        isActive: true,
+      })
+    );
+
+    await this.optionRepo.save([
+      this.optionRepo.create({
+        menuId: confirmMenu.id,
+        displayOrder: 1,
+        optionKey: '1',
+        label: 'Confirm',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'INITIATE_PAYMENT',
+        isActive: true,
+      }),
+      this.optionRepo.create({
+        menuId: confirmMenu.id,
+        displayOrder: 2,
+        optionKey: '2',
+        label: 'Cancel',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'EXIT',
+        isActive: true,
+      }),
+    ]);
+
+    // 4. Enter Payment OTP Menu
+    await this.menuRepo.save(
+      this.menuRepo.create({
+        flowVersionId: version.id,
+        menuKey: 'ENTER_PAYMENT_OTP',
+        title: 'Enter Payment OTP',
+        prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
+        menuType: UssdMenuType.INPUT,
+        displayOrder: 4,
+        isActive: true,
+      })
+    );
+
+    // Publish flow immediately
+    return await this.publishFlow(
+      flow.id,
+      version.id,
+      { notes: 'Auto-configured initial version' },
+      actorId
+    );
   }
 }
 
