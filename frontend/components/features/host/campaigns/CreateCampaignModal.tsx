@@ -59,21 +59,17 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeDrawer();
+        if (!createMutation.isPending) setOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, createMutation.isPending]);
 
-  // Keep eventCode updated from server query once fetched
-  useEffect(() => {
-    if (nextCodeQuery.data) {
-      setEventCode(nextCodeQuery.data);
-    }
-  }, [nextCodeQuery.data]);
+  const effectiveCode =
+    eventCode || nextCodeQuery.data || computeNextCampaignCode(existingProjects);
 
   useEffect(() => {
     if (error) errorRef.current?.focus();
@@ -111,7 +107,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") || "").trim();
     // Use the auto-generated eventCode
-    const code = String(eventCode || formData.get("eventCode") || "").trim();
+    const code = String(effectiveCode || formData.get("eventCode") || "").trim();
     const goal = String(formData.get("goal") || "").trim();
     const closing = String(formData.get("closing") || "").trim();
     const location = String(formData.get("location") || "").trim();
@@ -274,7 +270,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                         readOnly
                         id="new-campaign-code"
                         name="eventCode"
-                        value={eventCode}
+                        value={effectiveCode}
                         placeholder={nextCodeQuery.isLoading ? "Loading..." : "1001"}
                         className="w-36 cursor-not-allowed select-all rounded-lg border border-navy/20 bg-stone px-3 py-2 text-sm font-mono font-semibold tracking-wider text-navy shadow-inner focus:outline-none"
                         title="Auto-generated sequential campaign code (not editable)"
@@ -282,7 +278,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                       <div className="flex items-center gap-2 rounded-lg bg-navy/5 px-3 py-2 text-xs text-steel">
                         <span>Dial string:</span>
                         <span className="font-mono font-semibold text-navy">
-                          *920*969*{eventCode || "____"}#
+                          *920*969*{effectiveCode || "____"}#
                         </span>
                       </div>
                     </div>

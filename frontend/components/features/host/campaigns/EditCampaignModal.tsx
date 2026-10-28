@@ -29,9 +29,9 @@ interface CategoryOption {
 
 export function EditCampaignDrawer({ campaign, open, onClose, onUpdated }: Props) {
   const form = useRef<HTMLFormElement>(null);
-  const [today, setToday] = useState("");
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<CategoryOption | null>(null);
+  const [userSelectedCategory, setUserSelectedCategory] = useState<CategoryOption | null>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   const { data: backendCategories = [], isLoading: categoriesLoading } = useProjectCategoriesQuery();
@@ -44,24 +44,19 @@ export function EditCampaignDrawer({ campaign, open, onClose, onUpdated }: Props
     }));
   }, [backendCategories]);
 
-  // Set today's date
-  useEffect(() => {
-    setToday(new Date().toISOString().slice(0, 10));
-  }, []);
-
-  // Sync selected category when campaign changes or categories load
-  useEffect(() => {
-    if (!campaign) return;
-    setError("");
+  const matchedCategory = useMemo(() => {
+    if (!campaign) return null;
     const matched = categoryOptions.find(
       (opt) => opt.label.toLowerCase() === campaign.category?.toLowerCase()
     );
-    if (matched) {
-      setSelectedCategory(matched);
-    } else if (categoryOptions.length > 0 && campaign.category) {
-      setSelectedCategory({ value: campaign.category, label: campaign.category });
+    if (matched) return matched;
+    if (categoryOptions.length > 0 && campaign.category) {
+      return { value: campaign.category, label: campaign.category };
     }
+    return null;
   }, [campaign, categoryOptions]);
+
+  const selectedCategory = userSelectedCategory !== null ? userSelectedCategory : matchedCategory;
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -270,7 +265,7 @@ export function EditCampaignDrawer({ campaign, open, onClose, onUpdated }: Props
                       inputId="edit-campaign-category"
                       instanceId="edit-campaign-category-select"
                       value={selectedCategory}
-                      onChange={(opt) => setSelectedCategory(opt)}
+                      onChange={(opt) => setUserSelectedCategory(opt)}
                       options={categoryOptions}
                       placeholder={categoriesLoading ? "Loading categories..." : "Select a category"}
                       isClearable

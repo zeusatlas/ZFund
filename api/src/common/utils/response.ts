@@ -5,6 +5,7 @@ export interface PaginationMeta {
   limit: number;
   total: number;
   totalPages: number;
+  summary?: Record<string, unknown>;
 }
 
 export class ApiResponse {
@@ -29,7 +30,8 @@ export class ApiResponse {
     page: number,
     limit: number,
     total: number,
-    message = 'Success'
+    message = 'Success',
+    summary?: Record<string, unknown>
   ): Response {
     const totalPages = Math.ceil(total / limit) || 1;
     const meta: PaginationMeta = {
@@ -37,6 +39,7 @@ export class ApiResponse {
       limit,
       total,
       totalPages,
+      ...(summary ? { summary } : {}),
     };
 
     return res.status(200).json({
