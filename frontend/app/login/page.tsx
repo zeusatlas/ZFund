@@ -78,9 +78,6 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-steel">
             We sent a {CODE_LENGTH}-digit code to <span className="font-medium text-navy">{identity.phone}</span>.
           </p>
-          <p role="timer" aria-live="off" className="mt-4 text-sm font-medium text-navy">
-            {cooldown > 0 ? `Code expires in ${formatTime(cooldown)}` : "Your code has expired. Request a new one below."}
-          </p>
 
           <form onSubmit={submitCode} className="mt-8 space-y-5">
             <OtpInput value={code} onChange={setCode} disabled={locked || cooldown === 0} />

@@ -1,5 +1,7 @@
 const styles: Record<string, { label: string; className: string }> = {
   PUBLISHED: { label: "Published", className: "bg-[#e9f4ef] text-[#287754]" },
+  PENDING_REVIEW: { label: "Pending approval", className: "bg-[#fdebd3] text-[#a2530f]" },
+  APPROVED: { label: "Approved", className: "bg-[#e9f4ef] text-[#287754]" },
   DRAFT: { label: "Draft", className: "bg-[#fff4dc] text-[#a26c12]" },
   SUSPENDED: { label: "Suspended", className: "bg-[#fbeaea] text-[#a13d3d]" },
 };

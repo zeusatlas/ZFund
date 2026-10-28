@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
+import FilterSelect from "@/components/ui/FilterSelect";
 import Pagination from "@/components/ui/Pagination";
 import RowMenu, { type RowMenuItem } from "@/components/ui/RowMenu";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -80,20 +81,21 @@ export default function AdminUsers() {
               className="w-full rounded-lg border border-navy/15 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-gold"
             />
           </div>
-          <select
+          <FilterSelect
+            label="Filter by status"
+            className="w-full sm:w-48"
             value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
+            onChange={(value) => {
+              setStatus(value);
               setPage(1);
             }}
-            aria-label="Filter by status"
-            className="rounded-lg border border-navy/15 bg-white px-3 py-2.5 text-sm text-steel outline-none focus:border-gold"
-          >
-            <option value="">All statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="PENDING_VERIFICATION">Pending</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
+            options={[
+              { value: "", label: "All statuses" },
+              { value: "ACTIVE", label: "Active" },
+              { value: "PENDING_VERIFICATION", label: "Pending" },
+              { value: "SUSPENDED", label: "Suspended" },
+            ]}
+          />
         </div>
 
         {isPending ? (
