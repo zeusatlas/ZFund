@@ -1,5 +1,7 @@
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
+import MarketingMotion from "@/components/landing/MarketingMotion";
+import "@/components/landing/marketing.css";
 
 /**
  * Shared layout for all public-facing marketing pages
@@ -14,10 +16,10 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-white text-off-ink">
-      <Navbar />
-      <main className="flex-1">{children}</main>
+    <MarketingMotion className="flex min-h-screen flex-col">
+      <a className="skip-link" href="#main-content">Skip to content</a><Navbar />
+      <main id="main-content" className="flex-1">{children}</main>
       <Footer />
-    </div>
+    </MarketingMotion>
   );
 }

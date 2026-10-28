@@ -46,15 +46,14 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 bg-white transition-all duration-200 ${
-        scrolled ? "border-b border-ash" : "border-b border-transparent"
-      }`}
+      className="marketing-nav sticky z-50"
+      data-scrolled={scrolled}
     >
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
         {/* Wordmark */}
         <Link
           href="/"
-          className="text-[18px] font-medium tracking-tight text-off-ink"
+          className="brand text-off-ink"
         >
           ZFund
         </Link>
@@ -84,7 +83,7 @@ export default function Navbar() {
           </Link>
           <HostCtaLink
             onClick={() => setMobileOpen(false)}
-            className="rounded-full bg-lime px-5 py-2 text-[14px] font-medium text-off-ink transition-opacity hover:opacity-85"
+            className="pill pill-primary"
           >
             Host a campaign
           </HostCtaLink>
@@ -96,7 +95,7 @@ export default function Navbar() {
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           aria-controls="mobile-navigation"
-          className="rounded-md p-2 text-off-ink lg:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-off-ink lg:hidden"
           onClick={() => setMobileOpen((o) => !o)}
         >
           {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -105,7 +104,7 @@ export default function Navbar() {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div id="mobile-navigation" className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-ash bg-white px-6 pb-8 pt-6 lg:hidden">
+        <div id="mobile-navigation" className="mobile-menu-panel overflow-y-auto bg-parchment px-6 pb-8 pt-6 lg:hidden">
           <nav aria-label="Mobile navigation" className="flex flex-col gap-6">
             {navLinks.map((link) => (
               <Link
