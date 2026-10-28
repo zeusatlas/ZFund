@@ -1,0 +1,43 @@
+/* Shared scrollbar theme; high-contrast mode keeps the system controls. */
+@media (forced-colors: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-navy) var(--color-ash);
+  }
+
+  @supports selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--color-ash);
+      border-radius: 100px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      min-height: 40px;
+      background: var(--color-navy);
+      border: 2px solid var(--color-ash);
+      border-radius: 100px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-steel);
+    }
+
+    ::-webkit-scrollbar-thumb:active {
+      background: var(--color-gold);
+    }
+
+    ::-webkit-scrollbar-corner {
+      background: var(--color-ash);
+    }
+  }
+}

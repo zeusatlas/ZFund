@@ -31,7 +31,7 @@ export default function ReportsDashboard() {
     try {
       const names = Object.fromEntries(campaigns.map(campaign => [campaign.id,campaign.name]));
       const url = URL.createObjectURL(new Blob([transactionsCsv(report.scoped,names)], {type:"text/csv;charset=utf-8;"}));
-      const link=document.createElement("a");link.href=url;link.download="zfund-report-transactions-" + (month === "All" ? "all-months" : month) + ".csv";
+      const link=document.createElement("a");link.href=url;link.download="raisefundz-report-transactions-" + (month === "All" ? "all-months" : month) + ".csv";
       document.body.appendChild(link);link.click();link.remove();window.setTimeout(() => URL.revokeObjectURL(url),1000);
       setExportMessage("Download started: " + report.scoped.length + " transactions for this report.");
     } catch { setExportMessage("The download could not be started. Please try again."); }

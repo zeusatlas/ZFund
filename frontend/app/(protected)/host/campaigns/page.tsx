@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import CampaignList from "@/components/features/host/campaigns/CampaignList";
 import HostHeading from "@/components/features/host/shared/HostHeading";
-export const metadata: Metadata = { title: "Your campaigns | ZFund" };
+export const metadata: Metadata = { title: "Your campaigns | RaiseFundz" };
 
 export default function CampaignsPage() {
   return (

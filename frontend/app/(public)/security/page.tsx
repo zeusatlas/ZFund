@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ClipboardList, LockKeyhole, ShieldCheck } from "lucide-react";
 import { FAQ, PageCTA, PageIntro, PageSection } from "@/components/landing/PublicPage";
 
-export const metadata: Metadata = { title: "Security | ZFund", description: "Understand ZFund’s planned campaign reviews, access controls, and withdrawal approvals." };
+export const metadata: Metadata = { title: "Security | RaiseFundz", description: "Understand RaiseFundz’s planned campaign reviews, access controls, and withdrawal approvals." };
 
 export default function SecurityPage() {
   return <>
@@ -16,7 +16,7 @@ export default function SecurityPage() {
     </PageSection>
     <section className="bg-charcoal text-white"><div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-16 md:grid-cols-2">
       <h2 className="max-w-md text-3xl font-medium tracking-tight md:text-4xl">A preview today.<br />Clear expectations from day one.</h2>
-      <div className="space-y-5 leading-relaxed text-white/80"><p>This website currently demonstrates the product. Live payment collection, authentication, and the controls described above have not launched.</p><p>Campaigns, balances, and donor activity shown in previews are illustrative. They are not records of money held by ZFund.</p></div>
+      <div className="space-y-5 leading-relaxed text-white/80"><p>This website currently demonstrates the product. Live payment collection, authentication, and the controls described above have not launched.</p><p>Campaigns, balances, and donor activity shown in previews are illustrative. They are not records of money held by RaiseFundz.</p></div>
     </div></section>
     <PageSection title="Questions about giving safely"><FAQ items={[
       { question: "Should I share my mobile money PIN with a host?", answer: "No. Do not share your mobile money PIN or one-time codes with campaign organisers or anyone claiming to be support." },
