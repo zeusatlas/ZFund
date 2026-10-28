@@ -10,6 +10,7 @@ import { UssdFlow, UssdFlowStatus } from '../../src/database/entities/ussd-flow.
 import { UssdMenuOption, UssdOptionType } from '../../src/database/entities/ussd-menu-option.entity';
 import { UssdMenu, UssdMenuType } from '../../src/database/entities/ussd-menu.entity';
 import { User, UserStatus } from '../../src/database/entities/user.entity';
+import { paystackProvider } from '../../src/services/paystack.provider';
 import { closeTestDatabase, setupTestDatabase } from '../test-db';
 
 describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO runtime)', () => {
@@ -186,7 +187,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233241112233',
         USERDATA: '*920*969*1001#',
-        MSGTYPE: false, // initial request
+        MSGTYPE: true, // initial request in NALO contract
         NETWORK: 'MTN',
         SESSIONID: 'session-turn-1',
       });
@@ -217,7 +218,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233249998877',
         USERDATA: '*920*969*1001#',
-        MSGTYPE: false,
+        MSGTYPE: true,
         NETWORK: 'MTN',
         SESSIONID: 'session-turn-2',
       });
@@ -239,7 +240,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233245556677',
         USERDATA: '*920*969*1001#',
-        MSGTYPE: false,
+        MSGTYPE: true,
         SESSIONID: sessionId,
       });
 
@@ -253,7 +254,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233245556677',
         USERDATA: '1',
-        MSGTYPE: true,
+        MSGTYPE: false,
         SESSIONID: sessionId,
       });
 
@@ -268,7 +269,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233245556677',
         USERDATA: '50.00',
-        MSGTYPE: true,
+        MSGTYPE: false,
         SESSIONID: sessionId,
       });
 
@@ -283,7 +284,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233245556677',
         USERDATA: '1',
-        MSGTYPE: true,
+        MSGTYPE: false,
         SESSIONID: sessionId,
       });
 
@@ -303,7 +304,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233245556677',
         USERDATA: '*920*969*1001#',
-        MSGTYPE: false,
+        MSGTYPE: true,
         SESSIONID: sessionId,
       });
 
@@ -314,12 +315,161 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         USERID: 'NALOTest',
         MSISDN: '233245556677',
         USERDATA: '9',
-        MSGTYPE: true,
+        MSGTYPE: false,
         SESSIONID: sessionId,
       });
 
     expect(res.status).toBe(200);
     expect(res.body.MSGTYPE).toBe(true);
     expect(res.body.MSG).toContain('Invalid choice.');
+  });
+
+  it('should handle Paystack Mobile Money OTP challenge during USSD session', async () => {
+    // Mock Paystack to require OTP for this test
+    const chargeSpy = jest.spyOn(paystackProvider, 'chargeMobileMoney').mockResolvedValueOnce({
+      reference: 'ZF-PAY-TEST-OTP-1',
+      status: 'send_otp',
+      requiresOtp: true,
+      message: 'Please enter the OTP authorization code sent to your phone via SMS:',
+      displayText: 'Please enter the OTP authorization code sent to your phone via SMS:',
+    });
+
+    const submitOtpSpy = jest.spyOn(paystackProvider, 'submitOtp').mockResolvedValueOnce({
+      reference: 'ZF-PAY-TEST-OTP-1',
+      status: 'success',
+      message: 'Payment confirmed successfully!',
+      displayText: 'Payment verified successfully! Thank you for your contribution.',
+    });
+
+    const sessionId = 'session-otp-flow-1001';
+
+    // Turn 1: Initial dial
+    await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233246667788',
+        USERDATA: '*920*969*1001#',
+        MSGTYPE: true,
+        SESSIONID: sessionId,
+      });
+
+    // Turn 2: Select '1' (Offering)
+    await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233246667788',
+        USERDATA: '1',
+        MSGTYPE: false,
+        SESSIONID: sessionId,
+      });
+
+    // Turn 3: Enter Amount '25.00'
+    await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233246667788',
+        USERDATA: '25.00',
+        MSGTYPE: false,
+        SESSIONID: sessionId,
+      });
+
+    // Turn 4: Select '1' (Confirm) -> Paystack returns send_otp
+    const turn4 = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233246667788',
+        USERDATA: '1',
+        MSGTYPE: false,
+        SESSIONID: sessionId,
+      });
+
+    expect(turn4.status).toBe(200);
+    // CRITICAL: Session does NOT terminate when OTP is required!
+    expect(turn4.body.MSGTYPE).toBe(true);
+    expect(turn4.body.MSG).toContain('Please enter the OTP authorization code');
+
+    // Turn 5: Contributor enters OTP '123456'
+    const turn5 = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233246667788',
+        USERDATA: '123456',
+        MSGTYPE: false,
+        SESSIONID: sessionId,
+      });
+
+    expect(turn5.status).toBe(200);
+    // After OTP is verified, session terminates cleanly
+    expect(turn5.body.MSGTYPE).toBe(false);
+    expect(turn5.body.MSG).toContain('Payment verified successfully!');
+
+    expect(chargeSpy).toHaveBeenCalled();
+    expect(submitOtpSpy).toHaveBeenCalled();
+
+    chargeSpy.mockRestore();
+    submitOtpSpy.mockRestore();
+  });
+
+  it('should allow contributor to cancel payment at OTP prompt with 0', async () => {
+    jest.spyOn(paystackProvider, 'chargeMobileMoney').mockResolvedValueOnce({
+      reference: 'ZF-PAY-TEST-CANCEL-1',
+      status: 'send_otp',
+      requiresOtp: true,
+      message: 'Please enter OTP (or 0 to cancel):',
+      displayText: 'Please enter OTP (or 0 to cancel):',
+    });
+
+    const sessionId = 'session-cancel-otp-1';
+
+    // Start session and reach confirm
+    await request(app).post('/api/v1/ussd/nalo').send({
+      USERID: 'NALOTest',
+      MSISDN: '233248889900',
+      USERDATA: '*920*969*1001#',
+      MSGTYPE: true,
+      SESSIONID: sessionId,
+    });
+    await request(app).post('/api/v1/ussd/nalo').send({
+      USERID: 'NALOTest',
+      MSISDN: '233248889900',
+      USERDATA: '1',
+      MSGTYPE: false,
+      SESSIONID: sessionId,
+    });
+    await request(app).post('/api/v1/ussd/nalo').send({
+      USERID: 'NALOTest',
+      MSISDN: '233248889900',
+      USERDATA: '30.00',
+      MSGTYPE: false,
+      SESSIONID: sessionId,
+    });
+
+    // Confirm
+    const turn4 = await request(app).post('/api/v1/ussd/nalo').send({
+      USERID: 'NALOTest',
+      MSISDN: '233248889900',
+      USERDATA: '1',
+      MSGTYPE: false,
+      SESSIONID: sessionId,
+    });
+    expect(turn4.body.MSGTYPE).toBe(true);
+
+    // Contributor types 0 to cancel
+    const turn5 = await request(app).post('/api/v1/ussd/nalo').send({
+      USERID: 'NALOTest',
+      MSISDN: '233248889900',
+      USERDATA: '0',
+      MSGTYPE: false,
+      SESSIONID: sessionId,
+    });
+
+    expect(turn5.status).toBe(200);
+    expect(turn5.body.MSGTYPE).toBe(false);
+    expect(turn5.body.MSG).toContain('Payment cancelled.');
   });
 });

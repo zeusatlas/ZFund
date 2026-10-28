@@ -6,7 +6,7 @@ describe('NaloAdapter (NALO USSD Gateway contract and parsing)', () => {
       USERID: 'NALOTest',
       MSISDN: '233241234567',
       USERDATA: '*920*969*1001#',
-      MSGTYPE: false, // initial request in NALO contract
+      MSGTYPE: true, // initial request in official NALO contract
       NETWORK: 'MTN',
       SESSIONID: '16590115252429751',
     };
@@ -26,7 +26,7 @@ describe('NaloAdapter (NALO USSD Gateway contract and parsing)', () => {
       USERID: 'NALOTest',
       MSISDN: '233209876543',
       USERDATA: '*920*969#',
-      MSGTYPE: false,
+      MSGTYPE: true, // initial request in official NALO contract
       SESSIONID: '987654321',
     };
 
@@ -40,7 +40,7 @@ describe('NaloAdapter (NALO USSD Gateway contract and parsing)', () => {
       USERID: 'NALOTest',
       MSISDN: '233241234567',
       USERDATA: '2',
-      MSGTYPE: true, // continuing session
+      MSGTYPE: false, // continuing session in official NALO contract
       SESSIONID: '16590115252429751',
     };
 
@@ -67,6 +67,7 @@ describe('NaloAdapter (NALO USSD Gateway contract and parsing)', () => {
 
     expect(shortResponse.USERID).toBe('NALOTest');
     expect(shortResponse.MSISDN).toBe('233241234567');
+    expect(shortResponse.USERDATA).toBe('1');
     expect(shortResponse.MSGTYPE).toBe(true);
     expect(shortResponse.MSG).toBe('Welcome to Grace Church.\n1. Offering\n2. Tithe');
 

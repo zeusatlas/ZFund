@@ -117,6 +117,43 @@ describe('Notification & SMS Integration Tests', () => {
       expect(res.provider).toBe('MNOTIFY');
       expect(res.providerMessageId).toBe('mnotify-msg-999');
     });
+
+    it('should dispatch OTP SMS with sms_type: "otp" following ZDesk logic', async () => {
+      const adapter = new MNotifySmsAdapter('test_mnotify_key_123');
+      mockedAxios.post.mockResolvedValueOnce({
+        data: {
+          status: 'success',
+          code: '1000',
+          message: 'OTP sent successfully',
+          summary: {
+            _id: 'mnotify-otp-888',
+            type: 'otp',
+            total_sent: 1,
+            contacts: 1,
+            total_rejected: 0,
+            numbers_sent: ['233240000002'],
+            credit_used: 1,
+            credit_left: 498,
+          },
+        },
+      });
+
+      const res = await adapter.sendOTP('233240000002', 'Your ZFund verification code is 492019');
+
+      expect(res.success).toBe(true);
+      expect(res.provider).toBe('MNOTIFY');
+      expect(res.providerMessageId).toBe('mnotify-otp-888');
+
+      // Verify that sms_type: 'otp' was passed in payload to mNotify
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        expect.stringContaining('api.mnotify.com'),
+        expect.objectContaining({
+          sms_type: 'otp',
+          message: 'Your ZFund verification code is 492019',
+        }),
+        expect.anything()
+      );
+    });
   });
 
   describe('Notification Template Rendering & Safe Dispatch', () => {

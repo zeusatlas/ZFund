@@ -31,8 +31,8 @@ export class UserController {
 
   async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const user = await userService.createUser(req.body, req.user?.id);
-      ApiResponse.success(res, user, 'User created successfully', 201);
+      const { user, smsSent } = await userService.createUser(req.body, req.user?.id);
+      ApiResponse.success(res, { ...user, smsSent }, 'User created successfully', 201);
     } catch (err) {
       next(err);
     }

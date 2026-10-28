@@ -12,6 +12,7 @@ import { env } from './config/env';
 import { logger } from './config/logger';
 import { swaggerSpec } from './config/swagger';
 import apiRoutes from './routes/index.route';
+import ussdRuntimeRoutes from './routes/ussd-runtime.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -53,6 +54,13 @@ export function createApp(): Application {
     app.use(
       pinoHttp({
         logger,
+        // Keep request logs to one short line instead of dumping every header.
+        serializers: {
+          req: (req) => ({ method: req.method, url: req.url }),
+          res: (res) => ({ statusCode: res.statusCode }),
+        },
+        customSuccessMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
+        customErrorMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
         autoLogging: {
           ignore: (req) => req.url?.includes('/health') || req.url?.includes('/ready'),
         },
@@ -84,6 +92,9 @@ export function createApp(): Application {
   app.get(['/api-docs.html', '/docs'], (_req, res) => {
     res.sendFile(path.resolve(__dirname, '../API-DOCS.HTML'));
   });
+
+  // Direct USSD Gateway Webhook alias (supports /ussd and /ussd/nalo without api prefix)
+  app.use(['/ussd', '/ussd/nalo'], ussdRuntimeRoutes);
 
   // Base API routes
   app.use(env.API_PREFIX, apiRoutes);

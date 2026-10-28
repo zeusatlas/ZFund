@@ -7,10 +7,11 @@ const router = Router();
 
 /**
  * Public NALO USSD Gateway Callback Endpoint
- * Receives POST requests from NALO USSD Gateway
+ * Receives POST requests from NALO USSD Gateway.
+ * Supports both /api/v1/ussd and /api/v1/ussd/nalo
  */
 router.post(
-  '/nalo',
+  ['/', '/nalo'],
   ussdRateLimiter,
   naloAuthMiddleware,
   (req, res, next) => ussdRuntimeController.handleNaloRequest(req, res, next)

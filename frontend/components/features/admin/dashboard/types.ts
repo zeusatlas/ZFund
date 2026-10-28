@@ -15,7 +15,7 @@ export type FundTrend = {
   current: string;
 };
 
-export type TrendPeriod = "12m" | "30d";
+export type TrendPeriod = "30d" | "3m" | "6m" | "12m";
 
 export type HostAccount = {
   id: string;
@@ -43,6 +43,5 @@ export type NewHostInput = {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  password: string;
+  phone: string;
 };

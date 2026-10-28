@@ -8,15 +8,7 @@ export class MockSmsAdapter implements ISmsProvider {
 
   async sendSms(params: SendSmsParams): Promise<SendSmsResult> {
     const id = `mock-sms-${uuidv4().slice(0, 8)}`;
-    logger.info(
-      {
-        recipient: params.recipient,
-        senderId: params.senderId,
-        message: params.message,
-        id,
-      },
-      '[MOCK SMS] Message dispatched successfully'
-    );
+    logger.info(`[MOCK SMS] to ${params.recipient}: ${params.message}`);
 
     this.sentMessages.push({
       ...params,

@@ -6,11 +6,17 @@ import { SmsProviderFactory } from './sms-provider.factory';
 export class SmsService {
   private get attemptRepo() { return AppDataSource.getRepository(NotificationDeliveryAttempt); }
 
+  /**
+   * Main dispatch function supporting both regular and OTP SMS
+   */
   async send(params: {
     notificationId?: string;
-    recipient: string;
+    recipient: string | string[];
     message: string;
     senderId?: string;
+    isOtp?: boolean;
+    smsType?: 'otp' | 'normal';
+    skipDeliveryCheck?: boolean;
   }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     const provider = SmsProviderFactory.getProvider();
 
@@ -19,6 +25,9 @@ export class SmsService {
         recipient: params.recipient,
         message: params.message,
         senderId: params.senderId,
+        isOtp: params.isOtp,
+        smsType: params.smsType,
+        skipDeliveryCheck: params.skipDeliveryCheck,
       });
 
       if (params.notificationId) {
@@ -60,6 +69,44 @@ export class SmsService {
         error: msg,
       };
     }
+  }
+
+  /**
+   * Dedicated normal / regular SMS dispatch
+   */
+  async sendMessage(
+    recipient: string | string[],
+    message: string,
+    options?: { senderId?: string; notificationId?: string; skipDeliveryCheck?: boolean }
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    return this.send({
+      recipient,
+      message,
+      senderId: options?.senderId,
+      notificationId: options?.notificationId,
+      isOtp: false,
+      smsType: 'normal',
+      skipDeliveryCheck: options?.skipDeliveryCheck,
+    });
+  }
+
+  /**
+   * Dedicated OTP SMS dispatch (routes with sms_type: 'otp')
+   */
+  async sendOTP(
+    recipient: string | string[],
+    message: string,
+    options?: { senderId?: string; notificationId?: string; skipDeliveryCheck?: boolean }
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    return this.send({
+      recipient,
+      message,
+      senderId: options?.senderId,
+      notificationId: options?.notificationId,
+      isOtp: true,
+      smsType: 'otp',
+      skipDeliveryCheck: options?.skipDeliveryCheck,
+    });
   }
 }
 

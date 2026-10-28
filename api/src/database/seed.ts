@@ -1,6 +1,9 @@
+import { IsNull } from 'typeorm';
 import { AppDataSource, initializeDatabase } from '../config/database';
 import { logger } from '../config/logger';
 import { PermissionCode, SystemRole } from '../common/types/auth';
+import { env } from '../config/env';
+import { normalizePhone } from '../common/utils/phone';
 import { CryptoUtil } from '../common/utils/crypto';
 import {
   Contribution,
@@ -17,6 +20,13 @@ import {
   ProjectCategory,
   ProjectMember,
   ProjectMemberRole,
+  Organization,
+  OrgVerificationStatus,
+  PaymentMethodType,
+  Permission,
+  Project,
+  ProjectCategory,
+  ProjectPaymentMethod,
   ProjectStatus,
   Role,
   RolePermission,
@@ -50,6 +60,9 @@ export async function runSeeds(): Promise<void> {
   const versionRepo = AppDataSource.getRepository(UssdFlowVersion);
   const menuRepo = AppDataSource.getRepository(UssdMenu);
   const optionRepo = AppDataSource.getRepository(UssdMenuOption);
+  const orgRepo = AppDataSource.getRepository(Organization);
+  const projectRepo = AppDataSource.getRepository(Project);
+  const paymentMethodRepo = AppDataSource.getRepository(ProjectPaymentMethod);
 
   // 1. Seed Roles
   const roles = Object.values(SystemRole);
@@ -92,12 +105,17 @@ export async function runSeeds(): Promise<void> {
         passwordHash,
         firstName: 'System',
         lastName: 'Administrator',
+        phone: env.SEED_ADMIN_PHONE ? normalizePhone(env.SEED_ADMIN_PHONE) : undefined,
         role: SystemRole.SUPER_ADMIN,
         status: UserStatus.ACTIVE,
         isEmailVerified: true,
       })
     );
     logger.info(`Seeded Super Admin user: ${adminEmail}`);
+  } else if (!existingAdmin.phone && env.SEED_ADMIN_PHONE) {
+    existingAdmin.phone = normalizePhone(env.SEED_ADMIN_PHONE);
+    await userRepo.save(existingAdmin);
+    logger.info(`Set phone for Super Admin user: ${adminEmail}`);
   }
 
   // 4. Seed Project Categories
@@ -170,7 +188,7 @@ export async function runSeeds(): Promise<void> {
   }
 
   // 7. Seed General USSD Flow (*920*969#)
-  const existingGeneralFlow = await flowRepo.findOne({ where: { projectId: undefined } });
+  const existingGeneralFlow = await flowRepo.findOne({ where: { projectId: IsNull() } });
   if (!existingGeneralFlow) {
     const flow = flowRepo.create({
       name: 'General ZFund USSD Menu',
@@ -239,6 +257,17 @@ export async function runSeeds(): Promise<void> {
       displayOrder: 2,
     });
     await menuRepo.save(enterCodeMenu);
+
+    // Enter Payment OTP Menu
+    const enterOtpMenu = menuRepo.create({
+      flowVersionId: savedVersion.id,
+      menuKey: 'ENTER_PAYMENT_OTP',
+      title: 'Enter Payment OTP',
+      prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
+      menuType: UssdMenuType.INPUT,
+      displayOrder: 3,
+    });
+    await menuRepo.save(enterOtpMenu);
 
     logger.info('Seeded General USSD Flow and Menus (*920*969#)');
   }
@@ -543,19 +572,183 @@ export async function runSeeds(): Promise<void> {
       }
       logger.info('Seeded demo withdrawal requests');
     }
+    // 8. Seed Demo Church Project (*920*969*1001#)
+    const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });
+    if (!existingProject1001) {
+      let org = await orgRepo.findOne({ where: { slug: 'holy-trinity-parish' } });
+      if (!org) {
+        org = await orgRepo.save(
+          orgRepo.create({
+            name: 'Holy Trinity Parish',
+            slug: 'holy-trinity-parish',
+            verificationStatus: OrgVerificationStatus.VERIFIED,
+          })
+        );
+      }
+
+      const admin = await userRepo.findOne({ where: { email: adminEmail } });
+      const churchCategory = await categoryRepo.findOne({ where: { slug: 'church-religious' } });
+
+      const project1001 = await projectRepo.save(
+        projectRepo.create({
+          name: 'Holy Trinity Church Project',
+          description: 'Contributions for Holy Trinity Cathedral harvest and community outreach.',
+          organizationId: org.id,
+          ownerId: admin ? admin.id : undefined,
+          categoryId: churchCategory ? churchCategory.id : undefined,
+          eventCode: '1001',
+          currency: 'GHS',
+          minAmount: '1.00',
+          maxAmount: '10000.00',
+          status: ProjectStatus.PUBLISHED,
+          acceptsContributions: true,
+        })
+      );
+
+      await paymentMethodRepo.save(
+        paymentMethodRepo.create({
+          projectId: project1001.id,
+          method: PaymentMethodType.MOBILE_MONEY,
+          provider: 'PAYSTACK',
+          isEnabled: true,
+        })
+      );
+
+      const projectFlow = await flowRepo.save(
+        flowRepo.create({
+          name: 'Holy Trinity Church USSD Flow',
+          description: 'Direct USSD menu for event code 1001',
+          projectId: project1001.id,
+          status: UssdFlowStatus.PUBLISHED,
+        })
+      );
+
+      const projectVersion = await versionRepo.save(
+        versionRepo.create({
+          flowId: projectFlow.id,
+          versionNumber: 1,
+          status: UssdFlowVersionStatus.PUBLISHED,
+          publishedAt: new Date(),
+        })
+      );
+
+      projectFlow.activeVersionId = projectVersion.id;
+      await flowRepo.save(projectFlow);
+
+      // Welcome Menu
+      const projectWelcome = await menuRepo.save(
+        menuRepo.create({
+          flowVersionId: projectVersion.id,
+          menuKey: 'WELCOME',
+          title: 'Church Welcome',
+          prompt: 'Welcome to Holy Trinity Cathedral.\nSelect:',
+          menuType: UssdMenuType.SELECT,
+          displayOrder: 1,
+          isActive: true,
+        })
+      );
+
+      await optionRepo.save([
+        optionRepo.create({
+          menuId: projectWelcome.id,
+          displayOrder: 1,
+          optionKey: '1',
+          label: 'Offering',
+          optionType: UssdOptionType.ACTION,
+          actionReference: 'SELECT_PURPOSE',
+          targetMenuKey: 'AMOUNT_INPUT',
+        }),
+        optionRepo.create({
+          menuId: projectWelcome.id,
+          displayOrder: 2,
+          optionKey: '2',
+          label: 'Tithe',
+          optionType: UssdOptionType.ACTION,
+          actionReference: 'SELECT_PURPOSE',
+          targetMenuKey: 'AMOUNT_INPUT',
+        }),
+        optionRepo.create({
+          menuId: projectWelcome.id,
+          displayOrder: 3,
+          optionKey: '3',
+          label: 'Exit',
+          optionType: UssdOptionType.ACTION,
+          actionReference: 'EXIT',
+        }),
+      ]);
+
+      // Amount input menu
+      await menuRepo.save(
+        menuRepo.create({
+          flowVersionId: projectVersion.id,
+          menuKey: 'AMOUNT_INPUT',
+          title: 'Enter Amount',
+          prompt: 'Enter Amount in GHS:',
+          menuType: UssdMenuType.INPUT,
+          displayOrder: 2,
+          isActive: true,
+        })
+      );
+
+      // Confirmation menu
+      const projectConfirm = await menuRepo.save(
+        menuRepo.create({
+          flowVersionId: projectVersion.id,
+          menuKey: 'CONFIRM_PAYMENT',
+          title: 'Confirm Contribution',
+          prompt: 'Contribute GHS {amount} to {projectName}?',
+          menuType: UssdMenuType.SELECT,
+          displayOrder: 3,
+          isActive: true,
+        })
+      );
+
+      await optionRepo.save([
+        optionRepo.create({
+          menuId: projectConfirm.id,
+          displayOrder: 1,
+          optionKey: '1',
+          label: 'Confirm',
+          optionType: UssdOptionType.ACTION,
+          actionReference: 'INITIATE_PAYMENT',
+        }),
+        optionRepo.create({
+          menuId: projectConfirm.id,
+          displayOrder: 2,
+          optionKey: '2',
+          label: 'Cancel',
+          optionType: UssdOptionType.ACTION,
+          actionReference: 'EXIT',
+        }),
+      ]);
+
+      // Enter Payment OTP Menu
+      await menuRepo.save(
+        menuRepo.create({
+          flowVersionId: projectVersion.id,
+          menuKey: 'ENTER_PAYMENT_OTP',
+          title: 'Enter Payment OTP',
+          prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
+          menuType: UssdMenuType.INPUT,
+          displayOrder: 4,
+          isActive: true,
+        })
+      );
+
+      logger.info('Seeded Demo Church Project (*920*969*1001#)');
+    }
+
+    logger.info('Database seeding completed successfully.');
   }
 
-  logger.info('Database seeding completed successfully.');
-}
-
-if (require.main === module) {
-  runSeeds()
-    .then(() => {
-      logger.info('Seeding finished.');
-      process.exit(0);
-    })
-    .catch((err) => {
-      logger.error({ err }, 'Seeding failed');
-      process.exit(1);
-    });
-}
+  if (require.main === module) {
+    runSeeds()
+      .then(() => {
+        logger.info('Seeding finished.');
+        process.exit(0);
+      })
+      .catch((err) => {
+        logger.error({ err }, 'Seeding failed');
+        process.exit(1);
+      });
+  }

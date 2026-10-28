@@ -48,6 +48,19 @@ export class User {
   @Column({ default: false })
   isEmailVerified: boolean;
 
+  // One-time sign-in code sent by SMS (hash only; never exposed by queries).
+  @Column({ type: 'varchar', nullable: true, select: false })
+  otpHash?: string | null;
+
+  @Column({ type: 'timestamp with time zone', nullable: true, select: false })
+  otpExpiresAt?: Date | null;
+
+  @Column({ type: 'int', default: 0, select: false })
+  otpAttempts: number;
+
+  @Column({ type: 'timestamp with time zone', nullable: true, select: false })
+  otpSentAt?: Date | null;
+
   @Column({ type: 'timestamp with time zone', nullable: true })
   lastLoginAt?: Date;
 

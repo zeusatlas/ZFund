@@ -56,17 +56,20 @@ export function useAddHost() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: NewHostInput) => {
-      const { data } = await api.post<ApiEnvelope<{ id: string }>>("/users", {
+      const { data } = await api.post<ApiEnvelope<{ id: string; smsSent: boolean }>>("/users", {
         ...input,
-        phone: input.phone || undefined,
         role: "ACCOUNT_OWNER",
       });
       return data.data;
     },
-    onSuccess: (_user, input) => {
+    onSuccess: (user, input) => {
       // Overview counts, host list and activity feed all depend on a new host.
       queryClient.invalidateQueries({ queryKey: adminRoot });
-      toast.success(`${input.firstName} ${input.lastName} was added as a host.`);
+      if (user.smsSent) {
+        toast.success(`${input.firstName} ${input.lastName} was added and sent their sign-in details by SMS.`);
+      } else {
+        toast.warning(`${input.firstName} ${input.lastName} was added, but the SMS could not be sent. Share their email and phone number with them directly.`);
+      }
     },
   });
 }

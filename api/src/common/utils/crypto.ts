@@ -95,7 +95,7 @@ export class CryptoUtil {
   /**
    * Verifies Paystack HMAC SHA512 signature against raw request body
    */
-  static verifyPaystackSignature(rawBody: string | Buffer, signature: string, secretKey = env.PAYSTACK_WEBHOOK_SECRET): boolean {
+  static verifyPaystackSignature(rawBody: string | Buffer, signature: string, secretKey = env.PAYSTACK_SECRET_KEY): boolean {
     if (!signature) return false;
     const computed = crypto
       .createHmac('sha512', secretKey)

@@ -15,7 +15,10 @@ const COLLECTED_STATUSES = [
   ContributionStatus.REFUNDED,
 ];
 
-export type TrendPeriod = '12m' | '30d';
+export type TrendPeriod = '30d' | '3m' | '6m' | '12m';
+
+/** Periods shown week by week; the others use days (30d) or calendar months (12m). */
+const WEEKS_BY_PERIOD: Partial<Record<TrendPeriod, number>> = { '3m': 13, '6m': 26 };
 
 export interface DashboardOverview {
   currency: string;
@@ -218,6 +221,17 @@ export class AdminDashboardService {
           amount: '0.00',
         });
       }
+    } else if (WEEKS_BY_PERIOD[period]) {
+      const weeks = WEEKS_BY_PERIOD[period]!;
+      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (weeks * 7 - 1));
+      for (let i = 0; i < weeks; i++) {
+        const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i * 7);
+        buckets.push({
+          key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+          label: `${d.getDate()} ${MONTHS[d.getMonth()]}`,
+          amount: '0.00',
+        });
+      }
     } else {
       from = startOfMonth(now, -11);
       for (let i = 0; i < 12; i++) {
@@ -232,8 +246,20 @@ export class AdminDashboardService {
 
     const contributions = await this.collectedBetween(from);
     const index = new Map(buckets.map((b) => [b.key, b]));
+    const weeks = WEEKS_BY_PERIOD[period];
+    const dayMs = 24 * 60 * 60 * 1000;
     for (const c of contributions) {
       const d = new Date(c.createdAt);
+      if (weeks) {
+        // Whole days since the first day shown, counted on calendar dates so DST can't shift a bucket.
+        const days = Math.floor(
+          (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) -
+            Date.UTC(from.getFullYear(), from.getMonth(), from.getDate())) / dayMs
+        );
+        const bucket = buckets[Math.floor(days / 7)];
+        if (days >= 0 && bucket) bucket.amount = MoneyUtil.add(bucket.amount, c.amount);
+        continue;
+      }
       const key =
         period === '30d'
           ? new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10)

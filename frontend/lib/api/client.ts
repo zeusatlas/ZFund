@@ -49,32 +49,8 @@ function toApiError(error: AxiosError<ErrorBody>): ApiError {
   return { status, message: data?.message ?? error.message, errors };
 }
 
-export async function ensureAuthToken(): Promise<string | null> {
-  let token = tokenStorage.getAccess();
-  if (!token && typeof window !== "undefined") {
-    try {
-      const { data } = await refreshClient.post("/auth/login", {
-        email: "admin@zfund.org",
-        password: "SuperAdminZFund2026!",
-      });
-      const access: string = data.data?.accessToken ?? data.accessToken;
-      const refresh: string = data.data?.refreshToken ?? data.refreshToken;
-      if (access) {
-        tokenStorage.set(access, refresh);
-        token = access;
-      }
-    } catch {
-      // In production or when credentials differ, let request proceed to trigger standard auth flow
-    }
-  }
-  return token;
-}
-
 api.interceptors.request.use(async (config) => {
-  let token = tokenStorage.getAccess();
-  if (!token && typeof window !== "undefined" && !config.url?.includes("/auth/")) {
-    token = await ensureAuthToken();
-  }
+  const token = tokenStorage.getAccess();
   if (token) config.headers.set("Authorization", `Bearer ${token}`);
   return config;
 });
