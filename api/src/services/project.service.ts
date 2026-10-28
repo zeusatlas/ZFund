@@ -2,6 +2,10 @@ import { AppDataSource } from '../config/database';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
 import { auditService } from './audit.service';
+import { smsService } from './sms.service';
+import { normalizePhone } from '../common/utils/phone';
+import { logger } from '../config/logger';
+import { User } from '../database/entities/user.entity';
 import { ContributionPurpose } from '../database/entities/contribution-purpose.entity';
 import { ProjectContributionPurpose } from '../database/entities/project-contribution-purpose.entity';
 import { ProjectMember, ProjectMemberRole } from '../database/entities/project-member.entity';
@@ -328,6 +332,10 @@ export class ProjectService {
     );
 
     if (!isPlatformAdmin) {
+      // Approval belongs to platform admins; hosts may only submit for review.
+      if (targetStatus === ProjectStatus.APPROVED || targetStatus === ProjectStatus.PUBLISHED) {
+        throw new ForbiddenError('Only an administrator can approve a campaign');
+      }
       const allowed = validTransitions[currentStatus] || [];
       if (!allowed.includes(targetStatus)) {
         throw new BadRequestError(
@@ -349,7 +357,32 @@ export class ProjectService {
       newValues: { status: targetStatus, notes: input.notes },
     });
 
+    if (targetStatus === ProjectStatus.PENDING_REVIEW && currentStatus !== targetStatus) {
+      await this.notifyApprovalNeeded(saved);
+    }
+
     return saved;
+  }
+
+  /** Texts every active super admin that a campaign is waiting for approval. Never fails the status change. */
+  private async notifyApprovalNeeded(project: Project): Promise<void> {
+    try {
+      const admins = await AppDataSource.getRepository(User).find({
+        where: { role: SystemRole.SUPER_ADMIN },
+      });
+      const recipients = admins.filter((a) => a.phone && a.status !== 'SUSPENDED').map((a) => normalizePhone(a.phone!));
+      if (recipients.length === 0) return;
+
+      const sms = await smsService.send({
+        recipient: recipients,
+        message: `ZFund: the campaign "${project.name}" (code ${project.eventCode}) needs your approval. Review it under Campaigns in the admin dashboard.`,
+      });
+      if (!sms.success) {
+        logger.error({ projectId: project.id, error: sms.error }, 'Failed to send campaign approval SMS');
+      }
+    } catch (err) {
+      logger.error({ err, projectId: project.id }, 'Failed to notify admins of pending campaign');
+    }
   }
 
   async configurePurposes(

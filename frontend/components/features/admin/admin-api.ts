@@ -33,7 +33,7 @@ export type Fund = {
   createdAt: string;
 };
 
-export type FundCounts = { total: number; published: number; draft: number; suspended: number; raised: string };
+export type FundCounts = { total: number; published: number; draft: number; pendingReview: number; suspended: number; raised: string };
 
 export type FundDetail = Fund & {
   description?: string;

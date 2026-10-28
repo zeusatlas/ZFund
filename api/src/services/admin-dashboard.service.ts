@@ -85,6 +85,7 @@ export interface FundCounts {
   total: number;
   published: number;
   draft: number;
+  pendingReview: number;
   suspended: number;
   raised: string;
 }
@@ -552,13 +553,14 @@ export class AdminDashboardService {
 
   async getFundCounts(): Promise<FundCounts> {
     const countFor = (status: ProjectStatus) => this.projectRepo.count({ where: { status } });
-    const [published, draft, suspended, collected] = await Promise.all([
+    const [published, draft, pendingReview, suspended, collected] = await Promise.all([
       countFor(ProjectStatus.PUBLISHED),
       countFor(ProjectStatus.DRAFT),
+      countFor(ProjectStatus.PENDING_REVIEW),
       countFor(ProjectStatus.SUSPENDED),
       this.collectedBetween(),
     ]);
-    return { total: await this.projectRepo.count(), published, draft, suspended, raised: this.sum(collected) };
+    return { total: await this.projectRepo.count(), published, draft, pendingReview, suspended, raised: this.sum(collected) };
   }
 
   async getTransactionCounts(): Promise<TransactionCounts> {

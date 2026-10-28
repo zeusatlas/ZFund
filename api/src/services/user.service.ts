@@ -60,10 +60,14 @@ export class UserService {
     input: CreateUserInput,
     actorId?: string
   ): Promise<{ user: User; smsSent: boolean }> {
-    const existing = await this.userRepo.findOne({ where: { email: input.email } });
+    const existing = await this.userRepo
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) = LOWER(:email)', { email: input.email })
+      .getOne();
     if (existing) {
       throw new ConflictError('A user with this email address already exists');
     }
+    await this.assertPhoneAvailable(input.phone);
 
     // Sign-in is by SMS code, so no usable password is ever issued.
     const passwordHash = await CryptoUtil.hashPassword(CryptoUtil.generateRandomString(48));
@@ -104,13 +108,27 @@ export class UserService {
     return { user: safeUser as User, smsSent: sms.success };
   }
 
+  /** Phones are stored normalised, so compare against both the normalised and raw forms. */
+  private async assertPhoneAvailable(phone: string, excludeUserId?: string): Promise<void> {
+    const qb = this.userRepo
+      .createQueryBuilder('user')
+      .where('user.phone IN (:...phones)', { phones: [normalizePhone(phone), phone] });
+    if (excludeUserId) qb.andWhere('user.id != :excludeUserId', { excludeUserId });
+    if (await qb.getOne()) {
+      throw new ConflictError('A user with this phone number already exists');
+    }
+  }
+
   async updateUser(id: string, input: UpdateUserInput, actorId?: string): Promise<User> {
     const user = await this.getUserById(id);
     const oldValues = { firstName: user.firstName, lastName: user.lastName, phone: user.phone };
 
     if (input.firstName !== undefined) user.firstName = input.firstName;
     if (input.lastName !== undefined) user.lastName = input.lastName;
-    if (input.phone !== undefined) user.phone = input.phone;
+    if (input.phone !== undefined) {
+      await this.assertPhoneAvailable(input.phone, id);
+      user.phone = normalizePhone(input.phone);
+    }
 
     const saved = await this.userRepo.save(user);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CircleDollarSign, FilePenLine, Layers, Megaphone, UserRound } from "lucide-react";
+import { CircleDollarSign, Clock, FilePenLine, Layers, Megaphone, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import MetricCard from "@/components/ui/MetricCard";
@@ -32,10 +32,11 @@ export default function AdminCampaigns() {
         <p className="mt-2 text-sm text-steel">Every campaign your hosts have created, and how much each has raised.</p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Total raised" value={counts ? formatMoney(counts.raised) : dash} icon={CircleDollarSign} accent="green" />
         <MetricCard label="Campaigns" value={counts ? formatCount(counts.total) : dash} icon={Layers} accent="blue" />
         <MetricCard label="Published" value={counts ? formatCount(counts.published) : dash} icon={Megaphone} accent="purple" />
+        <MetricCard label="Pending approval" value={counts ? formatCount(counts.pendingReview) : dash} icon={Clock} accent="purple" />
         <MetricCard label="Drafts" value={counts ? formatCount(counts.draft) : dash} icon={FilePenLine} accent="gold" />
       </section>
 
@@ -47,6 +48,7 @@ export default function AdminCampaigns() {
           status={status}
           onStatus={(value) => { setStatus(value); setPage(1); }}
           statuses={[
+            { value: "PENDING_REVIEW", label: "Pending approval" },
             { value: "PUBLISHED", label: "Published" },
             { value: "DRAFT", label: "Draft" },
             { value: "SUSPENDED", label: "Suspended" },
