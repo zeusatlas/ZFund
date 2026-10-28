@@ -600,7 +600,7 @@
     <header class="topbar">
       <div class="topbar-brand">
         <div class="brand-logo">Z</div>
-        <span class="brand-name">ZFund API</span>
+        <span class="brand-name">RaiseFunds API</span>
         <span class="port-pill"><span class="pulse-dot"></span> Port 2077</span>
       </div>
 
@@ -726,9 +726,9 @@
 
         <!-- Hero Lead -->
         <div class="hero-lead">
-          <h1 class="hero-title">ZFund Backend API Specification</h1>
+          <h1 class="hero-title">RaiseFunds Backend API Specification</h1>
           <p class="hero-description">
-            Complete frontend developer reference for integrating React, Next.js, and Mobile clients with the ZFund contribution engine, database-driven USSD engine, Paystack mobile money gateway, and mNotify SMS provider.
+            Complete frontend developer reference for integrating React, Next.js, and Mobile clients with the RaiseFunds contribution engine, database-driven USSD engine, Paystack mobile money gateway, and mNotify SMS provider.
           </p>
           <div class="meta-tags-row">
             <span class="meta-tag">⚡ Base URL: <code>http://localhost:2077/api/v1</code></span>
@@ -817,7 +817,7 @@ export const api = axios.create({
 
 // 2. Request Interceptor: Attach Access Token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('zfund_access_token');
+  const token = localStorage.getItem('raisefunds_access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -838,11 +838,11 @@ api.interceptors.response.use(
           { withCredentials: true }
         );
         const newAccessToken = refreshRes.data.data.accessToken;
-        localStorage.setItem('zfund_access_token', newAccessToken);
+        localStorage.setItem('raisefunds_access_token', newAccessToken);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest); // Retry original failed call
       } catch (refreshErr) {
-        localStorage.removeItem('zfund_access_token');
+        localStorage.removeItem('raisefunds_access_token');
         window.location.href = '/login';
       }
     }
@@ -1448,7 +1448,7 @@ api.interceptors.response.use(
                   <div class="code-header"><span>Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
                   <pre><code>{
   "recipient": "233241234567",
-  "message": "Hello from ZFund! Your SMS configuration on Port 2077 is active."
+  "message": "Hello from RaiseFunds! Your SMS configuration on Port 2077 is active."
 }</code></pre>
                 </div>
                 <div class="code-box">

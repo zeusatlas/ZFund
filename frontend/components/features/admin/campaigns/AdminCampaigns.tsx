@@ -142,11 +142,10 @@ export default function AdminCampaigns() {
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === "list"
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === "list"
                     ? "bg-navy text-white shadow-xs"
                     : "text-steel hover:text-navy"
-                }`}
+                  }`}
                 aria-pressed={viewMode === "list"}
                 title="List view"
               >
@@ -156,11 +155,10 @@ export default function AdminCampaigns() {
               <button
                 type="button"
                 onClick={() => setViewMode("grid")}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === "grid"
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${viewMode === "grid"
                     ? "bg-navy text-white shadow-xs"
                     : "text-steel hover:text-navy"
-                }`}
+                  }`}
                 aria-pressed={viewMode === "grid"}
                 title="Grid view"
               >
@@ -231,9 +229,8 @@ export default function AdminCampaigns() {
                     return (
                       <tr
                         key={campaign.id}
-                        className={`transition-colors hover:bg-stone-light/40 ${
-                          isPendingReview ? "bg-amber-50/30" : ""
-                        }`}
+                        className={`transition-colors hover:bg-stone-light/40 ${isPendingReview ? "bg-amber-50/30" : ""
+                          }`}
                       >
                         <td className="px-5 py-4">
                           <Link
@@ -320,9 +317,8 @@ export default function AdminCampaigns() {
           ) : (
             /* Admin Campaigns Grid View */
             <div
-              className={`grid gap-4 transition-opacity md:grid-cols-2 xl:grid-cols-3 ${
-                isPlaceholderData ? "opacity-60" : ""
-              }`}
+              className={`grid gap-4 transition-opacity md:grid-cols-2 xl:grid-cols-3 ${isPlaceholderData ? "opacity-60" : ""
+                }`}
             >
               {data.items.map((campaign) => {
                 const percent = progressPercent(campaign.raised, campaign.targetAmount);
@@ -331,11 +327,10 @@ export default function AdminCampaigns() {
                 return (
                   <div
                     key={campaign.id}
-                    className={`flex flex-col rounded-xl border bg-white p-5 transition hover:shadow-md ${
-                      isPendingReview
+                    className={`flex flex-col rounded-xl border bg-white p-5 transition hover:shadow-md ${isPendingReview
                         ? "border-amber-300/80 bg-amber-50/20 shadow-sm"
                         : "border-navy/10 hover:border-navy/25"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -457,11 +452,10 @@ export default function AdminCampaigns() {
                 type="button"
                 onClick={handleConfirmReview}
                 disabled={updateStatusMutation.isPending}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors shadow-sm ${
-                  reviewAction === "APPROVE"
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors shadow-sm ${reviewAction === "APPROVE"
                     ? "bg-emerald-700 hover:bg-emerald-800"
                     : "bg-crimson hover:bg-crimson/90"
-                }`}
+                  }`}
               >
                 {updateStatusMutation.isPending ? (
                   <>

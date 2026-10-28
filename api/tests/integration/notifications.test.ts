@@ -73,7 +73,7 @@ describe('Notification & SMS Integration Tests', () => {
 
     it('should calculate SMS credits accurately based on message length and encoding', () => {
       // GSM-7: 1-160 chars = 1 credit, 161-306 = 2 credits
-      const shortGsm = 'Hello from ZFund! Your contribution of GHS 10.00 has been received.';
+      const shortGsm = 'Hello from RaiseFunds! Your contribution of GHS 10.00 has been received.';
       expect(MNotifySmsAdapter.calculateSMSCredits(shortGsm, 1)).toBe(1);
 
       const longGsm = 'A'.repeat(165);
@@ -110,7 +110,7 @@ describe('Notification & SMS Integration Tests', () => {
       const res = await adapter.sendSms({
         recipient: '233240000001',
         message: 'Your donation of GHS 50.00 was confirmed. Ref: ZF-TEST-01',
-        senderId: 'ZFund',
+        senderId: 'RaiseFunds',
       });
 
       expect(res.success).toBe(true);
@@ -138,7 +138,7 @@ describe('Notification & SMS Integration Tests', () => {
         },
       });
 
-      const res = await adapter.sendOTP('233240000002', 'Your ZFund verification code is 492019');
+      const res = await adapter.sendOTP('233240000002', 'Your RaiseFunds verification code is 492019');
 
       expect(res.success).toBe(true);
       expect(res.provider).toBe('MNOTIFY');
@@ -149,7 +149,7 @@ describe('Notification & SMS Integration Tests', () => {
         expect.stringContaining('api.mnotify.com'),
         expect.objectContaining({
           sms_type: 'otp',
-          message: 'Your ZFund verification code is 492019',
+          message: 'Your RaiseFunds verification code is 492019',
         }),
         expect.anything()
       );
@@ -212,7 +212,7 @@ describe('Notification & SMS Integration Tests', () => {
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           recipient: '233240000001',
-          message: 'Automated Test SMS verification from ZFund integration test',
+          message: 'Automated Test SMS verification from RaiseFunds integration test',
         });
 
       expect(res.status).toBe(200);

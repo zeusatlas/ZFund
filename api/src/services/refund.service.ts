@@ -161,7 +161,7 @@ export class RefundService {
       transactionReference: refund.paymentAttempt.reference,
       amount: refund.amount,
       currency: refund.currency,
-      merchantNote: `ZFund Refund for ${refund.refundReference}`,
+      merchantNote: `RaiseFunds Refund for ${refund.refundReference}`,
     });
 
     // Execute state update and financial ledger entries inside TypeORM transaction

@@ -5,13 +5,13 @@ const swaggerOptions: swaggerJSDoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'ZFund Backend API',
+      title: 'RaiseFunds Backend API',
       version: '1.0.0',
       description:
-        'ZFund API - Contribution Management Platform with Database-Driven USSD Engine, Paystack Payments, and Multi-Provider SMS Notifications',
+        'RaiseFunds API - Contribution Management Platform with Database-Driven USSD Engine, Paystack Payments, and Multi-Provider SMS Notifications',
       contact: {
-        name: 'ZFund Engineering Team',
-        email: 'engineering@zfund.org',
+        name: 'RaiseFunds Engineering Team',
+        email: 'engineering@raisefundz.com',
       },
     },
     servers: [

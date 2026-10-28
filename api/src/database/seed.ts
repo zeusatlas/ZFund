@@ -92,27 +92,29 @@ export async function runSeeds(): Promise<void> {
   }
 
   // 3. Seed Super Admin Account
-  const adminEmail = 'admin@zfund.org';
+  const adminEmail = 'admin@raisefundz.com';
+  const adminPhone = normalizePhone('0245482029');
   const existingAdmin = await userRepo.findOne({ where: { email: adminEmail } });
   if (!existingAdmin) {
-    const passwordHash = await CryptoUtil.hashPassword('SuperAdminZFund2026!');
+    const passwordHash = await CryptoUtil.hashPassword('Admin@2026!');
     await userRepo.save(
       userRepo.create({
         email: adminEmail,
         passwordHash,
         firstName: 'System',
         lastName: 'Administrator',
-        phone: env.SEED_ADMIN_PHONE ? normalizePhone(env.SEED_ADMIN_PHONE) : undefined,
+        phone: adminPhone,
         role: SystemRole.SUPER_ADMIN,
         status: UserStatus.ACTIVE,
         isEmailVerified: true,
       })
     );
-    logger.info(`Seeded Super Admin user: ${adminEmail}`);
-  } else if (!existingAdmin.phone && env.SEED_ADMIN_PHONE) {
-    existingAdmin.phone = normalizePhone(env.SEED_ADMIN_PHONE);
+    logger.info(`Seeded Super Admin user: ${adminEmail} (${adminPhone})`);
+  } else {
+    existingAdmin.phone = adminPhone;
+    existingAdmin.status = UserStatus.ACTIVE;
     await userRepo.save(existingAdmin);
-    logger.info(`Set phone for Super Admin user: ${adminEmail}`);
+    logger.info(`Ensured Super Admin phone: ${adminEmail} (${adminPhone})`);
   }
 
   // 4. Seed Project Categories
@@ -156,7 +158,7 @@ export async function runSeeds(): Promise<void> {
       channel: NotificationChannel.SMS,
       eventType: 'PAYMENT_SUCCESS',
       title: 'Contribution Confirmation',
-      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through ZFund.',
+      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through RaiseFunds.',
       approvedPlaceholders: ['currency', 'amount', 'projectName', 'reference'],
     },
     {
@@ -172,7 +174,7 @@ export async function runSeeds(): Promise<void> {
       channel: NotificationChannel.SMS,
       eventType: 'PAYMENT_SUCCESS',
       title: 'New Contribution Alert',
-      messageTemplate: 'ZFund Alert: New contribution of {currency} {amount} received for {projectName}.',
+      messageTemplate: 'RaiseFunds Alert: New contribution of {currency} {amount} received for {projectName}.',
       approvedPlaceholders: ['currency', 'amount', 'projectName'],
     },
   ];
@@ -184,80 +186,105 @@ export async function runSeeds(): Promise<void> {
     }
   }
 
-  // 7. Seed General USSD Flow (*920*969#)
-  const existingGeneralFlow = await flowRepo.findOne({ where: { projectId: IsNull() } });
-  if (!existingGeneralFlow) {
-    const flow = flowRepo.create({
-      name: 'General ZFund USSD Menu',
-      description: 'Default USSD Flow for *920*969#',
-      status: UssdFlowStatus.PUBLISHED,
-    });
-    const savedFlow = await flowRepo.save(flow);
+  // 7. Seed or Update General USSD Flow (*920*969#)
+  let generalFlow = await flowRepo.findOne({ where: { projectId: IsNull() } });
+  if (!generalFlow) {
+    generalFlow = await flowRepo.save(
+      flowRepo.create({
+        name: 'General RaiseFunds USSD Menu',
+        description: 'Default USSD Flow for *920*969#',
+        status: UssdFlowStatus.PUBLISHED,
+      })
+    );
+  }
 
-    const version = versionRepo.create({
-      flowId: savedFlow.id,
-      versionNumber: 1,
-      status: UssdFlowVersionStatus.PUBLISHED,
-      publishedAt: new Date(),
-      notes: 'Initial general menu',
-    });
-    const savedVersion = await versionRepo.save(version);
+  let version = await versionRepo.findOne({
+    where: { flowId: generalFlow.id, status: UssdFlowVersionStatus.PUBLISHED },
+    relations: ['menus', 'menus.options'],
+  });
 
-    savedFlow.activeVersionId = savedVersion.id;
-    await flowRepo.save(savedFlow);
+  if (!version) {
+    version = await versionRepo.save(
+      versionRepo.create({
+        flowId: generalFlow.id,
+        versionNumber: 1,
+        status: UssdFlowVersionStatus.PUBLISHED,
+        publishedAt: new Date(),
+        notes: 'Initial general menu',
+      })
+    );
+    generalFlow.activeVersionId = version.id;
+    await flowRepo.save(generalFlow);
+  }
 
-    // Welcome Menu
-    const welcomeMenu = menuRepo.create({
-      flowVersionId: savedVersion.id,
-      menuKey: 'WELCOME',
-      title: 'Welcome to ZFund',
-      prompt: 'Welcome to ZFund.\nSelect option:',
-      menuType: UssdMenuType.SELECT,
-      displayOrder: 1,
-    });
-    const savedWelcome = await menuRepo.save(welcomeMenu);
+  // Ensure Welcome Menu matches new Raise-Fundz format
+  let welcomeMenu = await menuRepo.findOne({
+    where: { flowVersionId: version.id, menuKey: 'WELCOME' },
+    relations: ['options'],
+  });
 
-    await optionRepo.save([
-      optionRepo.create({
-        menuId: savedWelcome.id,
+  if (!welcomeMenu) {
+    welcomeMenu = await menuRepo.save(
+      menuRepo.create({
+        flowVersionId: version.id,
+        menuKey: 'WELCOME',
+        title: 'Welcome to Raise-Fundz',
+        prompt: 'Welcome to your number one Fund Raising platform',
+        menuType: UssdMenuType.SELECT,
         displayOrder: 1,
-        optionKey: '1',
-        label: 'Enter Project Code',
-        optionType: UssdOptionType.NAVIGATION,
-        targetMenuKey: 'ENTER_CODE',
-      }),
-      optionRepo.create({
-        menuId: savedWelcome.id,
-        displayOrder: 2,
-        optionKey: '2',
-        label: 'About ZFund',
-        optionType: UssdOptionType.ACTION,
-        actionReference: 'VIEW_PROJECT_INFO',
-      }),
-      optionRepo.create({
-        menuId: savedWelcome.id,
-        displayOrder: 3,
-        optionKey: '3',
-        label: 'Exit',
-        optionType: UssdOptionType.ACTION,
-        actionReference: 'EXIT',
-      }),
-    ]);
+      })
+    );
+  } else {
+    welcomeMenu.prompt = 'Welcome to your number one Fund Raising platform';
+    welcomeMenu.title = 'Welcome to Raise-Fundz';
+    await menuRepo.save(welcomeMenu);
+    if (welcomeMenu.options && welcomeMenu.options.length > 0) {
+      await optionRepo.remove(welcomeMenu.options);
+    }
+  }
 
-    // Enter Code Menu
-    const enterCodeMenu = menuRepo.create({
-      flowVersionId: savedVersion.id,
-      menuKey: 'ENTER_CODE',
-      title: 'Enter Project Code',
-      prompt: 'Enter project code (e.g. 1001):',
-      menuType: UssdMenuType.INPUT,
+  await optionRepo.save([
+    optionRepo.create({
+      menuId: welcomeMenu.id,
+      displayOrder: 1,
+      optionKey: '1',
+      label: 'Support Project',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'SUPPORT_PROJECT',
+    }),
+    optionRepo.create({
+      menuId: welcomeMenu.id,
       displayOrder: 2,
-    });
-    await menuRepo.save(enterCodeMenu);
+      optionKey: '2',
+      label: 'Know more about Raise-Fundz',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'KNOW_MORE',
+    }),
+    optionRepo.create({
+      menuId: welcomeMenu.id,
+      displayOrder: 3,
+      optionKey: '3',
+      label: 'Register Today',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'REGISTER_TODAY',
+    }),
+    optionRepo.create({
+      menuId: welcomeMenu.id,
+      displayOrder: 4,
+      optionKey: '4',
+      label: 'Exit',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'EXIT',
+    }),
+  ]);
 
-    // Enter Payment OTP Menu
-    const enterOtpMenu = menuRepo.create({
-      flowVersionId: savedVersion.id,
+  // Enter Payment OTP Menu (global fallback)
+  let enterOtpMenu = await menuRepo.findOne({
+    where: { flowVersionId: version.id, menuKey: 'ENTER_PAYMENT_OTP' },
+  });
+  if (!enterOtpMenu) {
+    enterOtpMenu = menuRepo.create({
+      flowVersionId: version.id,
       menuKey: 'ENTER_PAYMENT_OTP',
       title: 'Enter Payment OTP',
       prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
@@ -265,211 +292,20 @@ export async function runSeeds(): Promise<void> {
       displayOrder: 3,
     });
     await menuRepo.save(enterOtpMenu);
-
-    logger.info('Seeded General USSD Flow and Menus (*920*969#)');
   }
 
-  // 8. Seed Demo Projects and Contributions if none exist
-  const contributorRepo = AppDataSource.getRepository(Contributor);
-  const contributionRepo = AppDataSource.getRepository(Contribution);
-  const paymentAttemptRepo = AppDataSource.getRepository(PaymentAttempt);
-  const memberRepo = AppDataSource.getRepository(ProjectMember);
+  logger.info('Seeded General USSD Flow and Menus (*920*969#)');
 
-  if ((await projectRepo.count()) === 0) {
-    logger.info('Seeding initial demo projects and contributions...');
-    const admin = await userRepo.findOne({ where: { email: adminEmail } });
-    const commCat = await categoryRepo.findOne({ where: { slug: 'community-development' } });
-    const eduCat = await categoryRepo.findOne({ where: { slug: 'schools-education' } });
-    const genCat = await categoryRepo.findOne({ where: { slug: 'fundraising' } });
-
-    const p1 = await projectRepo.save(
-      projectRepo.create({
-        name: 'Aburi community borehole',
-        eventCode: '1001',
-        description: 'A shared appeal to fund a borehole and improve access to clean water for households in the community.',
-        welcomeMessage: 'Aburi, Eastern Region',
-        currency: 'GHS',
-        targetAmount: '50000.00',
-        minAmount: '1.00',
-        maxAmount: '10000.00',
-        status: ProjectStatus.APPROVED,
-        acceptsContributions: true,
-        categoryId: commCat?.id,
-        createdAt: new Date('2026-10-12T10:00:00Z'),
-      })
-    );
-
-    const p2 = await projectRepo.save(
-      projectRepo.create({
-        name: 'Books for the next generation',
-        eventCode: '1002',
-        description: 'Old students coming together to furnish a school library with books, shelves, and reading tables.',
-        welcomeMessage: 'Cape Coast, Central Region',
-        currency: 'GHS',
-        targetAmount: '30000.00',
-        minAmount: '1.00',
-        maxAmount: '10000.00',
-        status: ProjectStatus.APPROVED,
-        acceptsContributions: true,
-        categoryId: eduCat?.id,
-        createdAt: new Date('2026-10-05T09:00:00Z'),
-      })
-    );
-
-    const p3 = await projectRepo.save(
-      projectRepo.create({
-        name: 'Market women’s welfare fund',
-        eventCode: '1003',
-        description: 'Support for members of our market association during medical emergencies and difficult times.',
-        welcomeMessage: 'Kumasi, Ashanti Region',
-        currency: 'GHS',
-        targetAmount: '20000.00',
-        minAmount: '1.00',
-        maxAmount: '10000.00',
-        status: ProjectStatus.APPROVED,
-        acceptsContributions: true,
-        categoryId: genCat?.id,
-        createdAt: new Date('2026-09-18T08:30:00Z'),
-      })
-    );
-
-    const p4 = await projectRepo.save(
-      projectRepo.create({
-        name: 'School essentials appeal',
-        eventCode: '1004',
-        description: 'School bags, exercise books, and learning materials for children at the start of term.',
-        welcomeMessage: 'Tamale, Northern Region',
-        currency: 'GHS',
-        targetAmount: '15000.00',
-        minAmount: '1.00',
-        maxAmount: '10000.00',
-        status: ProjectStatus.COMPLETED,
-        acceptsContributions: false,
-        categoryId: eduCat?.id,
-        createdAt: new Date('2026-08-01T11:00:00Z'),
-      })
-    );
-
-    const p5 = await projectRepo.save(
-      projectRepo.create({
-        name: 'Community food drive',
-        eventCode: '1005',
-        description: 'A neighbourhood food drive to prepare and distribute essential food packages.',
-        welcomeMessage: 'Accra, Greater Accra Region',
-        currency: 'GHS',
-        targetAmount: '10000.00',
-        minAmount: '1.00',
-        maxAmount: '10000.00',
-        status: ProjectStatus.COMPLETED,
-        acceptsContributions: false,
-        categoryId: commCat?.id,
-        createdAt: new Date('2026-07-10T12:00:00Z'),
-      })
-    );
-
-    const p6 = await projectRepo.save(
-      projectRepo.create({
-        name: 'Youth skills workshop',
-        eventCode: '1006',
-        description: 'A practical skills workshop for young people, with materials and equipment covered by the campaign.',
-        welcomeMessage: 'Ho, Volta Region',
-        currency: 'GHS',
-        targetAmount: '25000.00',
-        minAmount: '1.00',
-        maxAmount: '10000.00',
-        status: ProjectStatus.DRAFT,
-        acceptsContributions: false,
-        categoryId: commCat?.id,
-        createdAt: new Date('2026-06-20T14:00:00Z'),
-      })
-    );
-
-    if (admin) {
-      for (const p of [p1, p2, p3, p4, p5, p6]) {
-        await memberRepo.save(
-          memberRepo.create({
-            projectId: p.id,
-            userId: admin.id,
-            role: ProjectMemberRole.OWNER,
-          })
-        );
-      }
-    }
-
-    // Seed contributors
-    const donorPhones = [
-      { key: 'D-001', phone: '0243120345', name: 'Kwame Mensah' },
-      { key: 'D-002', phone: '0204560891', name: 'Akua Mansa' },
-      { key: 'D-003', phone: '0278910202', name: 'Kofi Annan' },
-      { key: 'D-004', phone: '0551231120', name: 'Ama Serwaa' },
-      { key: 'D-005', phone: '0507890456', name: 'Yaw Boateng' },
-      { key: 'D-006', phone: '0543210712', name: 'Abena Osei' },
-      { key: 'D-007', phone: '0266540880', name: 'Esi Dadzie' },
-      { key: 'D-008', phone: '0249870901', name: 'Kojo Antwi' },
-      { key: 'D-009', phone: '0201120144', name: 'Adwoa Safo' },
-      { key: 'D-010', phone: '0273340420', name: 'Kwaku Duah' },
-      { key: 'D-011', phone: '0509980600', name: 'Afia Pokua' },
-    ];
-
-    const donorMap = new Map<string, Contributor>();
-    for (const d of donorPhones) {
-      let donor = await contributorRepo.findOne({ where: { msisdn: d.phone } });
-      if (!donor) {
-        donor = await contributorRepo.save(
-          contributorRepo.create({
-            msisdn: d.phone,
-            name: d.name,
-          })
-        );
-      }
-      donorMap.set(d.key, donor);
-    }
-
-    const demoContributions = [
-      { ref: 'ZF-20261027-TX012', project: p1, donor: 'D-001', amount: '12500.00', status: ContributionStatus.CONFIRMED, date: '2026-10-27T14:32:00Z' },
-      { ref: 'ZF-20261026-TX011', project: p2, donor: 'D-002', amount: '8400.00', status: ContributionStatus.CONFIRMED, date: '2026-10-26T09:18:00Z' },
-      { ref: 'ZF-20261025-TX010', project: p1, donor: 'D-003', amount: '7500.00', status: ContributionStatus.CONFIRMED, date: '2026-10-25T16:05:00Z' },
-      { ref: 'ZF-20261024-TX009', project: p3, donor: 'D-004', amount: '4250.00', status: ContributionStatus.CONFIRMED, date: '2026-10-24T11:42:00Z' },
-      { ref: 'ZF-20261023-TX008', project: p1, donor: 'D-001', amount: '8475.00', status: ContributionStatus.CONFIRMED, date: '2026-10-23T08:26:00Z' },
-      { ref: 'ZF-20261022-TX007', project: p2, donor: 'D-005', amount: '4000.00', status: ContributionStatus.CONFIRMED, date: '2026-10-22T17:10:00Z' },
-      { ref: 'ZF-20261021-TX006', project: p3, donor: 'D-006', amount: '3500.00', status: ContributionStatus.CONFIRMED, date: '2026-10-21T13:54:00Z' },
-      { ref: 'ZF-20261020-TX005', project: p1, donor: 'D-007', amount: '500.00', status: ContributionStatus.PENDING, date: '2026-10-20T10:23:00Z' },
-      { ref: 'ZF-20260928-TX004', project: p4, donor: 'D-008', amount: '10000.00', status: ContributionStatus.CONFIRMED, date: '2026-09-28T15:37:00Z' },
-      { ref: 'ZF-20260925-TX003', project: p4, donor: 'D-009', amount: '5000.00', status: ContributionStatus.CONFIRMED, date: '2026-09-25T12:08:00Z' },
-      { ref: 'ZF-20260819-TX002', project: p5, donor: 'D-010', amount: '10000.00', status: ContributionStatus.CONFIRMED, date: '2026-08-19T09:46:00Z' },
-      { ref: 'ZF-20261019-TX001', project: p3, donor: 'D-011', amount: '100.00', status: ContributionStatus.FAILED, date: '2026-10-19T18:15:00Z' },
-    ];
-
-    for (const c of demoContributions) {
-      const donor = donorMap.get(c.donor)!;
-      const savedContrib = await contributionRepo.save(
-        contributionRepo.create({
-          reference: c.ref,
-          projectId: c.project.id,
-          contributorId: donor.id,
-          amount: c.amount,
-          currency: 'GHS',
-          status: c.status,
-          createdAt: new Date(c.date),
-        })
-      );
-
-      await paymentAttemptRepo.save(
-        paymentAttemptRepo.create({
-          reference: `PAY-${c.ref}`,
-          contributionId: savedContrib.id,
-          provider: 'PAYSTACK',
-          channel: PaymentChannel.MOBILE_MONEY,
-          msisdn: donor.msisdn,
-          amount: c.amount,
-          currency: 'GHS',
-          status:
-            c.status === ContributionStatus.CONFIRMED
-              ? PaymentStatus.SUCCESSFUL
-              : c.status === ContributionStatus.PENDING
-                ? PaymentStatus.PENDING
-                : PaymentStatus.FAILED,
-          createdAt: new Date(c.date),
+  // 8. Seed Demo Church Project (*920*969*1001#)
+  const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });
+  if (!existingProject1001) {
+    let org = await orgRepo.findOne({ where: { slug: 'holy-trinity-parish' } });
+    if (!org) {
+      org = await orgRepo.save(
+        orgRepo.create({
+          name: 'Holy Trinity Parish',
+          slug: 'holy-trinity-parish',
+          verificationStatus: OrgVerificationStatus.VERIFIED,
         })
       );
     }
@@ -571,182 +407,182 @@ export async function runSeeds(): Promise<void> {
   }
 
   // 8. Seed Demo Church Project (*920*969*1001#)
-    const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });
-    if (!existingProject1001) {
-      let org = await orgRepo.findOne({ where: { slug: 'holy-trinity-parish' } });
-      if (!org) {
-        org = await orgRepo.save(
-          orgRepo.create({
-            name: 'Holy Trinity Parish',
-            slug: 'holy-trinity-parish',
-            verificationStatus: OrgVerificationStatus.VERIFIED,
-          })
-        );
-      }
-
-      const admin = await userRepo.findOne({ where: { email: adminEmail } });
-      const churchCategory = await categoryRepo.findOne({ where: { slug: 'church-religious' } });
-
-      const project1001 = await projectRepo.save(
-        projectRepo.create({
-          name: 'Holy Trinity Church Project',
-          description: 'Contributions for Holy Trinity Cathedral harvest and community outreach.',
-          organizationId: org.id,
-          ownerId: admin ? admin.id : undefined,
-          categoryId: churchCategory ? churchCategory.id : undefined,
-          eventCode: '1001',
-          currency: 'GHS',
-          minAmount: '1.00',
-          maxAmount: '10000.00',
-          status: ProjectStatus.PUBLISHED,
-          acceptsContributions: true,
+  const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });
+  if (!existingProject1001) {
+    let org = await orgRepo.findOne({ where: { slug: 'holy-trinity-parish' } });
+    if (!org) {
+      org = await orgRepo.save(
+        orgRepo.create({
+          name: 'Holy Trinity Parish',
+          slug: 'holy-trinity-parish',
+          verificationStatus: OrgVerificationStatus.VERIFIED,
         })
       );
-
-      await paymentMethodRepo.save(
-        paymentMethodRepo.create({
-          projectId: project1001.id,
-          method: PaymentMethodType.MOBILE_MONEY,
-          provider: 'PAYSTACK',
-          isEnabled: true,
-        })
-      );
-
-      const projectFlow = await flowRepo.save(
-        flowRepo.create({
-          name: 'Holy Trinity Church USSD Flow',
-          description: 'Direct USSD menu for event code 1001',
-          projectId: project1001.id,
-          status: UssdFlowStatus.PUBLISHED,
-        })
-      );
-
-      const projectVersion = await versionRepo.save(
-        versionRepo.create({
-          flowId: projectFlow.id,
-          versionNumber: 1,
-          status: UssdFlowVersionStatus.PUBLISHED,
-          publishedAt: new Date(),
-        })
-      );
-
-      projectFlow.activeVersionId = projectVersion.id;
-      await flowRepo.save(projectFlow);
-
-      // Welcome Menu
-      const projectWelcome = await menuRepo.save(
-        menuRepo.create({
-          flowVersionId: projectVersion.id,
-          menuKey: 'WELCOME',
-          title: 'Church Welcome',
-          prompt: 'Welcome to Holy Trinity Cathedral.\nSelect:',
-          menuType: UssdMenuType.SELECT,
-          displayOrder: 1,
-          isActive: true,
-        })
-      );
-
-      await optionRepo.save([
-        optionRepo.create({
-          menuId: projectWelcome.id,
-          displayOrder: 1,
-          optionKey: '1',
-          label: 'Offering',
-          optionType: UssdOptionType.ACTION,
-          actionReference: 'SELECT_PURPOSE',
-          targetMenuKey: 'AMOUNT_INPUT',
-        }),
-        optionRepo.create({
-          menuId: projectWelcome.id,
-          displayOrder: 2,
-          optionKey: '2',
-          label: 'Tithe',
-          optionType: UssdOptionType.ACTION,
-          actionReference: 'SELECT_PURPOSE',
-          targetMenuKey: 'AMOUNT_INPUT',
-        }),
-        optionRepo.create({
-          menuId: projectWelcome.id,
-          displayOrder: 3,
-          optionKey: '3',
-          label: 'Exit',
-          optionType: UssdOptionType.ACTION,
-          actionReference: 'EXIT',
-        }),
-      ]);
-
-      // Amount input menu
-      await menuRepo.save(
-        menuRepo.create({
-          flowVersionId: projectVersion.id,
-          menuKey: 'AMOUNT_INPUT',
-          title: 'Enter Amount',
-          prompt: 'Enter Amount in GHS:',
-          menuType: UssdMenuType.INPUT,
-          displayOrder: 2,
-          isActive: true,
-        })
-      );
-
-      // Confirmation menu
-      const projectConfirm = await menuRepo.save(
-        menuRepo.create({
-          flowVersionId: projectVersion.id,
-          menuKey: 'CONFIRM_PAYMENT',
-          title: 'Confirm Contribution',
-          prompt: 'Contribute GHS {amount} to {projectName}?',
-          menuType: UssdMenuType.SELECT,
-          displayOrder: 3,
-          isActive: true,
-        })
-      );
-
-      await optionRepo.save([
-        optionRepo.create({
-          menuId: projectConfirm.id,
-          displayOrder: 1,
-          optionKey: '1',
-          label: 'Confirm',
-          optionType: UssdOptionType.ACTION,
-          actionReference: 'INITIATE_PAYMENT',
-        }),
-        optionRepo.create({
-          menuId: projectConfirm.id,
-          displayOrder: 2,
-          optionKey: '2',
-          label: 'Cancel',
-          optionType: UssdOptionType.ACTION,
-          actionReference: 'EXIT',
-        }),
-      ]);
-
-      // Enter Payment OTP Menu
-      await menuRepo.save(
-        menuRepo.create({
-          flowVersionId: projectVersion.id,
-          menuKey: 'ENTER_PAYMENT_OTP',
-          title: 'Enter Payment OTP',
-          prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
-          menuType: UssdMenuType.INPUT,
-          displayOrder: 4,
-          isActive: true,
-        })
-      );
-
-      logger.info('Seeded Demo Church Project (*920*969*1001#)');
     }
 
-    logger.info('Database seeding completed successfully.');
+    const admin = await userRepo.findOne({ where: { email: adminEmail } });
+    const churchCategory = await categoryRepo.findOne({ where: { slug: 'church-religious' } });
+
+    const project1001 = await projectRepo.save(
+      projectRepo.create({
+        name: 'Holy Trinity Church Project',
+        description: 'Contributions for Holy Trinity Cathedral harvest and community outreach.',
+        organizationId: org.id,
+        ownerId: admin ? admin.id : undefined,
+        categoryId: churchCategory ? churchCategory.id : undefined,
+        eventCode: '1001',
+        currency: 'GHS',
+        minAmount: '1.00',
+        maxAmount: '10000.00',
+        status: ProjectStatus.PUBLISHED,
+        acceptsContributions: true,
+      })
+    );
+
+    await paymentMethodRepo.save(
+      paymentMethodRepo.create({
+        projectId: project1001.id,
+        method: PaymentMethodType.MOBILE_MONEY,
+        provider: 'PAYSTACK',
+        isEnabled: true,
+      })
+    );
+
+    const projectFlow = await flowRepo.save(
+      flowRepo.create({
+        name: 'Holy Trinity Church USSD Flow',
+        description: 'Direct USSD menu for event code 1001',
+        projectId: project1001.id,
+        status: UssdFlowStatus.PUBLISHED,
+      })
+    );
+
+    const projectVersion = await versionRepo.save(
+      versionRepo.create({
+        flowId: projectFlow.id,
+        versionNumber: 1,
+        status: UssdFlowVersionStatus.PUBLISHED,
+        publishedAt: new Date(),
+      })
+    );
+
+    projectFlow.activeVersionId = projectVersion.id;
+    await flowRepo.save(projectFlow);
+
+    // Welcome Menu
+    const projectWelcome = await menuRepo.save(
+      menuRepo.create({
+        flowVersionId: projectVersion.id,
+        menuKey: 'WELCOME',
+        title: 'Church Welcome',
+        prompt: 'Welcome to Holy Trinity Cathedral.\nSelect:',
+        menuType: UssdMenuType.SELECT,
+        displayOrder: 1,
+        isActive: true,
+      })
+    );
+
+    await optionRepo.save([
+      optionRepo.create({
+        menuId: projectWelcome.id,
+        displayOrder: 1,
+        optionKey: '1',
+        label: 'Offering',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'SELECT_PURPOSE',
+        targetMenuKey: 'AMOUNT_INPUT',
+      }),
+      optionRepo.create({
+        menuId: projectWelcome.id,
+        displayOrder: 2,
+        optionKey: '2',
+        label: 'Tithe',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'SELECT_PURPOSE',
+        targetMenuKey: 'AMOUNT_INPUT',
+      }),
+      optionRepo.create({
+        menuId: projectWelcome.id,
+        displayOrder: 3,
+        optionKey: '3',
+        label: 'Exit',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'EXIT',
+      }),
+    ]);
+
+    // Amount input menu
+    await menuRepo.save(
+      menuRepo.create({
+        flowVersionId: projectVersion.id,
+        menuKey: 'AMOUNT_INPUT',
+        title: 'Enter Amount',
+        prompt: 'Enter Amount in GHS:',
+        menuType: UssdMenuType.INPUT,
+        displayOrder: 2,
+        isActive: true,
+      })
+    );
+
+    // Confirmation menu
+    const projectConfirm = await menuRepo.save(
+      menuRepo.create({
+        flowVersionId: projectVersion.id,
+        menuKey: 'CONFIRM_PAYMENT',
+        title: 'Confirm Contribution',
+        prompt: 'Contribute GHS {amount} to {projectName}?',
+        menuType: UssdMenuType.SELECT,
+        displayOrder: 3,
+        isActive: true,
+      })
+    );
+
+    await optionRepo.save([
+      optionRepo.create({
+        menuId: projectConfirm.id,
+        displayOrder: 1,
+        optionKey: '1',
+        label: 'Confirm',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'INITIATE_PAYMENT',
+      }),
+      optionRepo.create({
+        menuId: projectConfirm.id,
+        displayOrder: 2,
+        optionKey: '2',
+        label: 'Cancel',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'EXIT',
+      }),
+    ]);
+
+    // Enter Payment OTP Menu
+    await menuRepo.save(
+      menuRepo.create({
+        flowVersionId: projectVersion.id,
+        menuKey: 'ENTER_PAYMENT_OTP',
+        title: 'Enter Payment OTP',
+        prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
+        menuType: UssdMenuType.INPUT,
+        displayOrder: 4,
+        isActive: true,
+      })
+    );
+
+    logger.info('Seeded Demo Church Project (*920*969*1001#)');
   }
 
-  if (require.main === module) {
-    runSeeds()
-      .then(() => {
-        logger.info('Seeding finished.');
-        process.exit(0);
-      })
-      .catch((err) => {
-        logger.error({ err }, 'Seeding failed');
-        process.exit(1);
-      });
-  }
+  logger.info('Database seeding completed successfully.');
+}
+
+if (require.main === module) {
+  runSeeds()
+    .then(() => {
+      logger.info('Seeding finished.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      logger.error({ err }, 'Seeding failed');
+      process.exit(1);
+    });
+}

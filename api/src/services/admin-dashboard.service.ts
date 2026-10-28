@@ -85,10 +85,11 @@ export interface FundCounts {
   total: number;
   published: number;
   draft: number;
-  suspended: number;
   pendingReview: number;
+  suspended: number;
   rejected?: number;
   approved?: number;
+  scheduled?: number;
   raised: string;
 }
 
@@ -135,6 +136,10 @@ export interface ActivityEntry {
   entityId?: string;
   actorName: string | null;
   amount?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   createdAt: Date;
 }
 
@@ -560,7 +565,7 @@ export class AdminDashboardService {
 
   async getFundCounts(): Promise<FundCounts> {
     const countFor = (status: ProjectStatus) => this.projectRepo.count({ where: { status } });
-    const [published, draft, suspended, pendingReview, rejected, approved, collected] =
+    const [published, draft, suspended, pendingReview, rejected, approved, scheduled, collected] =
       await Promise.all([
         countFor(ProjectStatus.PUBLISHED),
         countFor(ProjectStatus.DRAFT),
@@ -568,6 +573,7 @@ export class AdminDashboardService {
         countFor(ProjectStatus.PENDING_REVIEW),
         countFor(ProjectStatus.REJECTED),
         countFor(ProjectStatus.APPROVED),
+        countFor(ProjectStatus.SCHEDULED),
         this.collectedBetween(),
       ]);
     const totalVisible = await this.projectRepo.count({
@@ -581,6 +587,7 @@ export class AdminDashboardService {
       pendingReview,
       rejected,
       approved,
+      scheduled,
       raised: this.sum(collected),
     };
   }
@@ -638,6 +645,10 @@ export class AdminDashboardService {
         entityId: l.entityId,
         actorName: l.userId ? (names.get(l.userId) ?? null) : null,
         ...(amount ? { amount: String(amount) } : {}),
+        ipAddress: l.ipAddress,
+        userAgent: l.userAgent,
+        oldValues: l.oldValues,
+        newValues: l.newValues,
         createdAt: l.createdAt,
       };
     });

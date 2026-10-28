@@ -6,7 +6,7 @@ import { logger } from './config/logger';
 
 async function bootstrap(): Promise<void> {
   try {
-    logger.info('Starting ZFund Backend Server...');
+    logger.info('Starting RaiseFunds Backend Server...');
 
     // Initialize PostgreSQL Database with TypeORM Entity Synchronization
     await initializeDatabase();
@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
           apiPrefix: env.API_PREFIX,
           docsUrl: `http://localhost:${env.PORT}/api-docs`,
         },
-        `🚀 ZFund API is running successfully at http://localhost:${env.PORT}`
+        `🚀 RaiseFunds API is running successfully at http://localhost:${env.PORT}`
       );
     });
 

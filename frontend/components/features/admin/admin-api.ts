@@ -17,6 +17,10 @@ export type ActivityLogEntry = {
   entityId?: string;
   actorName: string | null;
   amount?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   createdAt: string;
 };
 
@@ -126,6 +130,7 @@ export const adminApiKeys = {
   campaigns: (params: ListParams) => [...adminRoot, "campaigns", params] as const,
   campaign: (id: string) => [...adminRoot, "campaign", id] as const,
   contributions: (id: string, params: ListParams) => [...adminRoot, "campaign", id, "contributions", params] as const,
+  admins: () => [...adminRoot, "admins"] as const,
   withdrawals: (params: ListParams) => [...adminRoot, "withdrawals", params] as const,
 };
 
@@ -276,5 +281,40 @@ export function useUpdateCampaignStatus() {
     },
     onError: (error) =>
       toast.error((error as { message?: string }).message ?? "Could not update the campaign status."),
+  });
+}
+
+export type AdminAccount = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  role: "SUPER_ADMIN" | "PLATFORM_ADMIN";
+  status: string;
+  lastLoginAt?: string;
+};
+
+export type NewAdminInput = { firstName: string; lastName: string; email: string; phone: string; role: AdminAccount["role"] };
+
+export function useAdmins() {
+  return useQuery({
+    queryKey: adminApiKeys.admins(),
+    queryFn: async () =>
+      (await api.get<ApiEnvelope<AdminAccount[]>>("/users", { params: { role: "SUPER_ADMIN,PLATFORM_ADMIN", limit: 100 } })).data.data,
+  });
+}
+
+export function useAddAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: NewAdminInput) =>
+      (await api.post<ApiEnvelope<{ id: string; smsSent: boolean }>>("/users", input)).data.data,
+    onSuccess: (user, input) => {
+      queryClient.invalidateQueries({ queryKey: adminApiKeys.admins() });
+      const name = `${input.firstName} ${input.lastName}`;
+      if (user.smsSent) toast.success(`${name} was added and sent their sign-in details by SMS.`);
+      else toast.warning(`${name} was added, but the SMS could not be sent. Share their email and phone number with them directly.`);
+    },
   });
 }

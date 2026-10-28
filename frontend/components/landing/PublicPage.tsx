@@ -5,7 +5,7 @@ export function PageIntro({ label, title, children }: { label: string; title: st
   return (
     <section className="bg-parchment">
       <div className="mx-auto max-w-[1200px] px-6 py-20 md:py-28">
-        <Link href="/" className="mb-10 inline-block text-sm text-graphite underline underline-offset-4">ZFund / {label}</Link>
+        <Link href="/" className="mb-10 inline-block text-sm text-graphite underline underline-offset-4">RaiseFunds / {label}</Link>
         <h1 className="max-w-4xl text-[clamp(40px,6vw,76px)] font-medium leading-[1.02] tracking-[-0.035em]">{title}</h1>
         <p className="mt-8 max-w-2xl text-lg leading-relaxed text-graphite">{children}</p>
       </div>

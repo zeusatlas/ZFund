@@ -121,7 +121,7 @@ export class NaloAdapter {
   ): NaloRawResponse {
     let msg = response.message || '';
 
-    // Enforce NALO maximum message length (default 120 characters)
+    // Enforce NALO maximum message length (default 160 characters)
     if (msg.length > env.NALO_MAX_MESSAGE_LENGTH) {
       msg = msg.slice(0, env.NALO_MAX_MESSAGE_LENGTH - 3) + '...';
     }

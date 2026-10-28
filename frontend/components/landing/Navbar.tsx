@@ -56,7 +56,7 @@ export default function Navbar() {
           href="/"
           className="text-[18px] font-medium tracking-tight text-off-ink"
         >
-          ZFund
+          RaiseFunds
         </Link>
 
         {/* Desktop Nav */}

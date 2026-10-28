@@ -105,7 +105,7 @@ export class PaymentService {
     const savedAttempt = await this.paymentAttemptRepo.save(paymentAttempt);
 
     // Call Paystack provider
-    const customerEmail = input.email || `${input.msisdn}@contributors.zfund.org`;
+    const customerEmail = input.email || `${input.msisdn}@contributors.raisefundz.com`;
 
     try {
       const initResult = await paystackProvider.initializePayment({
@@ -216,7 +216,7 @@ export class PaymentService {
     });
     const savedAttempt = await this.paymentAttemptRepo.save(paymentAttempt);
 
-    const customerEmail = input.email || `${input.msisdn}@contributors.zfund.org`;
+    const customerEmail = input.email || `${input.msisdn}@contributors.raisefundz.com`;
 
     try {
       const chargeResult = await paystackProvider.chargeMobileMoney({
@@ -505,7 +505,7 @@ export class PaymentService {
       variables: {
         amount: paymentAttempt.amount,
         currency: paymentAttempt.currency,
-        projectName: project?.name || 'ZFund Project',
+        projectName: project?.name || 'RaiseFunds Project',
         reference: paymentAttempt.reference,
       },
     });

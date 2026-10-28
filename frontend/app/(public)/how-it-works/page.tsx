@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { FAQ, PageCTA, PageIntro, PageSection } from "@/components/landing/PublicPage";
 
 export const metadata: Metadata = {
-  title: "How it works | ZFund",
-  description: "Explore the ZFund fundraising journey for Ghana, from a campaign idea to contributions in Ghana cedis and a withdrawal request.",
+  title: "How it works | RaiseFunds",
+  description: "Explore the RaiseFunds fundraising journey for Ghana, from a campaign idea to contributions in Ghana cedis and a withdrawal request.",
 };
 
 const steps = [
@@ -26,9 +26,9 @@ export default function HowItWorksPage() {
       </ol>
     </PageSection>
     <div className="bg-parchment"><PageSection title="Before you get started"><FAQ items={[
-      { question: "Which currency does ZFund use?", answer: "Campaign examples and goals use Ghana cedis, shown as GH₵. GHS is the currency code for the Ghana cedi." },
+      { question: "Which currency does RaiseFunds use?", answer: "Campaign examples and goals use Ghana cedis, shown as GH₵. GHS is the currency code for the Ghana cedi." },
       { question: "Can I collect donations right now?", answer: "The site currently previews the fundraising experience. Campaign creation, live USSD collections, and payouts are still being developed." },
-      { question: "Is there a shortcode I can dial?", answer: "No live ZFund shortcode is published here yet. Donation instructions will be available when the collection service launches." },
+      { question: "Is there a shortcode I can dial?", answer: "No live RaiseFunds shortcode is published here yet. Donation instructions will be available when the collection service launches." },
     ]} /></PageSection></div>
     <PageCTA title="Start with a campaign people can understand." href="/for-hosts" label="Explore the host guide" />
   </>;
