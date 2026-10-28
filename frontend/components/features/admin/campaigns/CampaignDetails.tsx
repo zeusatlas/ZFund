@@ -185,16 +185,6 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
             </div>
           )}
         </div>
-        {campaign.status === "PENDING_REVIEW" && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#f0d3ae] bg-[#fdf6ea] p-4">
-            <p className="text-sm text-ink">This campaign is waiting for your approval before it can accept contributions.</p>
-            <div className="flex gap-2">
-              <button type="button" disabled={reviewing} onClick={() => review("DRAFT")} className="rounded-lg border border-navy/15 px-4 py-2 text-sm font-medium text-navy hover:bg-white disabled:opacity-50">Send back</button>
-              <button type="button" disabled={reviewing} onClick={() => review("PUBLISHED")} className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy/90 disabled:opacity-50">Approve &amp; publish</button>
-            </div>
-            {reviewError && <p className="w-full text-sm text-crimson">{reviewError}</p>}
-          </div>
-        )}
         {percent !== null && (
           <div className="mt-5 max-w-xl">
             <ProgressBar percent={percent} />

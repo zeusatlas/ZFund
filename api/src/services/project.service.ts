@@ -529,18 +529,6 @@ export class ProjectService {
       [ProjectStatus.ARCHIVED]: [],
     };
 
-    // When approving/publishing, check if the start date hasn't reached yet
-    if (targetStatus === ProjectStatus.PUBLISHED || targetStatus === ProjectStatus.APPROVED) {
-      const now = new Date();
-      if (project.startDate && new Date(project.startDate) > now) {
-        targetStatus = ProjectStatus.SCHEDULED;
-        project.acceptsContributions = false;
-      } else {
-        targetStatus = ProjectStatus.PUBLISHED;
-        project.acceptsContributions = true;
-      }
-    }
-
     // Platform Super Admin / Platform Admin can override transitions
     const isPlatformAdmin = [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(
       userRole as SystemRole
@@ -556,6 +544,18 @@ export class ProjectService {
         throw new BadRequestError(
           `Invalid state transition from '${currentStatus}' to '${targetStatus}'.`
         );
+      }
+    }
+
+    // When approving/publishing, check if the start date hasn't reached yet
+    if (targetStatus === ProjectStatus.PUBLISHED || targetStatus === ProjectStatus.APPROVED) {
+      const now = new Date();
+      if (project.startDate && new Date(project.startDate) > now) {
+        targetStatus = ProjectStatus.SCHEDULED;
+        project.acceptsContributions = false;
+      } else {
+        targetStatus = ProjectStatus.PUBLISHED;
+        project.acceptsContributions = true;
       }
     }
 
