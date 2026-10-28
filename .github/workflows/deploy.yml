@@ -140,7 +140,7 @@ jobs:
             echo "   Project Directory: $PROJECT_DIR"
             echo "   Target Branch:     $DEPLOY_BRANCH"
             echo "   API Subdomain:     api.raisefundz.com ($BACKEND_DIR -> PM2: zfund-api :2077)"
-            echo "   Frontend Apex:     raisefundz.com ($FRONTEND_DIR -> PM2: zfund-frontend :3000)"
+            echo "   Frontend Apex:     raisefundz.com ($FRONTEND_DIR -> PM2: zfund-frontend :2088)"
             echo "   Public Web Root:   $FRONTEND_PUBLIC"
             echo "   Backend changed:   $API_CHANGED"
             echo "   Frontend changed:  $FRONTEND_CHANGED"
@@ -298,7 +298,7 @@ jobs:
               echo "✅ Frontend build verified"
 
               # ─────────────────────────────────────────
-              # Next.js Server Management via PM2 (Port 3000)
+              # Next.js Server Management via PM2 (Port 2088)
               # ─────────────────────────────────────────
               echo ""
               echo "♻️ Restarting Frontend PM2 process (zfund-frontend)..."
@@ -308,7 +308,7 @@ jobs:
                 pm2 restart zfund-frontend --update-env
               else
                 echo "🆕 PM2 process does not exist, starting zfund-frontend..."
-                PORT=3000 pm2 start npm --name zfund-frontend -- start
+                PORT=2088 pm2 start npm --name zfund-frontend -- start
               fi
 
               echo ""
@@ -339,7 +339,7 @@ jobs:
                 cp -r dist/. "$FRONTEND_PUBLIC"/
               fi
 
-              # Write reverse proxy .htaccess to route raisefundz.com to PM2 port 3000
+              # Write reverse proxy .htaccess to route raisefundz.com to PM2 port 2088
               {
                 echo "Options -MultiViews"
                 echo "RewriteEngine On"
@@ -349,8 +349,8 @@ jobs:
                 echo "RewriteCond %{REQUEST_FILENAME} -d"
                 echo "RewriteRule ^ - [L]"
                 echo ""
-                echo "# Reverse proxy all web traffic to Next.js running on port 3000"
-                echo 'RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]'
+                echo "# Reverse proxy all web traffic to Next.js running on port 2088"
+                echo 'RewriteRule ^(.*)$ http://127.0.0.1:2088/$1 [P,L]'
                 echo "RequestHeader set X-Forwarded-Proto https"
               } > "$FRONTEND_PUBLIC/.htaccess"
 
