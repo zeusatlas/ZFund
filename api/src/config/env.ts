@@ -64,7 +64,7 @@ const envSchema = z.object({
   // NALO USSD
   NALO_USER_ID: z.string().default('ZEUS2028'),
   NALO_DEFAULT_CODE: z.string().default('*920*969#'),
-  NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(120),
+  NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(160),
 
   // Paystack
   PAYSTACK_SECRET_KEY: z.string(),

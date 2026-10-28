@@ -49,7 +49,7 @@ describe('NaloAdapter (NALO USSD Gateway contract and parsing)', () => {
     expect(parsed.userInput).toBe('2');
   });
 
-  it('should format response according to NALO contract and enforce 120 character limit', () => {
+  it('should format response according to NALO contract and enforce character limit', () => {
     const request = {
       provider: 'NALO' as const,
       userId: 'NALOTest',
@@ -74,14 +74,14 @@ describe('NaloAdapter (NALO USSD Gateway contract and parsing)', () => {
     // Message exceeding 120 characters clamped to 120
     const longMsg =
       'This is an exceptionally long USSD prompt that exceeds the provider maximum limit of one hundred and twenty characters allowed by the NALO USSD Gateway network protocol specifications.';
-    expect(longMsg.length).toBeGreaterThan(120);
+    expect(longMsg.length).toBeGreaterThan(160);
 
     const clampedResponse = NaloAdapter.formatResponse(request, {
       message: longMsg,
       continueSession: true,
     });
 
-    expect(clampedResponse.MSG.length).toBeLessThanOrEqual(120);
+    expect(clampedResponse.MSG.length).toBeLessThanOrEqual(160);
     expect(clampedResponse.MSG.endsWith('...')).toBe(true);
   });
 });

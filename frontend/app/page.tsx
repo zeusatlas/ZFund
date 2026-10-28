@@ -424,7 +424,7 @@ export default function Home() {
             </div>
             <p className="text-[16px] leading-relaxed text-graphite md:max-w-sm md:pb-2">
               Whether you&apos;re a community group of 30 or a national NGO
-              running dozens of campaigns, ZFund scales to how you work — with
+              running dozens of campaigns, RaiseFunds scales to how you work — with
               admin controls that match your governance needs.
             </p>
           </div>

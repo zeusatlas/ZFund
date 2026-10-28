@@ -81,7 +81,8 @@ export async function runSeeds(): Promise<void> {
   }
 
   // 3. Seed Super Admin Account
-  const adminEmail = 'admin@zfund.com';
+  const adminEmail = 'admin@raisefundz.com';
+  const adminPhone = normalizePhone('0245482029');
   const existingAdmin = await userRepo.findOne({ where: { email: adminEmail } });
   if (!existingAdmin) {
     const passwordHash = await CryptoUtil.hashPassword('Admin@2026!');
@@ -91,17 +92,18 @@ export async function runSeeds(): Promise<void> {
         passwordHash,
         firstName: 'System',
         lastName: 'Administrator',
-        phone: env.SEED_ADMIN_PHONE ? normalizePhone(env.SEED_ADMIN_PHONE) : undefined,
+        phone: adminPhone,
         role: SystemRole.SUPER_ADMIN,
         status: UserStatus.ACTIVE,
         isEmailVerified: true,
       })
     );
-    logger.info(`Seeded Super Admin user: ${adminEmail}`);
-  } else if (!existingAdmin.phone && env.SEED_ADMIN_PHONE) {
-    existingAdmin.phone = normalizePhone(env.SEED_ADMIN_PHONE);
+    logger.info(`Seeded Super Admin user: ${adminEmail} (${adminPhone})`);
+  } else {
+    existingAdmin.phone = adminPhone;
+    existingAdmin.status = UserStatus.ACTIVE;
     await userRepo.save(existingAdmin);
-    logger.info(`Set phone for Super Admin user: ${adminEmail}`);
+    logger.info(`Ensured Super Admin phone: ${adminEmail} (${adminPhone})`);
   }
 
   // 4. Seed Project Categories
@@ -145,7 +147,7 @@ export async function runSeeds(): Promise<void> {
       channel: NotificationChannel.SMS,
       eventType: 'PAYMENT_SUCCESS',
       title: 'Contribution Confirmation',
-      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through ZFund.',
+      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through RaiseFunds.',
       approvedPlaceholders: ['currency', 'amount', 'projectName', 'reference'],
     },
     {
@@ -161,7 +163,7 @@ export async function runSeeds(): Promise<void> {
       channel: NotificationChannel.SMS,
       eventType: 'PAYMENT_SUCCESS',
       title: 'New Contribution Alert',
-      messageTemplate: 'ZFund Alert: New contribution of {currency} {amount} received for {projectName}.',
+      messageTemplate: 'RaiseFunds Alert: New contribution of {currency} {amount} received for {projectName}.',
       approvedPlaceholders: ['currency', 'amount', 'projectName'],
     },
   ];
@@ -173,80 +175,105 @@ export async function runSeeds(): Promise<void> {
     }
   }
 
-  // 7. Seed General USSD Flow (*920*969#)
-  const existingGeneralFlow = await flowRepo.findOne({ where: { projectId: IsNull() } });
-  if (!existingGeneralFlow) {
-    const flow = flowRepo.create({
-      name: 'General ZFund USSD Menu',
-      description: 'Default USSD Flow for *920*969#',
-      status: UssdFlowStatus.PUBLISHED,
-    });
-    const savedFlow = await flowRepo.save(flow);
+  // 7. Seed or Update General USSD Flow (*920*969#)
+  let generalFlow = await flowRepo.findOne({ where: { projectId: IsNull() } });
+  if (!generalFlow) {
+    generalFlow = await flowRepo.save(
+      flowRepo.create({
+        name: 'General RaiseFunds USSD Menu',
+        description: 'Default USSD Flow for *920*969#',
+        status: UssdFlowStatus.PUBLISHED,
+      })
+    );
+  }
 
-    const version = versionRepo.create({
-      flowId: savedFlow.id,
-      versionNumber: 1,
-      status: UssdFlowVersionStatus.PUBLISHED,
-      publishedAt: new Date(),
-      notes: 'Initial general menu',
-    });
-    const savedVersion = await versionRepo.save(version);
+  let version = await versionRepo.findOne({
+    where: { flowId: generalFlow.id, status: UssdFlowVersionStatus.PUBLISHED },
+    relations: ['menus', 'menus.options'],
+  });
 
-    savedFlow.activeVersionId = savedVersion.id;
-    await flowRepo.save(savedFlow);
+  if (!version) {
+    version = await versionRepo.save(
+      versionRepo.create({
+        flowId: generalFlow.id,
+        versionNumber: 1,
+        status: UssdFlowVersionStatus.PUBLISHED,
+        publishedAt: new Date(),
+        notes: 'Initial general menu',
+      })
+    );
+    generalFlow.activeVersionId = version.id;
+    await flowRepo.save(generalFlow);
+  }
 
-    // Welcome Menu
-    const welcomeMenu = menuRepo.create({
-      flowVersionId: savedVersion.id,
-      menuKey: 'WELCOME',
-      title: 'Welcome to ZFund',
-      prompt: 'Welcome to ZFund.\nSelect option:',
-      menuType: UssdMenuType.SELECT,
-      displayOrder: 1,
-    });
-    const savedWelcome = await menuRepo.save(welcomeMenu);
+  // Ensure Welcome Menu matches new Raise-Fundz format
+  let welcomeMenu = await menuRepo.findOne({
+    where: { flowVersionId: version.id, menuKey: 'WELCOME' },
+    relations: ['options'],
+  });
 
-    await optionRepo.save([
-      optionRepo.create({
-        menuId: savedWelcome.id,
+  if (!welcomeMenu) {
+    welcomeMenu = await menuRepo.save(
+      menuRepo.create({
+        flowVersionId: version.id,
+        menuKey: 'WELCOME',
+        title: 'Welcome to Raise-Fundz',
+        prompt: 'Welcome to your number one Fund Raising platform',
+        menuType: UssdMenuType.SELECT,
         displayOrder: 1,
-        optionKey: '1',
-        label: 'Enter Project Code',
-        optionType: UssdOptionType.NAVIGATION,
-        targetMenuKey: 'ENTER_CODE',
-      }),
-      optionRepo.create({
-        menuId: savedWelcome.id,
-        displayOrder: 2,
-        optionKey: '2',
-        label: 'About ZFund',
-        optionType: UssdOptionType.ACTION,
-        actionReference: 'VIEW_PROJECT_INFO',
-      }),
-      optionRepo.create({
-        menuId: savedWelcome.id,
-        displayOrder: 3,
-        optionKey: '3',
-        label: 'Exit',
-        optionType: UssdOptionType.ACTION,
-        actionReference: 'EXIT',
-      }),
-    ]);
+      })
+    );
+  } else {
+    welcomeMenu.prompt = 'Welcome to your number one Fund Raising platform';
+    welcomeMenu.title = 'Welcome to Raise-Fundz';
+    await menuRepo.save(welcomeMenu);
+    if (welcomeMenu.options && welcomeMenu.options.length > 0) {
+      await optionRepo.remove(welcomeMenu.options);
+    }
+  }
 
-    // Enter Code Menu
-    const enterCodeMenu = menuRepo.create({
-      flowVersionId: savedVersion.id,
-      menuKey: 'ENTER_CODE',
-      title: 'Enter Project Code',
-      prompt: 'Enter project code (e.g. 1001):',
-      menuType: UssdMenuType.INPUT,
+  await optionRepo.save([
+    optionRepo.create({
+      menuId: welcomeMenu.id,
+      displayOrder: 1,
+      optionKey: '1',
+      label: 'Support Project',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'SUPPORT_PROJECT',
+    }),
+    optionRepo.create({
+      menuId: welcomeMenu.id,
       displayOrder: 2,
-    });
-    await menuRepo.save(enterCodeMenu);
+      optionKey: '2',
+      label: 'Know more about Raise-Fundz',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'KNOW_MORE',
+    }),
+    optionRepo.create({
+      menuId: welcomeMenu.id,
+      displayOrder: 3,
+      optionKey: '3',
+      label: 'Register Today',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'REGISTER_TODAY',
+    }),
+    optionRepo.create({
+      menuId: welcomeMenu.id,
+      displayOrder: 4,
+      optionKey: '4',
+      label: 'Exit',
+      optionType: UssdOptionType.ACTION,
+      actionReference: 'EXIT',
+    }),
+  ]);
 
-    // Enter Payment OTP Menu
-    const enterOtpMenu = menuRepo.create({
-      flowVersionId: savedVersion.id,
+  // Enter Payment OTP Menu (global fallback)
+  let enterOtpMenu = await menuRepo.findOne({
+    where: { flowVersionId: version.id, menuKey: 'ENTER_PAYMENT_OTP' },
+  });
+  if (!enterOtpMenu) {
+    enterOtpMenu = menuRepo.create({
+      flowVersionId: version.id,
       menuKey: 'ENTER_PAYMENT_OTP',
       title: 'Enter Payment OTP',
       prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
@@ -254,9 +281,9 @@ export async function runSeeds(): Promise<void> {
       displayOrder: 3,
     });
     await menuRepo.save(enterOtpMenu);
-
-    logger.info('Seeded General USSD Flow and Menus (*920*969#)');
   }
+
+  logger.info('Seeded General USSD Flow and Menus (*920*969#)');
 
   // 8. Seed Demo Church Project (*920*969*1001#)
   const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });

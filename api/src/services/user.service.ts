@@ -97,7 +97,7 @@ export class UserService {
     const sms = await smsService.send({
       recipient: normalizePhone(input.phone),
       message:
-        `Welcome to ZFund, ${saved.firstName}. Your account is ready. ` +
+        `Welcome to RaiseFunds, ${saved.firstName}. Your account is ready. ` +
         `Sign in at ${env.FRONTEND_URL}/login with your email (${saved.email}) ` +
         `and phone number (${saved.phone}). We'll text you a code each time.`,
     });

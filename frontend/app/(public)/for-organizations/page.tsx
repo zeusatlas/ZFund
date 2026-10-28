@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Building2, GraduationCap, HeartHandshake, Users } from "lucide-react";
 import { PageCTA, PageIntro, PageSection } from "@/components/landing/PublicPage";
 
-export const metadata: Metadata = { title: "For organisations | ZFund", description: "Fundraising for Ghana’s community associations, schools, faith communities, and nonprofits." };
+export const metadata: Metadata = { title: "For organisations | RaiseFunds", description: "Fundraising for Ghana’s community associations, schools, faith communities, and nonprofits." };
 
 const organisations = [
   { icon: HeartHandshake, title: "Community and welfare groups", body: "Bring neighbours, hometown associations, and welfare groups together around a shared need.", example: "A community in Tamale plans a clean-water appeal." },

@@ -387,7 +387,7 @@ export class ProjectService {
 
       const sms = await smsService.send({
         recipient: recipients,
-        message: `ZFund: the campaign "${project.name}" (code ${project.eventCode}) needs your approval. Review it under Campaigns in the admin dashboard.`,
+        message: `RaiseFunds: the campaign "${project.name}" (code ${project.eventCode}) needs your approval. Review it under Campaigns in the admin dashboard.`,
       });
       if (!sms.success) {
         logger.error({ projectId: project.id, error: sms.error }, 'Failed to send campaign approval SMS');

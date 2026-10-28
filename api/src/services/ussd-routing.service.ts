@@ -33,7 +33,7 @@ export class UssdRoutingService {
       }
     }
 
-    // 2. Fallback to General ZFund USSD Menu (*920*969#)
+    // 2. Fallback to General RaiseFunds USSD Menu (*920*969#)
     const generalFlow = await ussdFlowService.getGeneralPublishedFlow();
     return {
       flow: generalFlow?.flow || null,

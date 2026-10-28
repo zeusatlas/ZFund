@@ -22,7 +22,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
         />
 
         <Link href="/" className="relative text-[22px] font-medium tracking-tight">
-          ZFund
+          RaiseFunds
         </Link>
 
         <div className="relative max-w-md">
@@ -56,7 +56,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
       <section className="flex items-center px-6 py-12 sm:px-10 lg:px-16 xl:px-24">
         <div className="w-full max-w-[420px] text-left">
           <Link href="/" className="mb-10 block text-[20px] font-medium tracking-tight text-off-ink lg:hidden">
-            ZFund
+            RaiseFunds
           </Link>
           {children}
         </div>

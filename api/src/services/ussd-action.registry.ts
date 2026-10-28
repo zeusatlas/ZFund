@@ -103,7 +103,7 @@ UssdActionRegistry.register('ENTER_AMOUNT', async (ctx) => {
 UssdActionRegistry.register('CONFIRM_CONTRIBUTION', async (ctx) => {
   const amount = ctx.session.contextData.amount || '0.00';
   const currency = ctx.project?.currency || 'GHS';
-  const projectName = ctx.project?.name || 'ZFund';
+  const projectName = ctx.project?.name || 'RaiseFunds';
 
   return {
     customMessage: `Contribute ${currency} ${amount} to ${projectName}?\n1. Confirm\n2. Cancel`,
@@ -154,7 +154,7 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
 
     if (chargeResult.status === 'success') {
       return {
-        customMessage: `Payment of ${currency} ${amount} received successfully! Thank you for supporting ${ctx.project?.name || 'ZFund'}.`,
+        customMessage: `Payment of ${currency} ${amount} received successfully! Thank you for supporting ${ctx.project?.name || 'RaiseFunds'}.`,
         terminate: true,
         contextUpdates: {
           paymentReference: paymentAttempt.reference,
@@ -263,6 +263,26 @@ UssdActionRegistry.register('SUBMIT_PAYMENT_OTP', async (ctx) => {
   }
 });
 
+UssdActionRegistry.register('SUPPORT_PROJECT', async () => {
+  return {
+    nextMenuKey: 'SELECT_HOST',
+  };
+});
+
+UssdActionRegistry.register('KNOW_MORE', async () => {
+  return {
+    customMessage: "Raise-Fundz is Ghana's leading USSD & digital fundraising platform.\nRead more from www.raisefundz.com",
+    terminate: true,
+  };
+});
+
+UssdActionRegistry.register('REGISTER_TODAY', async () => {
+  return {
+    customMessage: "Contact the business team on\nMobile: 0203430792\nLandline: 0303981602\nsupport@zeusatlasltd.com",
+    terminate: true,
+  };
+});
+
 UssdActionRegistry.register('LOOKUP_PROJECT_BY_CODE', async (ctx) => {
   const code = ctx.userInput.trim();
   // Handled dynamically in routing service if needed
@@ -276,7 +296,7 @@ UssdActionRegistry.register('LOOKUP_PROJECT_BY_CODE', async (ctx) => {
 
 UssdActionRegistry.register('VIEW_PROJECT_INFO', async (ctx) => {
   const project = ctx.project;
-  const desc = project?.description || project?.name || 'ZFund contribution project.';
+  const desc = project?.description || project?.name || 'RaiseFunds contribution project.';
   return {
     customMessage: `${desc}\n0. Back`,
     nextMenuKey: 'PROJECT_INFO',
@@ -285,7 +305,7 @@ UssdActionRegistry.register('VIEW_PROJECT_INFO', async (ctx) => {
 
 UssdActionRegistry.register('EXIT', async () => {
   return {
-    customMessage: 'Thank you for using ZFund.',
+    customMessage: 'Thank you for using RaiseFunds.',
     terminate: true,
   };
 });

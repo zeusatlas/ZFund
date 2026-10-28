@@ -30,7 +30,7 @@ export default async function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="text-[18px] font-medium text-white">
-              ZFund
+              RaiseFunds
             </Link>
             <p className="mt-4 max-w-[220px] text-[14px] leading-relaxed text-parchment/50">
               Bringing Ghana’s communities together through clearer fundraising.
@@ -61,7 +61,7 @@ export default async function Footer() {
         {/* Bottom bar */}
         <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row sm:items-center">
           <p className="text-[12px] text-parchment/30">
-            © {new Date().getFullYear()} ZFund. All rights reserved.
+            © {new Date().getFullYear()} RaiseFunds. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link
