@@ -660,7 +660,19 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
           eyebrow={viewingCampaign.category}
           onClose={() => setViewingCampaign(null)}
           footer={
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  const camp = viewingCampaign;
+                  setViewingCampaign(null);
+                  setConfiguringFlowCampaign(camp);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-navy/20 bg-white px-4 py-2 text-sm font-medium text-navy hover:bg-stone transition-colors shadow-2xs"
+              >
+                <SlidersHorizontal size={14} className="text-steel" />
+                Configure USSD steps
+              </button>
               <button
                 type="button"
                 onClick={() => setViewingCampaign(null)}

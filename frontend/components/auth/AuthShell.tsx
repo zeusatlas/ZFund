@@ -1,24 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useLayoutEffect, useRef, type ReactNode } from "react";
-import { ArrowLeft, ArrowUpRight, HeartHandshake, Sprout, Users, GraduationCap, ShieldCheck } from "lucide-react";
-import gsap from "gsap";
+import type { ReactNode } from "react";
+import { ShieldCheck, Smartphone, TrendingUp } from "lucide-react";
 import "./auth.css";
 
-export default function AuthShell({ children }: { children: ReactNode }) {
-  const root = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const media = gsap.matchMedia();
-    media.add("(prefers-reduced-motion: no-preference)", () => {
-      gsap.from(".auth-story > h2, .auth-story > p, .auth-community", {
-        y: 24, opacity: 0, duration: 0.9, stagger: 0.14, ease: "power3.out",
-        clearProps: "transform,opacity",
-      });
-    }, root);
-    return () => media.revert();
-  }, []);
+const highlights = [
+  { icon: Smartphone, text: "Donors give by USSD from any phone" },
+  { icon: TrendingUp, text: "Watch contributions arrive in real time" },
+  { icon: ShieldCheck, text: "Every withdrawal reviewed before release" },
+];
 
+export default function AuthShell({ children }: { children: ReactNode }) {
   return (
     <main className="grid min-h-screen bg-white lg:grid-cols-[1.05fr_1fr]">
       <aside className="relative hidden overflow-hidden bg-off-ink text-white lg:flex lg:flex-col lg:justify-between lg:p-14">
@@ -32,7 +25,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
         />
 
         <Link href="/" className="relative text-[22px] font-medium tracking-tight">
-          RaiseFunds
+          RaiseFundz
         </Link>
 
         <div className="relative max-w-md">
@@ -66,7 +59,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
       <section className="flex items-center px-6 py-12 sm:px-10 lg:px-16 xl:px-24">
         <div className="w-full max-w-[420px] text-left">
           <Link href="/" className="mb-10 block text-[20px] font-medium tracking-tight text-off-ink lg:hidden">
-            RaiseFunds
+            RaiseFundz
           </Link>
           {children}
         </div>

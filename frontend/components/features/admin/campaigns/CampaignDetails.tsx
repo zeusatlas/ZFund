@@ -1,7 +1,17 @@
 "use client";
 
 import { format } from "date-fns";
-import { ArrowLeft, CircleDollarSign, ReceiptText, TrendingUp, Users, Check, X, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CircleDollarSign,
+  ReceiptText,
+  TrendingUp,
+  Users,
+  Check,
+  X,
+  Loader2,
+  SlidersHorizontal,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import MetricCard from "@/components/ui/MetricCard";
@@ -13,6 +23,7 @@ import { formatCount, formatMoney } from "@/lib/format";
 import { useCampaign, useCampaignContributions, useUpdateCampaignStatus } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
+import { ConfigureStepsDrawer } from "@/components/features/host/campaigns/ConfigureStepsDrawer";
 
 type Tab = "overview" | "contributions";
 
@@ -36,54 +47,52 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
     <section className="overflow-hidden surface-card">
       <ListToolbar
         search={search}
-        onSearch={(value) => { setSearch(value); setPage(1); }}
+        onSearch={(value: string) => { setSearch(value); setPage(1); }}
         searchLabel="Search by name, phone or reference"
         status={status}
-        onStatus={(value) => { setStatus(value); setPage(1); }}
+        onStatus={(value: string) => { setStatus(value); setPage(1); }}
         statuses={[
-          { value: "CONFIRMED", label: "Paid" },
-          { value: "PENDING", label: "Pending" },
-          { value: "FAILED", label: "Failed" },
-          { value: "REFUNDED", label: "Refunded" },
+          { label: "Paid", value: "CONFIRMED" },
+          { label: "Pending", value: "PENDING" },
+          { label: "Failed", value: "FAILED" },
+          { label: "Refunded", value: "REFUNDED" },
         ]}
       />
 
       {isPending ? (
-        <div className="space-y-3 p-5">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        <div className="space-y-3 p-4"><Skeleton className="h-10 rounded-xl" /><Skeleton className="h-10 rounded-xl" /><Skeleton className="h-10 rounded-xl" /></div>
       ) : isError ? (
-        <div className="p-5"><ErrorNote message={(error as { message?: string }).message} onRetry={() => refetch()} /></div>
+        <div className="p-4"><ErrorNote message={(error as { message?: string }).message} onRetry={() => refetch()} /></div>
       ) : data.items.length === 0 ? (
-        <p className="p-8 text-center text-sm text-steel">
-          {search || status ? "No contributions match your search." : "Nobody has contributed to this campaign yet."}
-        </p>
+        <p className="py-8 text-center text-sm text-steel">No contributions match the filter.</p>
       ) : (
-        <div className={`overflow-x-auto transition-opacity ${isPlaceholderData ? "opacity-60" : ""}`}>
-          <table className="w-full min-w-[680px] text-left">
-            <thead className="border-b border-navy/10 bg-stone-light text-[10px] font-semibold uppercase tracking-[0.1em] text-steel">
+        <div className={`overflow-x-auto ${isPlaceholderData ? "opacity-60" : ""}`}>
+          <table className="w-full text-left">
+            <thead className="border-b border-navy/10 bg-stone-light/50 text-xs font-semibold text-steel">
               <tr>
-                <th className="px-5 py-3 font-medium">Contributor</th>
-                <th className="px-4 py-3 font-medium">Amount paid</th>
-                <th className="px-4 py-3 font-medium">Purpose</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Date</th>
+                <th scope="col" className="px-4 py-3">Reference</th>
+                <th scope="col" className="px-4 py-3">Donor</th>
+                <th scope="col" className="px-4 py-3">Phone</th>
+                <th scope="col" className="px-4 py-3">Amount</th>
+                <th scope="col" className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-navy/10">
-              {data.items.map((row) => {
-                const badge = contributionStatus[row.status] ?? { label: row.status, className: "bg-stone text-steel" };
-                return (
-                  <tr key={row.id} className="text-sm">
-                    <td className="px-5 py-4">
-                      <p className="font-medium text-ink">{row.contributorName ?? "Anonymous contributor"}</p>
-                      <p className="mt-0.5 text-xs text-steel">{row.msisdn ?? row.reference}</p>
-                    </td>
-                    <td className="px-4 py-4 font-medium text-ink">{formatMoney(row.amount)}</td>
-                    <td className="px-4 py-4 text-ink">{row.purposeName ?? "General"}</td>
-                    <td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${badge.className}`}>{badge.label}</span></td>
-                    <td className="px-4 py-4 text-xs text-steel">{format(new Date(row.createdAt), "MMM d, yyyy, HH:mm")}</td>
-                  </tr>
-                );
-              })}
+            <tbody className="divide-y divide-navy/10 text-sm">
+              {data.items.map((row) => (
+                <tr key={row.id} className="transition-colors hover:bg-stone-light/40">
+                  <td className="px-4 py-3 font-mono text-xs text-navy">{row.reference}</td>
+                  <td className="px-4 py-3 font-medium text-navy">{row.contributorName || "Anonymous"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-steel">{row.msisdn}</td>
+                  <td className="px-4 py-3 font-semibold text-navy">{formatMoney(row.amount)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${contributionStatus[row.status]?.className ?? "bg-navy/8 text-steel"}`}>
+                      {contributionStatus[row.status]?.label ?? row.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-steel">{format(new Date(row.createdAt), "MMM d, yyyy, HH:mm")}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -100,6 +109,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
   const [tab, setTab] = useState<Tab>("overview");
   const [rejecting, setRejecting] = useState(false);
   const [rejectNotes, setRejectNotes] = useState("");
+  const [configuringFlow, setConfiguringFlow] = useState(false);
 
   const back = (
     <Link href="/admin/campaigns" className="inline-flex items-center gap-2 text-sm font-medium text-steel hover:text-navy">
@@ -158,8 +168,24 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
             </p>
           </div>
 
-          {campaign.status === "PENDING_REVIEW" && (
+          {campaign.status === "PENDING_REVIEW" ? (
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await updateStatusMutation.mutateAsync({ id: campaign.id, status: "PUBLISHED" });
+                    setConfiguringFlow(true);
+                  } catch {
+                    // Handled by toast
+                  }
+                }}
+                disabled={updateStatusMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-50 px-3.5 py-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs disabled:opacity-50"
+              >
+                <SlidersHorizontal size={13} className="text-emerald-700" />
+                Approve &amp; Configure Steps
+              </button>
               <button
                 type="button"
                 onClick={() => updateStatusMutation.mutate({ id: campaign.id, status: "PUBLISHED" })}
@@ -171,7 +197,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
                 ) : (
                   <Check size={13} />
                 )}
-                Approve & Go Live
+                Approve &amp; Go Live
               </button>
               <button
                 type="button"
@@ -183,18 +209,19 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
                 Reject
               </button>
             </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfiguringFlow(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-navy/15 bg-white px-3.5 py-2 text-xs font-medium text-navy hover:bg-stone hover:border-navy/30 transition-colors shadow-2xs"
+              >
+                <SlidersHorizontal size={13} className="text-steel" />
+                Configure USSD steps
+              </button>
+            </div>
           )}
         </div>
-        {campaign.status === "PENDING_REVIEW" && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#f0d3ae] bg-[#fdf6ea] p-4">
-            <p className="text-sm text-ink">This campaign is waiting for your approval before it can accept contributions.</p>
-            <div className="flex gap-2">
-              <button type="button" disabled={reviewing} onClick={() => review("DRAFT")} className="rounded-lg border border-navy/15 px-4 py-2 text-sm font-medium text-navy hover:bg-white disabled:opacity-50">Send back</button>
-              <button type="button" disabled={reviewing} onClick={() => review("PUBLISHED")} className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy/90 disabled:opacity-50">Approve &amp; publish</button>
-            </div>
-            {reviewError && <p className="w-full text-sm text-crimson">{reviewError}</p>}
-          </div>
-        )}
         {percent !== null && (
           <div className="mt-5 max-w-xl">
             <ProgressBar percent={percent} />
@@ -203,10 +230,10 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
         )}
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Total raised" value={formatMoney(campaign.raised)} icon={CircleDollarSign} accent="green" />
-        <MetricCard label="Contributors" value={formatCount(campaign.contributors)} icon={Users} accent="blue" />
-        <MetricCard label="Contributions" value={formatCount(campaign.transactions)} icon={ReceiptText} accent="purple" />
+        <MetricCard label="Target goal" value={campaign.targetAmount ? formatMoney(campaign.targetAmount) : "None"} icon={TrendingUp} accent="blue" />
+        <MetricCard label="Contributions" value={formatCount(campaign.transactions)} icon={ReceiptText} accent="gold" />
         <MetricCard label="Average gift" value={formatMoney(campaign.averageAmount)} icon={TrendingUp} accent="gold" />
       </section>
 
@@ -299,6 +326,13 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
           </div>
         </Modal>
       )}
+
+      {/* Configure USSD Dial Steps Drawer for Admin */}
+      <ConfigureStepsDrawer
+        campaign={campaign}
+        open={configuringFlow}
+        onClose={() => setConfiguringFlow(false)}
+      />
     </div>
   );
 }

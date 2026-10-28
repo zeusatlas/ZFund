@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
-import { useSyncExternalStore } from "react";
 import { dashboardForStoredToken } from "@/lib/auth/auth";
 
 const emptySubscribe = () => () => {};
