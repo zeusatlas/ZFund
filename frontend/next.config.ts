@@ -8,6 +8,35 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  async redirects() {
+    return [
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/how-it-works",
+        destination: "/#how-it-works",
+        permanent: true,
+      },
+      {
+        source: "/for-hosts",
+        destination: "/#for-hosts",
+        permanent: true,
+      },
+      {
+        source: "/for-organizations",
+        destination: "/#for-organizations",
+        permanent: true,
+      },
+      {
+        source: "/security",
+        destination: "/#security",
+        permanent: true,
+      },
+    ];
+  },
   turbopack: {
     root: path.join(__dirname, ".."),
     rules: {

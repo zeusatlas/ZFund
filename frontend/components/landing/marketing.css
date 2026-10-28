@@ -50,6 +50,7 @@
 .marketing .mini-ledger .ledger-total { font-size: 25px; font-family: inherit; }
 .marketing .section-link { display: inline-flex; align-items: center; gap: 12px; font-size: 12px; text-transform: uppercase; text-decoration: underline; text-underline-offset: 6px; }
 .marketing .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 48px; }
+.marketing .steps-4 { grid-template-columns: repeat(4, 1fr); }
 .marketing .step { border-top: 1px solid var(--color-ash); padding-top: 24px; }
 .marketing .step-number { display: inline-flex; width: 44px; height: 44px; justify-content: center; align-items: center; border: 1px solid var(--color-ash); border-radius: 50%; margin-bottom: 28px; }
 .marketing .step p { color: var(--color-graphite); margin-top: 16px; }
@@ -171,6 +172,7 @@
   .marketing .fund-flow { gap: 24px; }
   .marketing .flow-stack:first-child .flow-node::after, .marketing .flow-stack:last-child .flow-node::before { width: 24px; }
   .marketing .community { gap: 40px; }
+  .marketing .steps-4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
   .marketing .marketing-nav { top: 12px; width: calc(100% - 24px); margin-top: 12px; }

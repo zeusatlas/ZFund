@@ -35,14 +35,14 @@ export default function AuthShell({ children }: { children: ReactNode }) {
             <div className="auth-connection" />
             <div className="auth-purpose"><Sprout size={25} /><span>Good things grow<br /><strong>when we give together.</strong></span></div>
           </div>
-          <div className="auth-story-bottom"><span>Built around Ghana’s communities.</span><Link href="/how-it-works" aria-label="Explore how RaiseFundz works"><ArrowUpRight size={21} /></Link></div>
+          <div className="auth-story-bottom"><span>Built around Ghana’s communities.</span><Link href="/#how-it-works" aria-label="Explore how RaiseFundz works"><ArrowUpRight size={21} /></Link></div>
         </aside>
         <section className="auth-workspace" aria-label="Sign in">
           <div className="auth-card">{children}</div>
           <p className="auth-assurance"><ShieldCheck size={16} /> Your code is yours. Never share it.</p>
         </section>
       </main>
-      <footer className="auth-footer"><span>Shared goals. Clearer fundraising.</span><Link href="/security">Trust &amp; security <ArrowUpRight size={13} /></Link></footer>
+      <footer className="auth-footer"><span>Shared goals. Clearer fundraising.</span><Link href="/#security">Trust &amp; security <ArrowUpRight size={13} /></Link></footer>
     </div>
   );
 }
