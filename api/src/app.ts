@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import path from 'path';
 import pinoHttp from 'pino-http';
@@ -17,31 +17,67 @@ import ussdRuntimeRoutes from './routes/ussd-runtime.routes';
 export function createApp(): Application {
   const app = express();
 
+  // Deduplicate CORS headers to prevent duplicate values (e.g. from multiple middlewares)
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    const originalWriteHead = res.writeHead.bind(res);
+    res.writeHead = function (...args: any[]) {
+      const existing = res.getHeader('Access-Control-Allow-Origin');
+      if (existing !== undefined) {
+        let raw: string;
+        if (Array.isArray(existing)) {
+          raw = existing[0] ?? '';
+        } else {
+          raw = String(existing);
+        }
+        const cleaned = raw.split(',')[0]?.trim() ?? raw;
+        if (cleaned) {
+          res.setHeader('Access-Control-Allow-Origin', cleaned);
+        }
+      }
+      // @ts-ignore
+      return originalWriteHead(...args);
+    };
+    next();
+  });
+
   // Security Headers
   app.use(helmet());
 
   // CORS Configuration
-  const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-          callback(null, true);
-        } else {
-          callback(new Error('Blocked by CORS policy'));
-        }
-      },
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: [
-        'Content-Type',
-        'Authorization',
-        'x-correlation-id',
-        'x-paystack-signature',
-        'x-nalo-token',
-      ],
-    })
-  );
+  if (!env.CORS_HANDLED_BY_PROXY) {
+    const allowedOrigins = env.CORS_ORIGIN.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
+
+    app.use(
+      cors({
+        origin: (origin, callback) => {
+          if (
+            !origin ||
+            allowedOrigins.includes('*') ||
+            allowedOrigins.includes(origin) ||
+            origin.endsWith('.raisefundz.com') ||
+            origin === 'https://raisefundz.com' ||
+            origin === 'https://www.raisefundz.com'
+          ) {
+            callback(null, true);
+          } else {
+            callback(new Error('Blocked by CORS policy'));
+          }
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: [
+          'Content-Type',
+          'Authorization',
+          'x-correlation-id',
+          'x-paystack-signature',
+          'x-nalo-token',
+        ],
+        maxAge: 86400,
+      })
+    );
+  }
 
   // Cookie parser
   app.use(cookieParser());

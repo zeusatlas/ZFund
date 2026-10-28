@@ -59,6 +59,7 @@ const envSchema = z.object({
 
   // CORS
   CORS_ORIGIN: z.string().default('*'),
+  CORS_HANDLED_BY_PROXY: booleanEnv(false),
 
   // NALO USSD
   NALO_USER_ID: z.string().default('ZEUS2028'),

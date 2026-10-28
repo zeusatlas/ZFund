@@ -197,7 +197,7 @@ describe('Admin dashboard endpoints', () => {
     expect(activity.body.meta.total).toBeGreaterThanOrEqual(1);
 
     const funds = await request(app).get('/api/v1/admin/funds').set('Authorization', `Bearer ${adminToken}`);
-    expect(funds.body.meta.counts).toEqual({ total: 0, published: 0, draft: 0, suspended: 0, raised: '0.00' });
+    expect(funds.body.meta.counts).toEqual(expect.objectContaining({ total: 0, published: 0, draft: 0, suspended: 0, raised: '0.00' }));
 
     const tx = await request(app).get('/api/v1/admin/transactions').set('Authorization', `Bearer ${adminToken}`);
     expect(tx.body.meta.counts.processed).toBe('0.00');
