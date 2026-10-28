@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FilterSelect from "@/components/ui/FilterSelect";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { formatMoney } from "@/lib/format";
 import type { TrendPeriod } from "./types";
@@ -12,6 +13,16 @@ const copy = {
   "3m": { average: "Average weekly generation", current: "This week" },
   "30d": { average: "Average daily generation", current: "Today" },
 } as const;
+
+const periods = [
+  { value: "30d", label: "Last 30 days" },
+  { value: "3m", label: "Last 3 months" },
+  { value: "6m", label: "Last 6 months" },
+  { value: "12m", label: "Last 12 months" },
+];
+
+/** Bars between labels, so the axis stays readable at every range. */
+const labelEvery = { "30d": 5, "3m": 2, "6m": 4, "12m": 1 } as const;
 
 export function FundGeneration() {
   const [period, setPeriod] = useState<TrendPeriod>("12m");
@@ -25,15 +36,14 @@ export function FundGeneration() {
           <h2 className="font-semibold text-navy">Fund generation</h2>
           <p className="mt-1 text-sm text-steel">Activity across all host accounts</p>
         </div>
-        <select
-          aria-label="Fund generation period"
+        <FilterSelect
+          label="Fund generation period"
+          className="w-40 shrink-0"
+          minHeight="36px"
           value={period}
-          onChange={(e) => setPeriod(e.target.value as TrendPeriod)}
-          className="rounded-lg border border-navy/10 bg-white px-2.5 py-2 text-xs text-steel outline-none"
-        >
-          <option value="12m">Last 12 months</option>
-          <option value="30d">Last 30 days</option>
-        </select>
+          onChange={(value) => setPeriod(value as TrendPeriod)}
+          options={periods}
+        />
       </div>
 
       {isPending ? (
@@ -45,8 +55,7 @@ export function FundGeneration() {
           <div className={`mt-7 flex h-44 items-end gap-1 px-1 transition-opacity sm:gap-2 ${isPlaceholderData ? "opacity-50" : ""}`}>
             {data.buckets.map((bucket, index) => {
               const height = max > 0 ? Math.max((Number(bucket.amount) / max) * 100, 2) : 2;
-              // On the daily view, label every 5th bar so labels stay readable.
-              const showLabel = data.period === "12m" || index % 5 === 0;
+              const showLabel = index % labelEvery[data.period] === 0;
               return (
                 <div key={bucket.key} className="group flex h-full min-w-0 flex-1 flex-col justify-end">
                   <div className="relative w-full rounded-t-md bg-[#dce9e5] transition-colors group-hover:bg-gold" style={{ height: `${height}%` }}>

@@ -133,6 +133,10 @@ export interface ActivityEntry {
   entityId?: string;
   actorName: string | null;
   amount?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   createdAt: Date;
 }
 
@@ -616,6 +620,10 @@ export class AdminDashboardService {
         entityId: l.entityId,
         actorName: l.userId ? (names.get(l.userId) ?? null) : null,
         ...(amount ? { amount: String(amount) } : {}),
+        ipAddress: l.ipAddress,
+        userAgent: l.userAgent,
+        oldValues: l.oldValues,
+        newValues: l.newValues,
         createdAt: l.createdAt,
       };
     });

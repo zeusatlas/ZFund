@@ -27,7 +27,9 @@ export class UserService {
     const query = this.userRepo.createQueryBuilder('user');
 
     if (params.role) {
-      query.andWhere('user.role = :role', { role: params.role });
+      // Accepts one role or a comma-separated list.
+      const roles = String(params.role).split(',').filter(Boolean);
+      query.andWhere('user.role IN (:...roles)', { roles });
     }
     if (params.status) {
       query.andWhere('user.status = :status', { status: params.status });
