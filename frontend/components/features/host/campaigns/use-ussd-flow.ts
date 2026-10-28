@@ -12,7 +12,8 @@ export function useProjectUssdFlowQuery(projectId?: string) {
     queryKey: ["ussd-flow", projectId],
     queryFn: () => getProjectUssdFlow(projectId!),
     enabled: Boolean(projectId),
-    staleTime: 5_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }
 
@@ -30,7 +31,7 @@ export function useConfigureProjectUssdFlowMutation() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["ussd-flow", variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["admin"] });
     },
   });
 }
-

@@ -3,6 +3,7 @@ import { Manrope, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import QueryProvider from "@/components/providers/QueryProvider";
 import "./globals.css";
+import "./scrollbar.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RaiseFunds",
+  title: "RaiseFundz",
   description: "Community fundraising for Ghana. Explore USSD giving, campaigns in Ghana cedis, and tools for hosts and organisations.",
 };
 

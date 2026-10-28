@@ -112,7 +112,7 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         tokenStorage.clear();
-        if (typeof window !== "undefined") window.location.assign(LOGIN_PATH);
+        if (typeof window !== "undefined") window.location.replace(LOGIN_PATH);
       }
     }
 
