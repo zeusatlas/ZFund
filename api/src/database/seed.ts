@@ -23,9 +23,6 @@ import {
   Organization,
   OrgVerificationStatus,
   PaymentMethodType,
-  Permission,
-  Project,
-  ProjectCategory,
   ProjectPaymentMethod,
   ProjectStatus,
   Role,
@@ -273,7 +270,6 @@ export async function runSeeds(): Promise<void> {
   }
 
   // 8. Seed Demo Projects and Contributions if none exist
-  const projectRepo = AppDataSource.getRepository(Project);
   const contributorRepo = AppDataSource.getRepository(Contributor);
   const contributionRepo = AppDataSource.getRepository(Contribution);
   const paymentAttemptRepo = AppDataSource.getRepository(PaymentAttempt);
@@ -572,7 +568,9 @@ export async function runSeeds(): Promise<void> {
       }
       logger.info('Seeded demo withdrawal requests');
     }
-    // 8. Seed Demo Church Project (*920*969*1001#)
+  }
+
+  // 8. Seed Demo Church Project (*920*969*1001#)
     const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });
     if (!existingProject1001) {
       let org = await orgRepo.findOne({ where: { slug: 'holy-trinity-parish' } });

@@ -16,6 +16,10 @@ router.get('/', optionalAuthenticate, (req, res, next) =>
   projectController.getProjects(req, res, next)
 );
 
+router.get('/stats', optionalAuthenticate, (req, res, next) =>
+  projectController.getStats(req, res, next)
+);
+
 router.get('/categories', optionalAuthenticate, (req, res, next) =>
   projectController.getCategories(req, res, next)
 );

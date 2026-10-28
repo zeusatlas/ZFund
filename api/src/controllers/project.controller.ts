@@ -49,7 +49,27 @@ export class ProjectController {
         limit,
       });
 
-      ApiResponse.paginated(res, result.projects, page, limit, result.total, 'Projects retrieved');
+      ApiResponse.paginated(
+        res,
+        result.projects,
+        page,
+        limit,
+        result.total,
+        'Projects retrieved',
+        result.summary
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const stats = await projectService.getOverviewStats(
+        req.user?.id,
+        req.user?.role
+      );
+      ApiResponse.success(res, stats, 'Host overview stats retrieved');
     } catch (err) {
       next(err);
     }

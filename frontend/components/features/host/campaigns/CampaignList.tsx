@@ -338,21 +338,33 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
           </div>
         ) : visible.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <Search aria-hidden="true" size={28} className="mx-auto mb-4 text-steel" />
-            <h3 className="text-lg font-medium text-navy">No campaigns match your search</h3>
+            {compact ? (
+              <FolderPlus aria-hidden="true" size={32} className="mx-auto mb-3 text-gold" />
+            ) : (
+              <Search aria-hidden="true" size={28} className="mx-auto mb-4 text-steel" />
+            )}
+            <h3 className="text-lg font-medium text-navy">
+              {compact
+                ? "No active campaigns currently in motion"
+                : "No campaigns match your search"}
+            </h3>
             <p className="mt-2 text-sm text-steel">
-              Try another name, USSD code, or choose a different status filter.
+              {compact
+                ? "You have campaigns in your database, but none are currently collecting contributions. Publish a draft or start a new campaign."
+                : "Try another name, USSD code, or choose a different status filter."}
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                setStatus("All");
-              }}
-              className="mt-5 rounded-lg bg-navy px-4 py-2 text-sm text-white hover:bg-steel"
-            >
-              Clear filters
-            </button>
+            {!compact && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setStatus("All");
+                }}
+                className="mt-5 rounded-lg bg-navy px-4 py-2 text-sm text-white hover:bg-steel"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           visible.map((campaign) => {

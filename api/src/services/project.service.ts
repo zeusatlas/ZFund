@@ -1,6 +1,7 @@
 import { AppDataSource } from '../config/database';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
+import { MoneyUtil } from '../common/utils/decimal';
 import { auditService } from './audit.service';
 import { ContributionPurpose } from '../database/entities/contribution-purpose.entity';
 import { ProjectContributionPurpose } from '../database/entities/project-contribution-purpose.entity';
@@ -145,7 +146,7 @@ export class ProjectService {
     search?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ projects: Project[]; total: number }> {
+  }): Promise<{ projects: Project[]; total: number; summary?: Record<string, unknown> }> {
     const page = params.page || 1;
     const limit = Math.min(params.limit || 20, 100);
     const skip = (page - 1) * limit;
@@ -234,7 +235,88 @@ export class ProjectService {
       });
     });
 
-    return { projects: projectsWithStats, total };
+    const overviewStats = await this.getOverviewStats(params.userId, params.userRole);
+
+    return { projects: projectsWithStats, total, summary: overviewStats };
+  }
+
+  async getOverviewStats(userId?: string, userRole?: string): Promise<{
+    totalRaised: number;
+    totalRaisedFormatted: string;
+    campaignsCreated: number;
+    activeCampaigns: number;
+    completedCampaigns: number;
+    draftCampaigns: number;
+    contributorsPaid: number;
+  }> {
+    const isPlatformStaff = [
+      SystemRole.SUPER_ADMIN,
+      SystemRole.PLATFORM_ADMIN,
+      SystemRole.AUDITOR,
+    ].includes(userRole as SystemRole);
+
+    const projectQuery = this.projectRepo.createQueryBuilder('project');
+    if (!isPlatformStaff && userId) {
+      projectQuery.innerJoin(
+        'project_members',
+        'pm',
+        '(pm.projectId = project.id AND pm.userId = :userId) OR project.ownerId = :userId',
+        { userId }
+      );
+    }
+
+    const projects = await projectQuery.select(['project.id', 'project.status']).getMany();
+    const campaignsCreated = projects.length;
+    const activeCampaigns = projects.filter(
+      (p) => p.status === ProjectStatus.PUBLISHED || p.status === ProjectStatus.APPROVED
+    ).length;
+    const completedCampaigns = projects.filter(
+      (p) => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.ARCHIVED
+    ).length;
+    const draftCampaigns = projects.filter(
+      (p) =>
+        p.status === ProjectStatus.DRAFT ||
+        p.status === ProjectStatus.PENDING_REVIEW ||
+        p.status === ProjectStatus.SUSPENDED
+    ).length;
+
+    const projectIds = projects.map((p) => p.id);
+    let totalRaisedPesewas = 0;
+    let contributorsPaid = 0;
+
+    if (projectIds.length > 0) {
+      const stats = await this.contributionRepo
+        .createQueryBuilder('c')
+        .select([
+          'COALESCE(SUM(CASE WHEN c.status IN (:...confirmedStatuses) THEN CAST(c.amount AS numeric) ELSE 0 END), 0) AS "totalRaised"',
+          'COUNT(DISTINCT CASE WHEN c.status IN (:...confirmedStatuses) THEN c.contributorId ELSE NULL END) AS "contributorsCount"',
+        ])
+        .where('c.projectId IN (:...projectIds)', {
+          projectIds,
+          confirmedStatuses: [
+            ContributionStatus.CONFIRMED,
+            ContributionStatus.PARTIALLY_REFUNDED,
+            ContributionStatus.REFUNDED,
+          ],
+        })
+        .getRawOne();
+
+      totalRaisedPesewas = Math.round(parseFloat(stats?.totalRaised || '0') * 100);
+      contributorsPaid = parseInt(stats?.contributorsCount || '0', 10);
+    }
+
+    return {
+      totalRaised: totalRaisedPesewas,
+      totalRaisedFormatted: `GH₵ ${(totalRaisedPesewas / 100).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+      campaignsCreated,
+      activeCampaigns,
+      completedCampaigns,
+      draftCampaigns,
+      contributorsPaid,
+    };
   }
 
   async getProjectById(id: string, userId?: string, userRole?: string): Promise<Project> {

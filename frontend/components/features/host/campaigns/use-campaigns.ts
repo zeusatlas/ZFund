@@ -12,11 +12,14 @@ import {
   updateProjectStatus,
   getProjectCategories,
   getNextProjectCode,
+  getProjectStats,
   type BackendProject,
   type CreateProjectInput,
   type UpdateProjectInput,
   type ProjectStatus,
 } from "@/lib/api/projects";
+
+export type { ProjectStats } from "@/lib/api/projects";
 
 export function projectToCampaign(project: BackendProject): Campaign {
   const goalInPesewas = project.targetAmount
@@ -107,6 +110,14 @@ export function useNextCampaignCodeQuery(enabled = true) {
     queryFn: getNextProjectCode,
     enabled,
     staleTime: 0,
+  });
+}
+
+export function useProjectStatsQuery() {
+  return useQuery({
+    queryKey: ["projects", "stats"],
+    queryFn: getProjectStats,
+    staleTime: 5_000,
   });
 }
 

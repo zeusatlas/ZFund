@@ -161,3 +161,18 @@ export async function updateProjectStatus(
   const { data } = await api.patch<SingleProjectResponse>(`/projects/${id}/status`, { status, notes });
   return data.data;
 }
+
+export interface ProjectStats {
+  totalRaised: number;
+  totalRaisedFormatted: string;
+  campaignsCreated: number;
+  activeCampaigns: number;
+  completedCampaigns: number;
+  draftCampaigns: number;
+  contributorsPaid: number;
+}
+
+export async function getProjectStats(): Promise<ProjectStats> {
+  const { data } = await api.get<{ success: boolean; data: ProjectStats }>("/projects/stats");
+  return data.data;
+}
