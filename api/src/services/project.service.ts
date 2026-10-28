@@ -1,7 +1,9 @@
 import { AppDataSource } from '../config/database';
+import { logger } from '../config/logger';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
 import { auditService } from './audit.service';
+import { ussdFlowService } from './ussd-flow.service';
 import { ContributionPurpose } from '../database/entities/contribution-purpose.entity';
 import { ProjectContributionPurpose } from '../database/entities/project-contribution-purpose.entity';
 import { ProjectMember, ProjectMemberRole } from '../database/entities/project-member.entity';
@@ -84,6 +86,17 @@ export class ProjectService {
       action: 'CREATE_PROJECT',
       newValues: { name: savedProject.name, eventCode: savedProject.eventCode },
     });
+
+    // Auto-initialize published USSD flow for project event code
+    try {
+      await ussdFlowService.initializeProjectFlow(
+        savedProject.id,
+        { welcomePrompt: savedProject.welcomeMessage },
+        ownerId
+      );
+    } catch (err) {
+      logger.warn({ err, projectId: savedProject.id }, 'USSD flow auto-initialization skipped or failed');
+    }
 
     return savedProject;
   }
