@@ -529,7 +529,7 @@ export class UssdFlowService {
     // 3. Confirm Payment Menu
     const confirmPrompt =
       input?.confirmPrompt ||
-      `Contribute ${input?.currency || project.currency || 'GHS'} {amount} to ${project.name}?`;
+      `Contribute ${input?.currency || project.currency || 'GHS'} {amount} to {purpose}?`;
     const confirmMenu = await this.menuRepo.save(
       this.menuRepo.create({
         flowVersionId: version.id,

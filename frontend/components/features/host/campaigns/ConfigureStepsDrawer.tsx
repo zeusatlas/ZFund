@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   X,
   PhoneCall,
@@ -239,8 +239,27 @@ function ConfigureStepsForm({
   // Step 3: Confirmation Prompt
   const [confirmPrompt, setConfirmPrompt] = useState(() => {
     const confirmMenu = flowData?.version?.menus?.find((m: UssdMenu) => m.menuKey === "CONFIRM_PAYMENT");
-    return confirmMenu?.prompt ?? `Contribute {amount} ${campaign.currency || "GHS"} to ${campaign.name}?`;
+    const raw = confirmMenu?.prompt;
+    const fallback = `Contribute ${campaign.currency || "GHS"} {amount} to {purpose}?`;
+    if (!raw) return fallback;
+    let cleaned = raw;
+    if (campaign?.name) {
+      const escaped = campaign.name.replace(/[/\-\\^$*+?.()|[\]{}]/g, "\\$&");
+      cleaned = cleaned.replace(new RegExp(`to\\s+${escaped}\\?`, "gi"), "to {purpose}?");
+      cleaned = cleaned.replace(new RegExp(escaped, "gi"), "{purpose}");
+    }
+    cleaned = cleaned.replace(/{projectName}/g, "{purpose}");
+    return cleaned;
   });
+
+  const samplePurpose = useMemo(() => {
+    for (const p of purposes) {
+      if (p.subSteps && p.subSteps.length > 0) {
+        return p.subSteps[0];
+      }
+    }
+    return purposes[0]?.label || "Roofing";
+  }, [purposes]);
 
   // Step 4: OTP / PIN Prompt
   const [otpPrompt, setOtpPrompt] = useState(() => {
@@ -375,7 +394,7 @@ function ConfigureStepsForm({
       }
 
       const chosenSub = simActivePurpose.subSteps[subIdx];
-      setSimSelectedPurpose(`${simActivePurpose.label} (${chosenSub})`);
+      setSimSelectedPurpose(chosenSub);
       setSimInput("");
       setSimStep(2);
     } else if (simStep === 2) {
@@ -466,8 +485,8 @@ function ConfigureStepsForm({
           type="button"
           onClick={() => setActiveTab("configure")}
           className={`flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium transition-colors ${activeTab === "configure"
-              ? "border-navy text-navy font-semibold"
-              : "border-transparent text-steel hover:text-navy"
+            ? "border-navy text-navy font-semibold"
+            : "border-transparent text-steel hover:text-navy"
             }`}
         >
           <SlidersHorizontal size={15} />
@@ -477,8 +496,8 @@ function ConfigureStepsForm({
           type="button"
           onClick={() => setActiveTab("simulator")}
           className={`flex items-center gap-2 border-b-2 py-3 px-4 text-sm font-medium transition-colors ${activeTab === "simulator"
-              ? "border-navy text-navy font-semibold"
-              : "border-transparent text-steel hover:text-navy"
+            ? "border-navy text-navy font-semibold"
+            : "border-transparent text-steel hover:text-navy"
             }`}
         >
           <Smartphone size={15} />
@@ -585,8 +604,8 @@ function ConfigureStepsForm({
                               type="button"
                               onClick={() => toggleExpandPurpose(purpose.id)}
                               className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${hasSub
-                                  ? "bg-gold/15 text-navy hover:bg-gold/25 font-semibold"
-                                  : "bg-navy/5 text-steel hover:text-navy hover:bg-navy/10"
+                                ? "bg-gold/15 text-navy hover:bg-gold/25 font-semibold"
+                                : "bg-navy/5 text-steel hover:text-navy hover:bg-navy/10"
                                 }`}
                             >
                               <CornerDownRight size={12} className={hasSub ? "text-gold" : ""} />
@@ -795,8 +814,28 @@ function ConfigureStepsForm({
                   className="w-full rounded-xl border border-navy/20 bg-white px-3 py-2 text-sm text-navy focus:border-navy focus:outline-none"
                 />
                 <p className="mt-1 text-[11px] text-steel">
-                  Tip: Use <code className="bg-stone px-1 rounded text-navy">&#123;amount&#125;</code> as a placeholder for the donor&apos;s entered amount.
+                  Tip: Use <code className="bg-stone px-1 rounded text-navy">&#123;amount&#125;</code> for the donation amount and <code className="bg-stone px-1 rounded text-navy">&#123;purpose&#125;</code> to dynamically bind the selected step or sub-step (e.g. &quot;{samplePurpose}&quot;).
                 </p>
+
+                {/* Dynamic Preview Card */}
+                <div className="mt-3 rounded-xl border border-navy/10 bg-slate-50 p-3 text-xs">
+                  <span className="font-semibold text-steel block mb-1">
+                    Live Handset Preview:
+                  </span>
+                  <div className="rounded-lg border border-emerald-900/20 bg-[#0b1713] p-2.5 font-mono text-emerald-300">
+                    {confirmPrompt
+                      .replace(/{amount}/g, "50.00")
+                      .replace(/{purpose}/g, samplePurpose)
+                      .replace(/{subStep}/g, samplePurpose)
+                      .replace(/{target}/g, samplePurpose)
+                      .replace(/{step}/g, samplePurpose)
+                      .replace(/{projectName}/g, samplePurpose)
+                      .replace(/{currency}/g, campaign.currency || "GHS")}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-steel">
+                    When the donor selects <strong>&quot;{samplePurpose}&quot;</strong>, it dynamically replaces <code>&#123;purpose&#125;</code> on their phone screen.
+                  </p>
+                </div>
               </div>
             </section>
 
@@ -912,8 +951,14 @@ function ConfigureStepsForm({
                   {simStep === 3 && (
                     <div className="space-y-3 text-xs">
                       <p className="leading-relaxed font-semibold">
-                        {confirmPrompt.replace("{amount}", simAmount) ||
-                          `Contribute ${simAmount} ${campaign.currency || "GHS"} to ${campaign.name}?`}
+                        {confirmPrompt
+                          .replace(/{amount}/g, simAmount || "0.00")
+                          .replace(/{purpose}/g, simSelectedPurpose || campaign.name)
+                          .replace(/{subStep}/g, simSelectedPurpose || campaign.name)
+                          .replace(/{target}/g, simSelectedPurpose || campaign.name)
+                          .replace(/{step}/g, simSelectedPurpose || campaign.name)
+                          .replace(/{projectName}/g, simSelectedPurpose || campaign.name)
+                          .replace(/{currency}/g, campaign.currency || "GHS")}
                       </p>
                       <div className="space-y-1 text-emerald-300">
                         <p>1. Confirm & Pay</p>

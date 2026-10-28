@@ -62,6 +62,33 @@ UssdActionRegistry.register('SELECT_PURPOSE', async (ctx) => {
     contextUpdates: {
       selectedPurposeId: purposeId,
       selectedPurposeName: customName,
+      purpose: customName,
+      targetName: customName,
+    },
+  };
+});
+
+UssdActionRegistry.register('SELECT_SUB_PURPOSE', async (ctx) => {
+  const cfgPurposeId = ctx.selectedOption?.validationConfig?.purposeId as string | undefined;
+  const isCfgUuid = cfgPurposeId && UUID_REGEX.test(cfgPurposeId);
+  const isInputUuid = ctx.userInput && UUID_REGEX.test(ctx.userInput.trim());
+  const purposeId = isCfgUuid ? cfgPurposeId : isInputUuid ? ctx.userInput.trim() : undefined;
+
+  const subPurpose =
+    (ctx.selectedOption?.validationConfig?.subPurpose as string) ||
+    ctx.selectedOption?.label;
+  const parentPurpose = ctx.selectedOption?.validationConfig?.parentPurpose as string | undefined;
+
+  return {
+    nextMenuKey: 'AMOUNT_INPUT',
+    contextUpdates: {
+      selectedPurposeId: purposeId,
+      selectedPurposeName: subPurpose,
+      selectedParentPurposeName: parentPurpose,
+      purpose: subPurpose,
+      targetName: subPurpose,
+      subPurpose,
+      parentPurpose,
     },
   };
 });
@@ -103,10 +130,14 @@ UssdActionRegistry.register('ENTER_AMOUNT', async (ctx) => {
 UssdActionRegistry.register('CONFIRM_CONTRIBUTION', async (ctx) => {
   const amount = ctx.session.contextData.amount || '0.00';
   const currency = ctx.project?.currency || 'GHS';
-  const projectName = ctx.project?.name || 'RaiseFunds';
+  const target =
+    (ctx.session.contextData.selectedPurposeName as string) ||
+    (ctx.session.contextData.purpose as string) ||
+    ctx.project?.name ||
+    'RaiseFunds';
 
   return {
-    customMessage: `Contribute ${currency} ${amount} to ${projectName}?\n1. Confirm\n2. Cancel`,
+    customMessage: `Contribute ${currency} ${amount} to ${target}?\n1. Confirm\n2. Cancel`,
     nextMenuKey: 'CONFIRM_PAYMENT',
   };
 });

@@ -36,6 +36,7 @@ router.use('/projects', projectRoutes);
 // USSD Gateway Runtime & Flow Builder
 router.use('/ussd', ussdRuntimeRoutes); // Public NALO callback endpoint
 router.use('/ussd/flows', ussdFlowRoutes); // Authenticated USSD menu builder
+router.use('/ussd-flows', ussdFlowRoutes); // Authenticated USSD flow endpoint
 
 // Payments & Webhooks
 router.use('/payments', paymentRoutes);
