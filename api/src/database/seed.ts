@@ -37,9 +37,6 @@ import {
   UssdMenuOption,
   UssdMenuType,
   UssdOptionType,
-  WithdrawalMethod,
-  WithdrawalRequest,
-  WithdrawalStatus,
 } from './entities';
 
 export async function runSeeds(): Promise<void> {
@@ -295,116 +292,6 @@ export async function runSeeds(): Promise<void> {
   }
 
   logger.info('Seeded General USSD Flow and Menus (*920*969#)');
-
-  // 8. Seed Demo Church Project (*920*969*1001#)
-  const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });
-  if (!existingProject1001) {
-    let org = await orgRepo.findOne({ where: { slug: 'holy-trinity-parish' } });
-    if (!org) {
-      org = await orgRepo.save(
-        orgRepo.create({
-          name: 'Holy Trinity Parish',
-          slug: 'holy-trinity-parish',
-          verificationStatus: OrgVerificationStatus.VERIFIED,
-        })
-      );
-    }
-
-    logger.info('Seeded demo projects and contributions');
-
-    const withdrawalRepo = AppDataSource.getRepository(WithdrawalRequest);
-    if (admin) {
-      const demoWithdrawals = [
-        {
-          reference: 'ZF-WDR-20261026-0005',
-          project: p3,
-          amount: '2500.00',
-          status: WithdrawalStatus.PENDING,
-          method: WithdrawalMethod.MOBILE_MONEY,
-          recipient: 'Akosua Mensah',
-          institution: 'MTN Mobile Money',
-          account: '0240000345',
-          purpose: 'Medical support for an association member.',
-          reviewNote: 'Awaiting administrator review.',
-          date: '2026-10-26T10:00:00Z',
-        },
-        {
-          reference: 'ZF-WDR-20261025-0004',
-          project: p2,
-          amount: '1000.00',
-          status: WithdrawalStatus.PROCESSING,
-          method: WithdrawalMethod.BANK_TRANSFER,
-          recipient: 'School library committee',
-          institution: 'GCB Bank',
-          account: '1023456789',
-          purpose: 'First order of books and reading materials.',
-          reviewNote: 'Approved in this example. Payout confirmation is pending.',
-          date: '2026-10-25T11:00:00Z',
-        },
-        {
-          reference: 'ZF-WDR-20261024-0003',
-          project: p1,
-          amount: '500.00',
-          status: WithdrawalStatus.REJECTED,
-          method: WithdrawalMethod.MOBILE_MONEY,
-          recipient: 'Community water committee',
-          institution: 'Telecel Cash',
-          account: '0200000202',
-          purpose: 'Site inspection costs.',
-          reviewNote:
-            'Recipient details did not match the supporting documents. No funds were deducted.',
-          date: '2026-10-24T09:00:00Z',
-        },
-        {
-          reference: 'ZF-WDR-20260930-0002',
-          project: p4,
-          amount: '6000.00',
-          status: WithdrawalStatus.DONE,
-          method: WithdrawalMethod.BANK_TRANSFER,
-          recipient: 'School essentials committee',
-          institution: 'Ecobank Ghana',
-          account: '144100234567',
-          purpose: 'Exercise books and school bags.',
-          reviewNote: 'Payout completed.',
-          date: '2026-09-30T14:00:00Z',
-        },
-        {
-          reference: 'ZF-WDR-20260820-0001',
-          project: p5,
-          amount: '5000.00',
-          status: WithdrawalStatus.DONE,
-          method: WithdrawalMethod.MOBILE_MONEY,
-          recipient: 'Community food committee',
-          institution: 'MTN Mobile Money',
-          account: '0240000456',
-          purpose: 'Food packages for the community drive.',
-          reviewNote: 'Payout completed.',
-          date: '2026-08-20T16:00:00Z',
-        },
-      ];
-
-      for (const w of demoWithdrawals) {
-        await withdrawalRepo.save(
-          withdrawalRepo.create({
-            reference: w.reference,
-            hostId: admin.id,
-            projectId: w.project.id,
-            amount: w.amount,
-            currency: 'GHS',
-            method: w.method,
-            recipientName: w.recipient,
-            institution: w.institution,
-            accountNumber: w.account,
-            purpose: w.purpose,
-            status: w.status,
-            reviewNote: w.reviewNote,
-            createdAt: new Date(w.date),
-          })
-        );
-      }
-      logger.info('Seeded demo withdrawal requests');
-    }
-  }
 
   // 8. Seed Demo Church Project (*920*969*1001#)
   const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });

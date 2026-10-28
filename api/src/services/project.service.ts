@@ -548,7 +548,7 @@ export class ProjectService {
 
     if (!isPlatformAdmin) {
       // Approval belongs to platform admins; hosts may only submit for review.
-      if (targetStatus === ProjectStatus.APPROVED || targetStatus === ProjectStatus.PUBLISHED) {
+      if (input.status === ProjectStatus.APPROVED || input.status === ProjectStatus.PUBLISHED) {
         throw new ForbiddenError('Only an administrator can approve a campaign');
       }
       const allowed = validTransitions[currentStatus] || [];
