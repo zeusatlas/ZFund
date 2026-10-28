@@ -203,7 +203,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
               aria-modal="true"
               aria-labelledby="create-campaign-title"
               aria-describedby="create-campaign-description"
-              className="flex w-screen max-w-xl flex-col bg-stone-light text-navy shadow-2xl animate-drawer border-l border-navy/10"
+              className="flex w-screen max-w-4xl flex-col bg-stone-light text-navy shadow-2xl animate-drawer border-l border-navy/10"
             >
               {/* Drawer Header */}
               <div className="flex items-start justify-between gap-4 border-b border-navy/10 bg-white p-6">
