@@ -3,15 +3,47 @@ import { WithdrawalMethod, WithdrawalStatus } from '../database/entities/withdra
 
 export const createWithdrawalSchema = z
   .object({
-    projectId: z.string().uuid().optional(),
-    amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Enter an amount with up to two decimal places'),
-    method: z.nativeEnum(WithdrawalMethod),
-    recipientName: z.string().trim().min(3, 'Enter the recipient name').max(100),
+    projectId: z.string().optional(),
+    campaignId: z.string().optional(),
+    amount: z
+      .union([z.string(), z.number()])
+      .transform((val) => (typeof val === 'number' ? val.toFixed(2) : String(val).trim()))
+      .refine((val) => /^\d+(\.\d{1,2})?$/.test(val), {
+        message: 'Enter an amount with up to two decimal places',
+      }),
+    method: z
+      .union([z.nativeEnum(WithdrawalMethod), z.enum(['Mobile money', 'Bank transfer'])])
+      .transform((val) =>
+        val === 'Mobile money'
+          ? WithdrawalMethod.MOBILE_MONEY
+          : val === 'Bank transfer'
+            ? WithdrawalMethod.BANK_TRANSFER
+            : val
+      ),
+    recipientName: z.string().trim().min(3, 'Enter the recipient name').max(100).optional(),
+    recipient: z.string().trim().min(3, 'Enter the recipient name').max(100).optional(),
     institution: z.string().trim().min(2, 'Enter the network or bank name').max(100),
-    accountNumber: z.string().trim().min(1, 'Enter the destination number'),
+    accountNumber: z.string().trim().min(1, 'Enter the destination number').optional(),
+    account: z.string().trim().min(1, 'Enter the destination number').optional(),
     purpose: z.string().trim().min(10, 'Describe how the funds will be used').max(500),
   })
+  .transform((data) => ({
+    projectId: data.projectId || data.campaignId,
+    amount: data.amount,
+    method: data.method,
+    recipientName: data.recipientName || data.recipient || '',
+    institution: data.institution,
+    accountNumber: data.accountNumber || data.account || '',
+    purpose: data.purpose,
+  }))
   .superRefine((data, ctx) => {
+    if (!data.recipientName || data.recipientName.length < 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recipientName'],
+        message: 'Enter the recipient name',
+      });
+    }
     const number = data.accountNumber.replace(/[\s-]/g, '');
     const valid =
       data.method === WithdrawalMethod.MOBILE_MONEY
@@ -29,6 +61,41 @@ export const createWithdrawalSchema = z
     }
   });
 
+export const updateWithdrawalSchema = z
+  .object({
+    amount: z
+      .union([z.string(), z.number()])
+      .transform((val) => (typeof val === 'number' ? val.toFixed(2) : String(val).trim()))
+      .refine((val) => /^\d+(\.\d{1,2})?$/.test(val), {
+        message: 'Enter an amount with up to two decimal places',
+      })
+      .optional(),
+    method: z
+      .union([z.nativeEnum(WithdrawalMethod), z.enum(['Mobile money', 'Bank transfer'])])
+      .transform((val) =>
+        val === 'Mobile money'
+          ? WithdrawalMethod.MOBILE_MONEY
+          : val === 'Bank transfer'
+            ? WithdrawalMethod.BANK_TRANSFER
+            : val
+      )
+      .optional(),
+    recipientName: z.string().trim().min(3).max(100).optional(),
+    recipient: z.string().trim().min(3).max(100).optional(),
+    institution: z.string().trim().min(2).max(100).optional(),
+    accountNumber: z.string().trim().min(1).optional(),
+    account: z.string().trim().min(1).optional(),
+    purpose: z.string().trim().min(10).max(500).optional(),
+  })
+  .transform((data) => ({
+    amount: data.amount,
+    method: data.method,
+    recipientName: data.recipientName || data.recipient,
+    institution: data.institution,
+    accountNumber: data.accountNumber || data.account,
+    purpose: data.purpose,
+  }));
+
 export const updateWithdrawalStatusSchema = z.object({
   status: z.nativeEnum(WithdrawalStatus).refine((s) => s !== WithdrawalStatus.PENDING, {
     message: 'A request cannot be moved back to pending',
@@ -37,4 +104,5 @@ export const updateWithdrawalStatusSchema = z.object({
 });
 
 export type CreateWithdrawalInput = z.infer<typeof createWithdrawalSchema>;
+export type UpdateWithdrawalInput = z.infer<typeof updateWithdrawalSchema>;
 export type UpdateWithdrawalStatusInput = z.infer<typeof updateWithdrawalStatusSchema>;

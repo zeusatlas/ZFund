@@ -37,7 +37,7 @@ export default function Modal({ title, eyebrow, onClose, children, footer }: Rea
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-drawer-in flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:max-h-[calc(100vh-2rem)] sm:rounded-2xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-0 bg-white shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4 border-b border-navy/10 px-5 py-4 sm:px-6 sm:py-5">
           <div>

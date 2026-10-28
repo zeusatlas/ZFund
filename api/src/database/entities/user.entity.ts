@@ -48,7 +48,10 @@ export class User {
   @Column({ default: false })
   isEmailVerified: boolean;
 
-  // One-time sign-in code sent by SMS (hash only; never exposed by queries).
+  // One-time sign-in code sent by SMS (plain OTP code).
+  @Column({ type: 'varchar', nullable: true, select: false })
+  otpCode?: string | null;
+
   @Column({ type: 'varchar', nullable: true, select: false })
   otpHash?: string | null;
 

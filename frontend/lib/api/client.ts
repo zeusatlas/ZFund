@@ -1,7 +1,39 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { tokenStorage } from "./token-storage";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:2077/api/v1";
+export const PRODUCTION_API_URL = "https://api.raisefundz.com/api/v1";
+export const LOCAL_API_URL = "http://localhost:2077/api/v1";
+
+export function resolveApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  // In the browser: if accessed from raisefundz.com or any non-localhost domain,
+  // ensure we use the live API url even if a build artifact retained a localhost fallback
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname.toLowerCase();
+    const isLocalhost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+    if (!isLocalhost) {
+      if (!envUrl || envUrl.includes("localhost") || envUrl.includes("127.0.0.1")) {
+        return PRODUCTION_API_URL;
+      }
+      return envUrl;
+    }
+  }
+
+  if (envUrl) {
+    return envUrl;
+  }
+
+  // Production build / SSR default
+  if (process.env.NODE_ENV === "production") {
+    return PRODUCTION_API_URL;
+  }
+
+  // Local development default
+  return LOCAL_API_URL;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 const REFRESH_PATH = "/auth/refresh-token";
 const LOGIN_PATH = "/login";
 
@@ -50,6 +82,14 @@ function toApiError(error: AxiosError<ErrorBody>): ApiError {
 }
 
 api.interceptors.request.use(async (config) => {
+  // Runtime guarantee: on live domains, automatically redirect any localhost request to production
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname.toLowerCase();
+    const isLocalhost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+    if (!isLocalhost && (config.baseURL?.includes("localhost") || !config.baseURL)) {
+      config.baseURL = PRODUCTION_API_URL;
+    }
+  }
   const token = tokenStorage.getAccess();
   if (token) config.headers.set("Authorization", `Bearer ${token}`);
   return config;

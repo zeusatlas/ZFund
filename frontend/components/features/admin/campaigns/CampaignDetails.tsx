@@ -1,17 +1,16 @@
 "use client";
 
 import { format } from "date-fns";
-import { ArrowLeft, CircleDollarSign, ReceiptText, TrendingUp, Users } from "lucide-react";
+import { ArrowLeft, CircleDollarSign, ReceiptText, TrendingUp, Users, Check, X, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import MetricCard from "@/components/ui/MetricCard";
 import Pagination from "@/components/ui/Pagination";
+import Modal from "@/components/ui/Modal";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatCount, formatMoney } from "@/lib/format";
-import { useQueryClient } from "@tanstack/react-query";
-import { updateProjectStatus } from "@/lib/api/projects";
-import { adminRoot, useCampaign, useCampaignContributions } from "../admin-api";
+import { useCampaign, useCampaignContributions, useUpdateCampaignStatus } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
 
@@ -97,23 +96,10 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
 
 export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: string }>) {
   const { data: campaign, isPending, isError, error, refetch } = useCampaign(campaignId);
+  const updateStatusMutation = useUpdateCampaignStatus();
   const [tab, setTab] = useState<Tab>("overview");
-  const queryClient = useQueryClient();
-  const [reviewing, setReviewing] = useState(false);
-  const [reviewError, setReviewError] = useState("");
-
-  async function review(status: "PUBLISHED" | "DRAFT") {
-    setReviewing(true);
-    setReviewError("");
-    try {
-      await updateProjectStatus(campaignId, status);
-      await queryClient.invalidateQueries({ queryKey: adminRoot });
-    } catch (err) {
-      setReviewError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not update this campaign.");
-    } finally {
-      setReviewing(false);
-    }
-  }
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState("");
 
   const back = (
     <Link href="/admin/campaigns" className="inline-flex items-center gap-2 text-sm font-medium text-steel hover:text-navy">
@@ -171,6 +157,33 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
               <Link href={`/admin/users/${campaign.hostId}`} className="font-medium text-ink hover:text-gold">{campaign.hostName}</Link>
             </p>
           </div>
+
+          {campaign.status === "PENDING_REVIEW" && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => updateStatusMutation.mutate({ id: campaign.id, status: "PUBLISHED" })}
+                disabled={updateStatusMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-800 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {updateStatusMutation.isPending ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Check size={13} />
+                )}
+                Approve & Go Live
+              </button>
+              <button
+                type="button"
+                onClick={() => setRejecting(true)}
+                disabled={updateStatusMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-crimson/30 bg-white px-4 py-2 text-xs font-medium text-crimson hover:bg-crimson/5 transition-colors disabled:opacity-50"
+              >
+                <X size={13} />
+                Reject
+              </button>
+            </div>
+          )}
         </div>
         {campaign.status === "PENDING_REVIEW" && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#f0d3ae] bg-[#fdf6ea] p-4">
@@ -222,6 +235,69 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
         </section>
       ) : (
         <Contributions campaignId={campaignId} />
+      )}
+
+      {/* Reject Modal */}
+      {rejecting && (
+        <Modal
+          title="Reject Campaign"
+          onClose={() => setRejecting(false)}
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setRejecting(false)}
+                disabled={updateStatusMutation.isPending}
+                className="rounded-xl border border-navy/20 bg-white px-4 py-2 text-sm font-medium hover:bg-stone disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await updateStatusMutation.mutateAsync({
+                      id: campaign.id,
+                      status: "REJECTED",
+                      notes: rejectNotes.trim() || undefined,
+                    });
+                    setRejecting(false);
+                    refetch();
+                  } catch {
+                    // Handled by mutation toast
+                  }
+                }}
+                disabled={updateStatusMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-xl bg-crimson px-4 py-2 text-sm font-medium text-white hover:bg-crimson/90 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {updateStatusMutation.isPending && (
+                  <Loader2 size={15} className="animate-spin" />
+                )}
+                Confirm Rejection
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-xs text-steel leading-relaxed">
+              Rejecting this campaign will set its status to <strong className="text-navy">Rejected</strong>{" "}
+              so the host can revise details before resubmitting.
+            </p>
+            <div>
+              <label htmlFor="reject-notes-detail" className="text-xs font-semibold text-navy block mb-1">
+                Rejection Reason / Host Feedback
+              </label>
+              <textarea
+                id="reject-notes-detail"
+                rows={3}
+                placeholder="Explain what the host needs to revise or fix..."
+                value={rejectNotes}
+                onChange={(e) => setRejectNotes(e.target.value)}
+                className="w-full rounded-xl border border-navy/20 bg-white px-3 py-2 text-xs text-navy focus:border-navy focus:outline-none"
+              />
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

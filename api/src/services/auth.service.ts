@@ -79,7 +79,8 @@ export class AuthService {
     }
 
     const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
-    user.otpHash = this.hashOtp(user.id, code);
+    user.otpCode = code;
+    user.otpHash = code;
     user.otpExpiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
     user.otpAttempts = 0;
     user.otpSentAt = new Date();
@@ -87,7 +88,7 @@ export class AuthService {
 
     const sms = await smsService.send({
       recipient: normalizePhone(user.phone),
-      message: `Your ZFund sign-in code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`,
+      message: `Your RaiseFunds sign-in code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`,
     });
     if (!sms.success) {
       logger.error({ userId: user.id, error: sms.error }, 'Failed to send sign-in code');
@@ -111,14 +112,17 @@ export class AuthService {
       );
     }
 
-    if (!user.otpHash || !user.otpExpiresAt || user.otpExpiresAt.getTime() < Date.now()) throw invalid;
+    const storedCode = user.otpCode || user.otpHash;
+    if (!storedCode || !user.otpExpiresAt || user.otpExpiresAt.getTime() < Date.now()) throw invalid;
 
-    const expected = Buffer.from(user.otpHash);
-    const actual = Buffer.from(this.hashOtp(user.id, input.code));
-    if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+    const inputCode = String(input.code).trim();
+    if (storedCode !== inputCode) {
       user.otpAttempts += 1;
       const locked = user.otpAttempts >= OTP_MAX_ATTEMPTS;
-      if (locked) user.otpHash = null;
+      if (locked) {
+        user.otpCode = null;
+        user.otpHash = null;
+      }
       await this.userRepo.save(user);
       await this.recordAuthEvent({
         userId: user.id,
@@ -141,6 +145,7 @@ export class AuthService {
     }
 
     // Codes are single-use. A first successful sign-in activates a pending account.
+    user.otpCode = null;
     user.otpHash = null;
     user.otpExpiresAt = null;
     user.otpAttempts = 0;
@@ -194,7 +199,7 @@ export class AuthService {
   private findOtpUser(email: string): Promise<User | null> {
     return this.userRepo
       .createQueryBuilder('user')
-      .addSelect(['user.otpHash', 'user.otpExpiresAt', 'user.otpAttempts', 'user.otpSentAt'])
+      .addSelect(['user.otpCode', 'user.otpHash', 'user.otpExpiresAt', 'user.otpAttempts', 'user.otpSentAt'])
       .where('user.email = :email', { email })
       .getOne();
   }

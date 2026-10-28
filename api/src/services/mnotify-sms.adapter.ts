@@ -133,7 +133,7 @@ export async function checkDeliveryStatus(
  */
 export async function sendLowCreditAlert(creditLeft: number, accountName?: string): Promise<void> {
   const alertRecipients = ['0245482029', '020001546', '0247098016'];
-  const source = accountName ? `Account: ${accountName}` : 'ZFund Platform';
+  const source = accountName ? `Account: ${accountName}` : 'RaiseFunds Platform';
   const alertMessage = `⚠️ SMS Credit Alert\n${source}\nBalance: ${creditLeft} credits remaining.\nPlease top up soon.`;
 
   try {

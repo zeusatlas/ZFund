@@ -55,6 +55,10 @@ router.get('/versions/:versionId/validate', (req, res, next) =>
   ussdFlowController.validateFlow(req, res, next)
 );
 
+router.get('/projects/:projectId', (req, res, next) =>
+  ussdFlowController.getProjectFlow(req, res, next)
+);
+
 router.post(
   '/projects/:projectId/initialize',
   validate({ body: initializeProjectFlowSchema }),

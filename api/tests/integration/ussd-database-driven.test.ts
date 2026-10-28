@@ -182,10 +182,238 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         actionReference: 'EXIT',
       }),
     ]);
+
+    // 5. Seed General USSD Flow (*920*969#)
+    const generalFlow = await flowRepo.save(
+      flowRepo.create({
+        name: 'General RaiseFunds USSD Menu',
+        status: UssdFlowStatus.PUBLISHED,
+      })
+    );
+
+    const generalVersion = await versionRepo.save(
+      versionRepo.create({
+        flowId: generalFlow.id,
+        versionNumber: 1,
+        status: UssdFlowVersionStatus.PUBLISHED,
+        publishedAt: new Date(),
+      })
+    );
+
+    generalFlow.activeVersionId = generalVersion.id;
+    await flowRepo.save(generalFlow);
+
+    const generalWelcome = await menuRepo.save(
+      menuRepo.create({
+        flowVersionId: generalVersion.id,
+        menuKey: 'WELCOME',
+        title: 'Welcome to Raise-Fundz',
+        prompt: 'Welcome to your number one Fund Raising platform',
+        menuType: UssdMenuType.SELECT,
+        displayOrder: 1,
+        isActive: true,
+      })
+    );
+
+    await optionRepo.save([
+      optionRepo.create({
+        menuId: generalWelcome.id,
+        displayOrder: 1,
+        optionKey: '1',
+        label: 'Support Project',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'SUPPORT_PROJECT',
+      }),
+      optionRepo.create({
+        menuId: generalWelcome.id,
+        displayOrder: 2,
+        optionKey: '2',
+        label: 'Know more about Raise-Fundz',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'KNOW_MORE',
+      }),
+      optionRepo.create({
+        menuId: generalWelcome.id,
+        displayOrder: 3,
+        optionKey: '3',
+        label: 'Register Today',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'REGISTER_TODAY',
+      }),
+      optionRepo.create({
+        menuId: generalWelcome.id,
+        displayOrder: 4,
+        optionKey: '4',
+        label: 'Exit',
+        optionType: UssdOptionType.ACTION,
+        actionReference: 'EXIT',
+      }),
+    ]);
   });
 
   afterAll(async () => {
     await closeTestDatabase();
+  });
+
+  it('should route general dial code (*920*969#) without event code and display main platform menu', async () => {
+    const res = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240001122',
+        USERDATA: '*920*969#',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: 'session-general-1',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.MSGTYPE).toBe(true);
+    expect(res.body.MSG).toContain('Welcome to your number one Fund Raising platform');
+    expect(res.body.MSG).toContain('1. Support Project');
+    expect(res.body.MSG).toContain('2. Know more about Raise-Fundz');
+    expect(res.body.MSG).toContain('3. Register Today');
+    expect(res.body.MSG).toContain('4. Exit');
+  });
+
+  it('Option 2: should display "Know more about Raise-Fundz" and website URL then end session', async () => {
+    const sessionId = 'session-know-more-1';
+    await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240002233',
+        USERDATA: '*920*969#',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+
+    const res = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240002233',
+        USERDATA: '2',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.MSGTYPE).toBe(false); // Session terminated
+    expect(res.body.MSG).toContain('Raise-Fundz');
+    expect(res.body.MSG).toContain('www.raisefundz.com');
+  });
+
+  it('Option 3: should display "Register Today" with business team contact info and end session', async () => {
+    const sessionId = 'session-register-today-1';
+    await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240003344',
+        USERDATA: '*920*969#',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+
+    const res = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240003344',
+        USERDATA: '3',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.MSGTYPE).toBe(false);
+    expect(res.body.MSG).toContain('0203430792');
+    expect(res.body.MSG).toContain('0303981602');
+    expect(res.body.MSG).toContain('support@zeusatlasltd.com');
+  });
+
+  it('Option 1: should list active hosts, then campaigns, then transition into campaign custom flow', async () => {
+    const sessionId = 'session-support-project-flow-1';
+
+    // Turn 1: Dial *920*969#
+    const turn1 = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240004455',
+        USERDATA: '*920*969#',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+    expect(turn1.body.MSG).toContain('1. Support Project');
+
+    // Turn 2: Select 1 (Support Project) -> Lists active hosts
+    const turn2 = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240004455',
+        USERDATA: '1',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+    expect(turn2.body.MSGTYPE).toBe(true);
+    expect(turn2.body.MSG).toContain('Select Host:');
+    expect(turn2.body.MSG).toContain('Holy Trinity Parish');
+
+    // Turn 3: Select 1 (Holy Trinity Parish) -> Lists campaigns for this host
+    const turn3 = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240004455',
+        USERDATA: '1',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+    expect(turn3.body.MSGTYPE).toBe(true);
+    expect(turn3.body.MSG).toContain('Select Campaign:');
+    expect(turn3.body.MSG).toContain('Holy Trinity Church Project');
+
+    // Turn 4: Select 1 (Holy Trinity Church Project) -> JUMPS DIRECTLY into campaign custom flow!
+    const turn4 = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240004455',
+        USERDATA: '1',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+    expect(turn4.body.MSGTYPE).toBe(true);
+    // Custom campaign menu is rendered!
+    expect(turn4.body.MSG).toContain('Holy Trinity');
+    expect(turn4.body.MSG).toContain('1. Offering');
+    expect(turn4.body.MSG).toContain('2. Tithe');
+    expect(turn4.body.MSG).toContain('3. Exit');
+
+    // Turn 5: Follow campaign custom flow -> Select 1 (Offering)
+    const turn5 = await request(app)
+      .post('/api/v1/ussd/nalo')
+      .send({
+        USERID: 'NALOTest',
+        MSISDN: '233240004455',
+        USERDATA: '1',
+        MSGTYPE: true,
+        NETWORK: 'MTN',
+        SESSIONID: sessionId,
+      });
+    expect(turn5.body.MSGTYPE).toBe(true);
+    expect(turn5.body.MSG).toContain('Enter Amount');
   });
 
   it('should route direct event code (*920*969*1001#) and display the initial menu configured in database', async () => {

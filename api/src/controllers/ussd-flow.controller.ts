@@ -102,6 +102,19 @@ export class UssdFlowController {
       next(err);
     }
   }
+
+  async getProjectFlow(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      let flowData = await ussdFlowService.getProjectPublishedFlow(req.params.projectId);
+      if (!flowData) {
+        await ussdFlowService.initializeProjectFlow(req.params.projectId, undefined, req.user?.id);
+        flowData = await ussdFlowService.getProjectPublishedFlow(req.params.projectId);
+      }
+      ApiResponse.success(res, flowData, 'Project USSD flow retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const ussdFlowController = new UssdFlowController();

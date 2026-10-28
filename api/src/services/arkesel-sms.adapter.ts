@@ -18,7 +18,7 @@ export class ArkeselSmsAdapter implements ISmsProvider {
     }
 
     try {
-      const sender = params.senderId || env.SMS_SENDER_ID || 'ZFund';
+      const sender = params.senderId || env.SMS_SENDER_ID || 'RaiseFunds';
 
       const response = await axios.post(
         env.SMS_API_URL,

@@ -25,6 +25,7 @@ router.get('/hosts', (req, res, next) => adminController.getHosts(req, res, next
 router.get('/hosts/:id', (req, res, next) => adminController.getHostDetail(req, res, next));
 router.get('/funds', (req, res, next) => adminController.getFunds(req, res, next));
 router.get('/funds/:id', (req, res, next) => adminController.getFundDetail(req, res, next));
+router.patch('/funds/:id/status', (req, res, next) => adminController.updateFundStatus(req, res, next));
 router.get('/funds/:id/contributions', (req, res, next) =>
   adminController.getFundContributions(req, res, next)
 );

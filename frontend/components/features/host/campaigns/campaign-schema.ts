@@ -15,7 +15,8 @@ export const campaignFormSchema = z.object({
   eventCode: z
     .string()
     .trim()
-    .regex(/^[0-9]{3,10}$/, "Event code must be 3–10 digits (e.g. 1042) for USSD dialing."),
+    .regex(/^[0-9]{4}$/, "Campaign code must be a 4-digit number (e.g. 1001).")
+    .optional(),
   category: z.string().min(1, "Please select a category."),
   location: z.string().trim().max(120).optional().default(""),
   description: z.string().trim().max(2000).optional().default(""),

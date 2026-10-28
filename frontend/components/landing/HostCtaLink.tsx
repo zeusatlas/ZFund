@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { dashboardForStoredToken } from "@/lib/auth/auth";
+
+const emptySubscribe = () => () => {};
 
 /** Sends signed-in users to their dashboard and everyone else to the login page. */
 export default function HostCtaLink({

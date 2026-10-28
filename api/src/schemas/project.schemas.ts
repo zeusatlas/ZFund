@@ -11,15 +11,17 @@ export const createProjectSchema = z.object({
     .string()
     .min(3, 'Event code must be at least 3 digits')
     .max(10, 'Event code max 10 digits')
-    .regex(/^[0-9]+$/, 'Event code must contain only digits'),
+    .regex(/^[0-9]+$/, 'Event code must contain only digits')
+    .optional(),
   currency: z.string().length(3).default('GHS'),
   targetAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Invalid monetary format').optional(),
   minAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).default('1.00'),
   maxAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).default('10000.00'),
   welcomeMessage: z.string().max(120, 'Welcome message max 120 characters').optional(),
-  startDate: z.string().datetime().optional(),
+  startDate: z.string().datetime({ message: 'Valid start date is required' }),
   endDate: z.string().datetime().optional(),
   acceptsContributions: z.boolean().default(true),
+  status: z.nativeEnum(ProjectStatus).default(ProjectStatus.PENDING_REVIEW),
 });
 
 export const updateProjectSchema = createProjectSchema.partial().omit({ eventCode: true });
