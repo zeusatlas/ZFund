@@ -1,5 +1,21 @@
 export type CampaignStatus = "Active" | "Completed" | "Draft";
-export type Campaign = { id: string; name: string; location: string; category: string; description: string; goal: number; status: CampaignStatus; created: string; closing: string };
+export type Campaign = {
+  id: string;
+  name: string;
+  location: string;
+  category: string;
+  description: string;
+  goal: number;
+  status: CampaignStatus;
+  created: string;
+  closing: string;
+  eventCode?: string;
+  rawStatus?: string;
+  currency?: string;
+  acceptsContributions?: boolean;
+  raised?: number;
+  contributors?: number;
+};
 // Illustrative data. All amounts are in pesewas.
 export const campaigns: Campaign[] = [
   { id: "ZF-006", name: "Aburi community borehole", location: "Aburi, Eastern Region", category: "Community", description: "A shared appeal to fund a borehole and improve access to clean water for households in the community.", goal: 5000000, status: "Active", created: "2026-10-12", closing: "2026-12-15" },

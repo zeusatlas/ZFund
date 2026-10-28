@@ -1,34 +1,130 @@
 "use client";
-import { useMemo, useSyncExternalStore } from "react";
-import { campaigns as examples, type Campaign } from "@/components/features/host/shared/demo";
-import { storedCampaignSchema } from "@/components/features/host/campaigns/campaign-schema";
 
-const STORAGE_KEY = "zfund-host-campaigns-v1";
-const CHANGE_EVENT = "zfund-host-campaigns-changed";
-function subscribe(notify: () => void) {
-  const onStorage = (event: StorageEvent) => { if (event.key === STORAGE_KEY || event.key === null) notify(); };
-  window.addEventListener("storage", onStorage);
-  window.addEventListener(CHANGE_EVENT, notify);
-  return () => { window.removeEventListener("storage", onStorage); window.removeEventListener(CHANGE_EVENT, notify); };
+import { useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { type Campaign, type CampaignStatus } from "@/components/features/host/shared/demo";
+import {
+  getProjects,
+  getProjectById,
+  createProject,
+  updateProjectStatus,
+  getProjectCategories,
+  type BackendProject,
+  type CreateProjectInput,
+  type ProjectStatus,
+} from "@/lib/api/projects";
+
+export function projectToCampaign(project: BackendProject): Campaign {
+  const goalInPesewas = project.targetAmount
+    ? Math.round(parseFloat(project.targetAmount) * 100)
+    : 0;
+
+  const raisedInPesewas = project.totalRaised
+    ? Math.round(parseFloat(project.totalRaised) * 100)
+    : 0;
+
+  const contributors = project.contributorsCount ?? 0;
+
+  const statusMap: Record<ProjectStatus, CampaignStatus> = {
+    DRAFT: "Draft",
+    PENDING_REVIEW: "Draft",
+    APPROVED: "Active",
+    PUBLISHED: "Active",
+    SUSPENDED: "Draft",
+    COMPLETED: "Completed",
+    ARCHIVED: "Completed",
+  };
+
+  return {
+    id: project.id,
+    name: project.name,
+    eventCode: project.eventCode,
+    location: project.welcomeMessage || "Ghana",
+    category: project.category?.name || "General Fundraising",
+    description: project.description || "",
+    goal: goalInPesewas,
+    raised: raisedInPesewas,
+    contributors,
+    status: statusMap[project.status] || "Active",
+    rawStatus: project.status,
+    created: project.createdAt ? project.createdAt.slice(0, 10) : "",
+    closing: project.endDate ? project.endDate.slice(0, 10) : "",
+    currency: project.currency,
+    acceptsContributions: project.acceptsContributions,
+  };
 }
-function snapshot() {
-  try { return window.localStorage.getItem(STORAGE_KEY) ?? "[]"; }
-  catch { return "[]"; }
+
+export function useProjectsQuery(params?: { search?: string; status?: string }) {
+  return useQuery({
+    queryKey: ["projects", params],
+    queryFn: async () => {
+      const result = await getProjects(params);
+      return result.projects;
+    },
+    staleTime: 5_000,
+  });
 }
-function readCampaigns(raw: string): Campaign[] {
-  return storedCampaignSchema.array().parse(JSON.parse(raw));
+
+export function useProjectCategoriesQuery() {
+  return useQuery({
+    queryKey: ["project-categories"],
+    queryFn: getProjectCategories,
+    staleTime: 60_000,
+  });
 }
-export function useCampaigns() {
-  const raw = useSyncExternalStore(subscribe, snapshot, () => "[]");
-  return useMemo(() => {
-    try { return [...readCampaigns(raw), ...examples]; }
-    catch { return examples; }
-  }, [raw]);
+
+export function useCampaignsList(params?: { search?: string; status?: string }) {
+  const query = useProjectsQuery(params);
+  const campaigns = useMemo(() => {
+    return (query.data || []).map(projectToCampaign);
+  }, [query.data]);
+
+  return {
+    ...query,
+    campaigns,
+    backendCount: campaigns.length,
+  };
 }
-export function saveCampaign(campaign: Campaign) {
-  // Read again at save time so another tab's additions are preserved.
-  const existing = readCampaigns(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
-  const valid = storedCampaignSchema.parse(campaign);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify([valid, ...existing]));
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+
+export function useCampaigns(): Campaign[] {
+  const { campaigns } = useCampaignsList();
+  return campaigns;
+}
+
+export function useCampaign(id: string) {
+  return useQuery({
+    queryKey: ["project", id],
+    queryFn: async () => {
+      const project = await getProjectById(id);
+      return projectToCampaign(project);
+    },
+    enabled: Boolean(id && id.length > 10), // UUID length
+  });
+}
+
+export function useCreateProjectMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateProjectInput) => createProject(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useUpdateProjectStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status, notes }: { id: string; status: ProjectStatus; notes?: string }) =>
+      updateProjectStatus(id, status, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export async function saveCampaign(input: CreateProjectInput) {
+  return createProject(input);
 }

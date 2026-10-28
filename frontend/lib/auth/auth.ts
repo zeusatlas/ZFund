@@ -14,16 +14,28 @@ export type AuthUser = {
   status: string;
 };
 
-type LoginPayload = { email: string; password: string };
+export const adminRoles = ["SUPER_ADMIN", "PLATFORM_ADMIN"];
+
+type OtpIdentity = { email: string; phone: string };
 type LoginResult = { accessToken: string; refreshToken: string; user: AuthUser };
 
 export const authKeys = { me: ["auth", "me"] as const };
 
-export function useLogin() {
+/** Step 1: texts a one-time code to the phone number on the account. */
+export function useRequestOtp() {
+  return useMutation({
+    mutationFn: async (payload: OtpIdentity) => {
+      await api.post("/auth/request-otp", payload);
+    },
+  });
+}
+
+/** Step 2: exchanges the texted code for a session. */
+export function useVerifyOtp() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: LoginPayload) => {
-      const { data } = await api.post<ApiEnvelope<LoginResult>>("/auth/login", payload);
+    mutationFn: async (payload: OtpIdentity & { code: string }) => {
+      const { data } = await api.post<ApiEnvelope<LoginResult>>("/auth/verify-otp", payload);
       return data.data;
     },
     onSuccess: (result) => {
@@ -42,6 +54,18 @@ export function useMe() {
     },
     staleTime: 5 * 60_000,
   });
+}
+
+/** Where a signed-in user belongs, read from the stored token (no network call). */
+export function dashboardForStoredToken(): "/admin" | "/host" | null {
+  const token = tokenStorage.getAccess();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return adminRoles.includes(payload.role) ? "/admin" : "/host";
+  } catch {
+    return null;
+  }
 }
 
 export function useLogout() {

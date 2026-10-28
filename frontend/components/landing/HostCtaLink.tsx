@@ -1,0 +1,28 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { dashboardForStoredToken } from "@/lib/auth/auth";
+
+/** Sends signed-in users to their dashboard and everyone else to the login page. */
+export default function HostCtaLink({
+  className,
+  children,
+  onClick,
+}: {
+  className?: string;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
+  const [href, setHref] = useState("/login");
+
+  useEffect(() => {
+    setHref(dashboardForStoredToken() ?? "/login");
+  }, []);
+
+  return (
+    <Link href={href} className={className} onClick={onClick}>
+      {children}
+    </Link>
+  );
+}

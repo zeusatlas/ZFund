@@ -26,7 +26,7 @@ const swaggerOptions: swaggerJSDoc.Options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Provide JWT access token obtained from /auth/login or /auth/refresh-token',
+          description: 'Provide JWT access token obtained from /auth/verify-otp or /auth/refresh-token',
         },
       },
     },

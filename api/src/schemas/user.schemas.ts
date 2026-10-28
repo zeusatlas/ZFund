@@ -4,10 +4,9 @@ import { UserStatus } from '../database/entities/user.entity';
 
 export const createUserSchema = z.object({
   email: z.string().email().toLowerCase(),
-  password: z.string().min(8),
   firstName: z.string().min(2),
   lastName: z.string().min(2),
-  phone: z.string().optional(),
+  phone: z.string().regex(/^[+]?[0-9 ()-]{9,}$/, 'Valid phone number is required'),
   role: z.nativeEnum(SystemRole),
 });
 

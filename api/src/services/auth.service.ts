@@ -1,14 +1,19 @@
+import crypto from 'crypto';
 import { AppDataSource } from '../config/database';
+import { logger } from '../config/logger';
 import {
   BadRequestError,
-  ConflictError,
   ForbiddenError,
   NotFoundError,
+  TooManyRequestsError,
   UnauthorizedError,
+  AppError,
 } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
 import { CryptoUtil } from '../common/utils/crypto';
+import { normalizePhone } from '../common/utils/phone';
 import { auditService } from './audit.service';
+import { smsService } from './sms.service';
 import { AuthEvent, AuthEventType } from '../database/entities/auth-event.entity';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity';
 import { RefreshToken } from '../database/entities/refresh-token.entity';
@@ -16,10 +21,16 @@ import { User, UserStatus } from '../database/entities/user.entity';
 import {
   ChangePasswordInput,
   ForgotPasswordInput,
-  LoginInput,
-  RegisterInput,
+  RequestOtpInput,
   ResetPasswordInput,
+  VerifyOtpInput,
 } from '../schemas/auth.schemas';
+
+const OTP_TTL_MINUTES = 2;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_WARN_AFTER_ATTEMPTS = 3;
+// A new code can only be requested once the current one has run out.
+const OTP_RESEND_SECONDS = OTP_TTL_MINUTES * 60;
 
 export interface AuthTokens {
   accessToken: string;
@@ -40,98 +51,105 @@ export class AuthService {
   private get passwordResetRepo() { return AppDataSource.getRepository(PasswordResetToken); }
   private get authEventRepo() { return AppDataSource.getRepository(AuthEvent); }
 
-  async register(input: RegisterInput, ipAddress?: string, userAgent?: string): Promise<User> {
-    const existing = await this.userRepo.findOne({ where: { email: input.email } });
-    if (existing) {
-      throw new ConflictError('A user with this email address already exists');
-    }
+  /**
+   * Starts a sign-in: when the email and phone match an account, texts a one-time code.
+   * The outcome is deliberately identical for unknown accounts to avoid user enumeration.
+   */
+  async requestOtp(input: RequestOtpInput, ipAddress?: string, userAgent?: string): Promise<void> {
+    const user = await this.findOtpUser(input.email);
 
-    const passwordHash = await CryptoUtil.hashPassword(input.password);
-    const user = this.userRepo.create({
-      email: input.email,
-      passwordHash,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      phone: input.phone,
-      role: input.role || SystemRole.ACCOUNT_OWNER,
-      // Becomes ACTIVE on first successful login.
-      status: UserStatus.PENDING_VERIFICATION,
-    });
-
-    const savedUser = await this.userRepo.save(user);
-
-    await this.recordAuthEvent({
-      userId: savedUser.id,
-      eventType: AuthEventType.LOGIN_SUCCESS,
-      email: savedUser.email,
-      ipAddress,
-      userAgent,
-      metadata: { action: 'USER_REGISTERED' },
-    });
-
-    await auditService.log({
-      userId: savedUser.id,
-      entityType: 'USER',
-      entityId: savedUser.id,
-      action: 'REGISTER',
-      ipAddress,
-      userAgent,
-    });
-
-    return savedUser;
-  }
-
-  async login(input: LoginInput, ipAddress?: string, userAgent?: string): Promise<AuthTokens> {
-    const user = await this.userRepo
-      .createQueryBuilder('user')
-      .addSelect('user.passwordHash')
-      .where('user.email = :email', { email: input.email })
-      .getOne();
-
-    if (!user) {
+    if (!user?.phone || normalizePhone(user.phone) !== normalizePhone(input.phone)) {
       await this.recordAuthEvent({
+        userId: user?.id,
         eventType: AuthEventType.LOGIN_FAILED,
         email: input.email,
         ipAddress,
         userAgent,
-        metadata: { reason: 'USER_NOT_FOUND' },
+        metadata: { reason: 'OTP_REQUEST_NO_MATCH' },
       });
-      throw new UnauthorizedError('Invalid email or password');
+      return;
     }
 
     if (user.status === UserStatus.SUSPENDED) {
-      await this.recordAuthEvent({
-        userId: user.id,
-        eventType: AuthEventType.LOGIN_FAILED,
-        email: input.email,
-        ipAddress,
-        userAgent,
-        metadata: { reason: 'ACCOUNT_SUSPENDED' },
-      });
       throw new ForbiddenError('Account is suspended. Please contact platform administration.');
     }
 
-    const isValidPassword = await CryptoUtil.verifyPassword(user.passwordHash, input.password);
-    if (!isValidPassword) {
+    if (user.otpSentAt && Date.now() - user.otpSentAt.getTime() < OTP_RESEND_SECONDS * 1000) {
+      throw new TooManyRequestsError('Please wait before requesting another code');
+    }
+
+    const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+    user.otpHash = this.hashOtp(user.id, code);
+    user.otpExpiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+    user.otpAttempts = 0;
+    user.otpSentAt = new Date();
+    await this.userRepo.save(user);
+
+    const sms = await smsService.send({
+      recipient: normalizePhone(user.phone),
+      message: `Your ZFund sign-in code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`,
+    });
+    if (!sms.success) {
+      logger.error({ userId: user.id, error: sms.error }, 'Failed to send sign-in code');
+      throw new AppError('We could not send your code. Please try again shortly.', 503);
+    }
+  }
+
+  async verifyOtp(input: VerifyOtpInput, ipAddress?: string, userAgent?: string): Promise<AuthTokens> {
+    const user = await this.findOtpUser(input.email);
+    const invalid = new UnauthorizedError('Invalid or expired code');
+
+    if (!user?.phone || normalizePhone(user.phone) !== normalizePhone(input.phone)) throw invalid;
+
+    if (user.status === UserStatus.SUSPENDED) {
+      throw new ForbiddenError('Account is suspended. Please contact platform administration.');
+    }
+
+    if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
+      throw new TooManyRequestsError(
+        'Too many incorrect attempts. You can request a new code after some time.'
+      );
+    }
+
+    if (!user.otpHash || !user.otpExpiresAt || user.otpExpiresAt.getTime() < Date.now()) throw invalid;
+
+    const expected = Buffer.from(user.otpHash);
+    const actual = Buffer.from(this.hashOtp(user.id, input.code));
+    if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+      user.otpAttempts += 1;
+      const locked = user.otpAttempts >= OTP_MAX_ATTEMPTS;
+      if (locked) user.otpHash = null;
+      await this.userRepo.save(user);
       await this.recordAuthEvent({
         userId: user.id,
         eventType: AuthEventType.LOGIN_FAILED,
-        email: input.email,
+        email: user.email,
         ipAddress,
         userAgent,
-        metadata: { reason: 'INVALID_CREDENTIALS' },
+        metadata: { reason: locked ? 'OTP_LOCKED' : 'INVALID_OTP' },
       });
-      throw new UnauthorizedError('Invalid email or password');
+      if (locked) {
+        throw new TooManyRequestsError(
+          'Too many incorrect attempts. You can request a new code after some time.'
+        );
+      }
+      if (user.otpAttempts >= OTP_WARN_AFTER_ATTEMPTS) {
+        const left = OTP_MAX_ATTEMPTS - user.otpAttempts;
+        throw new UnauthorizedError(`Invalid code. You have ${left} attempt${left === 1 ? '' : 's'} left.`);
+      }
+      throw invalid;
     }
 
-    // Update lastLoginAt; a first successful login activates a pending account
+    // Codes are single-use. A first successful sign-in activates a pending account.
+    user.otpHash = null;
+    user.otpExpiresAt = null;
+    user.otpAttempts = 0;
     user.lastLoginAt = new Date();
     if (user.status === UserStatus.PENDING_VERIFICATION) {
       user.status = UserStatus.ACTIVE;
     }
     await this.userRepo.save(user);
 
-    // Generate tokens
     const tokenPayload = {
       userId: user.id,
       email: user.email,
@@ -141,15 +159,11 @@ export class AuthService {
     const accessToken = CryptoUtil.generateAccessToken(tokenPayload);
     const refreshToken = CryptoUtil.generateRefreshToken(tokenPayload);
 
-    // Store hashed refresh token in database
-    const tokenHash = CryptoUtil.hashToken(refreshToken);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
     await this.refreshTokenRepo.save(
       this.refreshTokenRepo.create({
         userId: user.id,
-        tokenHash,
-        expiresAt,
+        tokenHash: CryptoUtil.hashToken(refreshToken),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         ipAddress,
         userAgent,
       })
@@ -175,6 +189,18 @@ export class AuthService {
         status: user.status,
       },
     };
+  }
+
+  private findOtpUser(email: string): Promise<User | null> {
+    return this.userRepo
+      .createQueryBuilder('user')
+      .addSelect(['user.otpHash', 'user.otpExpiresAt', 'user.otpAttempts', 'user.otpSentAt'])
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+
+  private hashOtp(userId: string, code: string): string {
+    return CryptoUtil.hashToken(`${userId}:${code}`);
   }
 
   async refreshToken(oldRefreshToken: string, ipAddress?: string, userAgent?: string): Promise<AuthTokens> {

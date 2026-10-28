@@ -20,8 +20,7 @@ export function AddHostModal({ onClose }: { onClose: () => void }) {
         firstName: String(form.get("firstName")).trim(),
         lastName: String(form.get("lastName")).trim(),
         email: String(form.get("email")).trim(),
-        phone: String(form.get("phone") ?? "").trim() || undefined,
-        password: String(form.get("password")),
+        phone: String(form.get("phone")).trim(),
       },
       { onSuccess: onClose },
     );
@@ -73,16 +72,10 @@ export function AddHostModal({ onClose }: { onClose: () => void }) {
           </label>
 
           <label className="block text-sm font-medium text-ink">
-            Phone number <span className="font-normal text-steel">(optional)</span>
-            <input type="tel" name="phone" pattern="[+]?[0-9 ()-]{8,}" className={inputClass} placeholder="+233 24 000 0000" />
+            Phone number
+            <input required type="tel" name="phone" autoComplete="off" pattern="[+]?[0-9 ()-]{9,}" className={inputClass} placeholder="0541234567" />
             {fieldError("phone") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("phone")}</span>}
-          </label>
-
-          <label className="block text-sm font-medium text-ink">
-            Temporary password
-            <input required type="password" minLength={8} name="password" autoComplete="new-password" className={inputClass} placeholder="At least 8 characters" />
-            {fieldError("password") && <span className="mt-1 block text-xs text-[#a13d3d]">{fieldError("password")}</span>}
-            <span className="mt-1 block text-xs font-normal text-steel">Share this with the host securely. They should change it after signing in.</span>
+            <span className="mt-1 block text-xs font-normal text-steel">We&apos;ll text their email and phone number to this number. They sign in with those and a code sent by SMS.</span>
           </label>
 
           {apiError && !apiError.errors && (

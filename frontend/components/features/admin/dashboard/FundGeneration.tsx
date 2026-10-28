@@ -8,6 +8,8 @@ import { useFundTrend } from "./use-admin-dashboard";
 
 const copy = {
   "12m": { average: "Average monthly generation", current: "This month" },
+  "6m": { average: "Average weekly generation", current: "This week" },
+  "3m": { average: "Average weekly generation", current: "This week" },
   "30d": { average: "Average daily generation", current: "Today" },
 } as const;
 

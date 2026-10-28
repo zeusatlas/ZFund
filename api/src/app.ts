@@ -53,6 +53,13 @@ export function createApp(): Application {
     app.use(
       pinoHttp({
         logger,
+        // Keep request logs to one short line instead of dumping every header.
+        serializers: {
+          req: (req) => ({ method: req.method, url: req.url }),
+          res: (res) => ({ statusCode: res.statusCode }),
+        },
+        customSuccessMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
+        customErrorMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
         autoLogging: {
           ignore: (req) => req.url?.includes('/health') || req.url?.includes('/ready'),
         },

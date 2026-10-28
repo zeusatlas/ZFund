@@ -7,6 +7,8 @@ import { ProjectContributionPurpose } from '../database/entities/project-contrib
 import { ProjectMember, ProjectMemberRole } from '../database/entities/project-member.entity';
 import { PaymentMethodType, ProjectPaymentMethod } from '../database/entities/project-payment-method.entity';
 import { Project, ProjectStatus } from '../database/entities/project.entity';
+import { ProjectCategory } from '../database/entities/project-category.entity';
+import { Contribution, ContributionStatus } from '../database/entities/contribution.entity';
 import {
   ConfigurePaymentMethodsInput,
   ConfigurePurposesInput,
@@ -17,10 +19,16 @@ import {
 
 export class ProjectService {
   private get projectRepo() { return AppDataSource.getRepository(Project); }
+  private get categoryRepo() { return AppDataSource.getRepository(ProjectCategory); }
   private get memberRepo() { return AppDataSource.getRepository(ProjectMember); }
   private get projectPurposeRepo() { return AppDataSource.getRepository(ProjectContributionPurpose); }
   private get purposeRepo() { return AppDataSource.getRepository(ContributionPurpose); }
   private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
+  private get contributionRepo() { return AppDataSource.getRepository(Contribution); }
+
+  async getCategories(): Promise<ProjectCategory[]> {
+    return this.categoryRepo.find({ where: { isActive: true }, order: { name: 'ASC' } });
+  }
 
   async createProject(input: CreateProjectInput, ownerId: string): Promise<Project> {
     // Verify eventCode uniqueness
@@ -134,7 +142,50 @@ export class ProjectService {
     query.orderBy('project.createdAt', 'DESC').skip(skip).take(limit);
 
     const [projects, total] = await query.getManyAndCount();
-    return { projects, total };
+
+    const projectIds = projects.map((p) => p.id);
+    const statsMap: Record<string, { totalRaised: string; contributorsCount: number }> = {};
+
+    if (projectIds.length > 0) {
+      const stats = await this.contributionRepo
+        .createQueryBuilder('c')
+        .select('c.projectId', 'projectId')
+        .addSelect(
+          'COALESCE(SUM(CASE WHEN c.status IN (:...confirmedStatuses) THEN CAST(c.amount AS numeric) ELSE 0 END), 0)',
+          'totalRaised'
+        )
+        .addSelect(
+          'COUNT(DISTINCT CASE WHEN c.status IN (:...confirmedStatuses) THEN c.contributorId ELSE NULL END)',
+          'contributorsCount'
+        )
+        .where('c.projectId IN (:...projectIds)', {
+          projectIds,
+          confirmedStatuses: [
+            ContributionStatus.CONFIRMED,
+            ContributionStatus.PARTIALLY_REFUNDED,
+            ContributionStatus.REFUNDED,
+          ],
+        })
+        .groupBy('c.projectId')
+        .getRawMany();
+
+      for (const row of stats) {
+        statsMap[row.projectId] = {
+          totalRaised: parseFloat(row.totalRaised || '0').toFixed(2),
+          contributorsCount: parseInt(row.contributorsCount || '0', 10),
+        };
+      }
+    }
+
+    const projectsWithStats = projects.map((p) => {
+      const stats = statsMap[p.id] || { totalRaised: '0.00', contributorsCount: 0 };
+      return Object.assign(p, {
+        totalRaised: stats.totalRaised,
+        contributorsCount: stats.contributorsCount,
+      });
+    });
+
+    return { projects: projectsWithStats, total };
   }
 
   async getProjectById(id: string, userId?: string, userRole?: string): Promise<Project> {
@@ -168,7 +219,30 @@ export class ProjectService {
       }
     }
 
-    return project;
+    const stats = await this.contributionRepo
+      .createQueryBuilder('c')
+      .select(
+        'COALESCE(SUM(CASE WHEN c.status IN (:...confirmedStatuses) THEN CAST(c.amount AS numeric) ELSE 0 END), 0)',
+        'totalRaised'
+      )
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN c.status IN (:...confirmedStatuses) THEN c.contributorId ELSE NULL END)',
+        'contributorsCount'
+      )
+      .where('c.projectId = :projectId', {
+        projectId: id,
+        confirmedStatuses: [
+          ContributionStatus.CONFIRMED,
+          ContributionStatus.PARTIALLY_REFUNDED,
+          ContributionStatus.REFUNDED,
+        ],
+      })
+      .getRawOne();
+
+    return Object.assign(project, {
+      totalRaised: parseFloat(stats?.totalRaised || '0').toFixed(2),
+      contributorsCount: parseInt(stats?.contributorsCount || '0', 10),
+    });
   }
 
   async getProjectByEventCode(eventCode: string): Promise<Project | null> {

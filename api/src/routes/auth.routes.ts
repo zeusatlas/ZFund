@@ -6,26 +6,26 @@ import { authController } from '../controllers/auth.controller';
 import {
   changePasswordSchema,
   forgotPasswordSchema,
-  loginSchema,
   refreshTokenSchema,
-  registerSchema,
+  requestOtpSchema,
   resetPasswordSchema,
+  verifyOtpSchema,
 } from '../schemas/auth.schemas';
 
 const router = Router();
 
 router.post(
-  '/register',
+  '/request-otp',
   authRateLimiter,
-  validate({ body: registerSchema }),
-  (req, res, next) => authController.register(req, res, next)
+  validate({ body: requestOtpSchema }),
+  (req, res, next) => authController.requestOtp(req, res, next)
 );
 
 router.post(
-  '/login',
+  '/verify-otp',
   authRateLimiter,
-  validate({ body: loginSchema }),
-  (req, res, next) => authController.login(req, res, next)
+  validate({ body: verifyOtpSchema }),
+  (req, res, next) => authController.verifyOtp(req, res, next)
 );
 
 router.post(

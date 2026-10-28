@@ -28,9 +28,9 @@ async function refreshAccessToken(): Promise<string> {
   const refreshToken = tokenStorage.getRefresh();
   if (!refreshToken) throw new Error("No refresh token");
   const { data } = await refreshClient.post(REFRESH_PATH, { refreshToken });
-  // Backend wraps payloads in { success, message, data }.
-  const access: string = data.data.accessToken;
-  tokenStorage.set(access, data.data.refreshToken);
+  const access: string = data.data?.accessToken ?? data.accessToken;
+  const refresh: string = data.data?.refreshToken ?? data.refreshToken;
+  tokenStorage.set(access, refresh);
   return access;
 }
 
@@ -49,7 +49,7 @@ function toApiError(error: AxiosError<ErrorBody>): ApiError {
   return { status, message: data?.message ?? error.message, errors };
 }
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   const token = tokenStorage.getAccess();
   if (token) config.headers.set("Authorization", `Bearer ${token}`);
   return config;
