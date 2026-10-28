@@ -14,5 +14,5 @@ export default async function UserDetailsPage({
 
   if (!user) notFound();
 
-  return <UserDetails user={user} />;
+  return <UserDetails userId={user.id} />;
 }

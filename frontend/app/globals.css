@@ -11,17 +11,18 @@
   --color-midnight: #10192b;
   --color-ink: #1c1f26;
 
-  /* ── Landing Pages: blue-black + orange brand palette ──
-     Token names kept so existing classes keep working; "lime" is now the dashboard gold accent. */
-  --color-lime: #c08a2e; /* same as --color-gold in the dashboard */
-  --color-parchment: #f3f5f9;
-  --color-ash: #d6dce6;
-  --color-graphite: #5a6a82;
-  --color-charcoal: #12233f;
-  --color-off-ink: #0a1628;
-  --color-smoke: #b6bfcc;
+  /* ── Landing Pages: warm community palette ── */
+  --color-lime: #e5aa45;
+  --color-lime-light: #f5d98a;
+  --color-lime-dark: #c48a1e;
+  --color-parchment: #fff8ed;
+  --color-ash: #eadfce;
+  --color-graphite: #75695d;
+  --color-charcoal: #3b2b22;
+  --color-off-ink: #271c16;
+  --color-smoke: #b8a89b;
 
-  /* Softer elevation: lighter than Tailwind's defaults, applies to every shadow-* utility. */
+  /* Elevation */
   --shadow-sm: 0 1px 2px 0 rgb(16 24 40 / 0.05);
   --shadow-md: 0 2px 6px -1px rgb(16 24 40 / 0.07);
   --shadow-lg: 0 6px 14px -4px rgb(16 24 40 / 0.1);
@@ -36,29 +37,123 @@
   color-scheme: light;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
+}
+
 body {
   background: var(--color-stone);
   color: var(--color-ink);
   font-family: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ── Perk Eyebrow Label Utility ──────────────────────────────────────────── */
+/* ── Eyebrow Label ── */
 .text-eyebrow {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   line-height: 1.4;
 }
 
-/* ── Float animation for hero mockup ────────────────────────────────────── */
+/* ========================================================
+   ANIMATIONS
+   ======================================================== */
+
+/* Float — hero dashboard mockup */
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50%       { transform: translateY(-12px) rotate(0.4deg); }
+  50%       { transform: translateY(-10px) rotate(0.3deg); }
+}
+.animate-float { animation: float 5s ease-in-out infinite; }
+
+/* Slide-up reveal */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-slide-up-delay-1 { animation: slide-up 0.65s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-slide-up-delay-2 { animation: slide-up 0.65s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-slide-up-delay-3 { animation: slide-up 0.65s 0.36s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.5s ease both; }
+
+/* Marquee — social proof ticker */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+.animate-marquee:hover { animation-play-state: paused; }
+
+/* Pulse dot — live indicator */
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.6; }
+  70%  { transform: scale(2); opacity: 0; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
-.animate-float {
-  animation: float 5s ease-in-out infinite;
+/* Shimmer — loading skeleton effect */
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.4) 50%, transparent 75%);
+  background-size: 200% auto;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Number count-up glow */
+@keyframes count-glow {
+  0%, 100% { text-shadow: none; }
+  50% { text-shadow: 0 0 20px rgba(229, 170, 69, 0.35); }
+}
+.animate-count-glow { animation: count-glow 2s ease-in-out infinite; }
+
+/* Mobile drawer slide-in */
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-drawer-in { animation: drawer-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Card pop on hover */
+.card-hover {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px -10px rgb(39 28 22 / 0.18);
+}
+
+/* Gradient text utility */
+.text-gradient-lime {
+  background: linear-gradient(135deg, #e5aa45, #c48a1e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass card */
+.glass-card {
+  background: rgba(255, 248, 237, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(234, 223, 206, 0.8);
 }
 
 :focus-visible {
@@ -66,7 +161,6 @@ body {
   outline-offset: 4px;
 }
 
-/* Form fields show focus with a single gold border, not border plus outline. */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
@@ -75,5 +169,10 @@ textarea:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-float { animation: none; }
+  html { scroll-behavior: auto; }
+  .animate-float,
+  .animate-marquee,
+  .animate-shimmer,
+  .animate-count-glow,
+  .animate-pulse-ring { animation: none; }
 }
