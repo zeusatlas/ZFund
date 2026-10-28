@@ -12,7 +12,7 @@ const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const role: UserRole = pathname.startsWith("/dashboard/host") ? "host" : "admin";
+  const role: UserRole = pathname.startsWith("/host") ? "host" : "admin";
 
   return (
     <RoleContext.Provider value={{ role }}>
@@ -33,8 +33,8 @@ export function RoleRouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isAdminRoute = pathname.startsWith("/dashboard/admin");
-  const isHostRoute = pathname.startsWith("/dashboard/host");
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isHostRoute = pathname.startsWith("/host");
   const canAccess = (role === "admin" && isAdminRoute) || (role === "host" && isHostRoute);
 
   useEffect(() => {

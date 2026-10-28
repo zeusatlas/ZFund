@@ -1,57 +1,120 @@
 "use client";
 
-import { Check, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
-import { withdrawalRequests, type WithdrawalRequest, type WithdrawalStatus } from "./data";
-
-function StatusBadge({ status }: { status: WithdrawalStatus }) {
-  const styles = {
-    Pending: "bg-[#fff4dc] text-[#8b5d0d]",
-    Approved: "bg-[#e9f4ef] text-[#216746]",
-    Rejected: "bg-[#fbeaea] text-[#a13d3d]",
-  };
-
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}>{status}</span>;
-}
+import { format } from "date-fns";
+import { Banknote, CheckCircle2, Clock3, Loader } from "lucide-react";
+import { useState } from "react";
+import MetricCard from "@/components/ui/MetricCard";
+import Pagination from "@/components/ui/Pagination";
+import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
+import RowMenu, { type RowMenuItem } from "@/components/ui/RowMenu";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { formatCount, formatMoney } from "@/lib/format";
+import { useUpdateWithdrawalStatus, useWithdrawals, type Withdrawal } from "../admin-api";
+import ListToolbar from "../ListToolbar";
+import WithdrawalDetailsModal from "./WithdrawalDetailsModal";
+import { actionLabel, methodLabel, nextStatuses, WithdrawalStatusBadge } from "./withdrawal-status";
 
 export default function AdminWithdrawals() {
-  const [requests, setRequests] = useState(withdrawalRequests);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("All statuses");
-  const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const debouncedSearch = useDebouncedValue(search);
 
-  const visibleRequests = useMemo(() => requests.filter((request) => {
-    const matchesQuery = !query || `${request.id} ${request.host}`.toLowerCase().includes(query.toLowerCase());
-    return matchesQuery && (status === "All statuses" || request.status === status);
-  }), [query, requests, status]);
+  const { data, isPending, isError, error, refetch, isPlaceholderData } = useWithdrawals({ page, search: debouncedSearch, status });
+  const update = useUpdateWithdrawalStatus();
+  const counts = data?.meta.counts;
+  const selected = data?.items.find((item) => item.id === selectedId) ?? null;
+  const dash = "–";
 
-  function updateStatus(request: WithdrawalRequest, nextStatus: WithdrawalStatus) {
-    setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status: nextStatus } : item));
-    setNotice(`${request.id} was ${nextStatus.toLowerCase()}.`);
+  function menuItems(item: Withdrawal): RowMenuItem[] {
+    const moves: RowMenuItem[] = nextStatuses[item.status].map((next) => ({
+      label: actionLabel[next],
+      danger: next === "REJECTED",
+      // Rejecting opens the details so a reason can be written first.
+      onSelect: () => (next === "REJECTED" ? setSelectedId(item.id) : update.mutate({ id: item.id, status: next })),
+    }));
+    return [{ label: "View details", onSelect: () => setSelectedId(item.id) }, ...moves];
   }
-
-  const pendingCount = requests.filter((request) => request.status === "Pending").length;
-  const pendingAmount = requests.filter((request) => request.status === "Pending").reduce((total, request) => total + Number(request.amount.replace("GHS ", "").replace(/,/g, "")), 0);
 
   return (
     <div className="w-full space-y-6">
       <section>
-        <h1 className="text-2xl font-semibold uppercase tracking-tight text-navy md:text-3xl">Withdrawals</h1>
-        <p className="mt-2 text-sm text-steel">Review and manage withdrawal requests from your hosts.</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Withdrawal requests</h1>
+        <p className="mt-2 text-sm text-steel">Review payout requests from hosts and move them along as you attend to them.</p>
       </section>
 
-      <section className="grid overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm sm:grid-cols-3">
-        <div className="border-b border-navy/10 p-5 sm:border-b-0 sm:border-r"><p className="text-sm text-steel">Pending requests</p><p className="mt-2 text-2xl font-bold text-navy">{pendingCount}</p></div>
-        <div className="border-b border-navy/10 p-5 sm:border-b-0 sm:border-r"><p className="text-sm text-steel">Pending amount</p><p className="mt-2 text-2xl font-bold text-navy">GHS {pendingAmount.toLocaleString("en-GH", { minimumFractionDigits: 2 })}</p></div>
-        <div className="p-5"><p className="text-sm text-steel">Review queue</p><p className="mt-2 text-2xl font-bold text-navy">{pendingCount ? "Needs attention" : "All clear"}</p></div>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Pending requests" value={counts ? formatCount(counts.pending) : dash} icon={Clock3} accent="gold" />
+        <MetricCard label="Processing" value={counts ? formatCount(counts.processing) : dash} icon={Loader} accent="blue" />
+        <MetricCard label="Amount outstanding" value={counts ? formatMoney(counts.outstanding) : dash} icon={Banknote} accent="purple" />
+        <MetricCard label="Paid out" value={counts ? formatMoney(counts.paidOut) : dash} icon={CheckCircle2} accent="green" />
       </section>
-
-      {notice && <div className="flex items-center gap-2 rounded-lg border border-[#cfe6d9] bg-[#f1faf4] px-4 py-3 text-sm text-[#287754]"><Check size={16} />{notice}</div>}
 
       <section className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-navy/10 p-4 sm:flex-row sm:items-center sm:justify-between md:p-5"><div className="relative w-full sm:max-w-xs"><Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-steel" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search requests" className="w-full rounded-lg border border-navy/15 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-gold" /></div><select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-lg border border-navy/15 bg-white px-3 py-2.5 text-sm text-steel outline-none focus:border-gold"><option>All statuses</option><option>Pending</option><option>Approved</option><option>Rejected</option></select></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left"><thead className="bg-stone-light text-xs uppercase tracking-wide text-steel"><tr><th className="px-5 py-3 font-medium">Host</th><th className="px-4 py-3 font-medium">Amount</th><th className="px-4 py-3 font-medium">Destination</th><th className="px-4 py-3 font-medium">Requested</th><th className="px-4 py-3 font-medium">Status</th><th className="px-5 py-3 font-medium">Action</th></tr></thead><tbody className="divide-y divide-navy/10">{visibleRequests.map((request) => <tr key={request.id} className="text-sm"><td className="px-5 py-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-xs font-medium text-white">{request.initials}</span><div><p className="font-medium text-ink">{request.host}</p><p className="text-xs text-steel">{request.id}</p></div></div></td><td className="px-4 py-4 font-semibold text-navy">{request.amount}</td><td className="px-4 py-4 font-mono text-xs text-steel">{request.destination}</td><td className="px-4 py-4 text-xs text-steel">{request.requestedAt}</td><td className="px-4 py-4"><StatusBadge status={request.status} /></td><td className="px-5 py-4">{request.status === "Pending" ? <div className="flex gap-2"><button type="button" onClick={() => updateStatus(request, "Approved")} className="inline-flex items-center gap-1 rounded-md bg-navy px-2.5 py-1.5 text-xs font-medium text-white hover:bg-steel"><Check size={13} /> Approve</button><button type="button" onClick={() => updateStatus(request, "Rejected")} className="inline-flex items-center gap-1 rounded-md border border-[#e8bcbc] px-2.5 py-1.5 text-xs font-medium text-crimson hover:bg-[#fbeaea]"><X size={13} /> Reject</button></div> : <span className="text-xs text-steel">Reviewed</span>}</td></tr>)}</tbody></table></div>{visibleRequests.length === 0 && <p className="p-8 text-center text-sm text-steel">No withdrawal requests found.</p>}
+        <ListToolbar
+          search={search}
+          onSearch={(value) => { setSearch(value); setPage(1); }}
+          searchLabel="Search by reference, host or recipient"
+          status={status}
+          onStatus={(value) => { setStatus(value); setPage(1); }}
+          statuses={[
+            { value: "PENDING", label: "Pending" },
+            { value: "PROCESSING", label: "Processing" },
+            { value: "DONE", label: "Done" },
+            { value: "REJECTED", label: "Rejected" },
+          ]}
+        />
+
+        {isPending ? (
+          <div className="space-y-3 p-5">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <div className="p-5"><ErrorNote message={(error as { message?: string }).message} onRetry={() => refetch()} /></div>
+        ) : data.items.length === 0 ? (
+          <p className="p-8 text-center text-sm text-steel">
+            {search || status ? "No requests match your search." : "No withdrawal requests yet. Requests from hosts will appear here."}
+          </p>
+        ) : (
+          <div className={`overflow-x-auto transition-opacity ${isPlaceholderData ? "opacity-60" : ""}`}>
+            <table className="w-full min-w-[720px] text-left">
+              <thead className="bg-stone-light text-xs uppercase tracking-wide text-steel">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Request</th>
+                  <th className="px-4 py-3 font-medium">Host</th>
+                  <th className="px-4 py-3 font-medium">Amount</th>
+                  <th className="px-4 py-3 font-medium">Payout to</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-navy/10">
+                {data.items.map((item) => (
+                  <tr key={item.id} className="text-sm">
+                    <td className="px-5 py-4">
+                      <button type="button" onClick={() => setSelectedId(item.id)} className="font-medium text-ink hover:text-gold">{item.reference}</button>
+                      <p className="mt-0.5 text-xs text-steel">{format(new Date(item.createdAt), "MMM d, yyyy, HH:mm")}</p>
+                    </td>
+                    <td className="px-4 py-4 text-ink">{item.hostName}</td>
+                    <td className="px-4 py-4 font-medium text-ink">{formatMoney(item.amount)}</td>
+                    <td className="px-4 py-4">
+                      <p className="text-ink">{item.recipientName}</p>
+                      <p className="mt-0.5 text-xs text-steel">{methodLabel[item.method]} · {item.institution}</p>
+                    </td>
+                    <td className="px-4 py-4"><WithdrawalStatusBadge status={item.status} /></td>
+                    <td className="px-5 py-4 text-right">
+                      <RowMenu label={`More actions for ${item.reference}`} items={menuItems(item)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {data && <Pagination page={page} totalPages={data.meta.totalPages} total={data.meta.total} label="requests" onPageChange={setPage} />}
       </section>
+
+      {selected && <WithdrawalDetailsModal withdrawal={selected} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }

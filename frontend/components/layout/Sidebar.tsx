@@ -6,7 +6,7 @@ export function SidebarContent() {
   return (
     <>
       <div className="flex h-16 shrink-0 items-center border-b border-steel/40 px-6">
-        <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+        <Link href="/admin" className="text-lg font-semibold tracking-tight">
           ZFund
         </Link>
       </div>

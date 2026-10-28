@@ -1,0 +1,78 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { SystemRole } from '../../common/types/auth';
+import { OrganizationMember } from './organization-member.entity';
+import { RefreshToken } from './refresh-token.entity';
+
+export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
+}
+
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ unique: true })
+  @Index('idx_user_email')
+  email: string;
+
+  @Column({ select: false })
+  passwordHash: string;
+
+  @Column()
+  firstName: string;
+
+  @Column()
+  lastName: string;
+
+  @Column({ nullable: true })
+  @Index('idx_user_phone')
+  phone?: string;
+
+  @Column({ type: 'enum', enum: SystemRole, default: SystemRole.ACCOUNT_OWNER })
+  role: SystemRole;
+
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
+  status: UserStatus;
+
+  @Column({ default: false })
+  isEmailVerified: boolean;
+
+  // One-time sign-in code sent by SMS (hash only; never exposed by queries).
+  @Column({ type: 'varchar', nullable: true, select: false })
+  otpHash?: string | null;
+
+  @Column({ type: 'timestamp with time zone', nullable: true, select: false })
+  otpExpiresAt?: Date | null;
+
+  @Column({ type: 'int', default: 0, select: false })
+  otpAttempts: number;
+
+  @Column({ type: 'timestamp with time zone', nullable: true, select: false })
+  otpSentAt?: Date | null;
+
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  lastLoginAt?: Date;
+
+  @OneToMany(() => OrganizationMember, (member) => member.user)
+  memberships: OrganizationMember[];
+
+  @OneToMany(() => RefreshToken, (token) => token.user)
+  refreshTokens: RefreshToken[];
+
+  @CreateDateColumn({ type: 'timestamp with time zone' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamp with time zone' })
+  updatedAt: Date;
+}
