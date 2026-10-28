@@ -1,5 +1,4 @@
 import { Search } from "lucide-react";
-import FilterSelect from "@/components/ui/FilterSelect";
 
 type ListToolbarProps = {
   search: string;

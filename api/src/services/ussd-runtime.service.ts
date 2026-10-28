@@ -560,8 +560,32 @@ export class UssdRuntimeService {
   private renderMenu(menu: UssdMenu, project: Project | null, session: UssdSession): string {
     let prompt = menu.prompt;
 
+    const selectedStep =
+      (session.contextData.selectedPurposeName as string) ||
+      (session.contextData.purpose as string) ||
+      (session.contextData.targetName as string) ||
+      project?.name ||
+      'this campaign';
+
     // Replace dynamic placeholders in prompt
-    prompt = prompt.replace(/{projectName}/g, project?.name || 'RaiseFunds');
+    prompt = prompt.replace(/{purpose}/g, selectedStep);
+    prompt = prompt.replace(/{subStep}/g, selectedStep);
+    prompt = prompt.replace(/{target}/g, selectedStep);
+    prompt = prompt.replace(/{targetName}/g, selectedStep);
+    prompt = prompt.replace(/{step}/g, selectedStep);
+
+    if (menu.menuKey === 'CONFIRM_PAYMENT') {
+      prompt = prompt.replace(/{projectName}/g, selectedStep);
+      if (project?.name) {
+        const escaped = project.name.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+        prompt = prompt.replace(new RegExp(`to\\s+${escaped}\\?`, 'gi'), `to ${selectedStep}?`);
+        prompt = prompt.replace(new RegExp(escaped, 'g'), selectedStep);
+      }
+    } else {
+      prompt = prompt.replace(/{projectName}/g, project?.name || 'RaiseFunds');
+    }
+
+    prompt = prompt.replace(/{campaignName}/g, project?.name || 'RaiseFunds');
     prompt = prompt.replace(/{currency}/g, project?.currency || 'GHS');
     prompt = prompt.replace(/{amount}/g, String(session.contextData.amount || '0.00'));
     prompt = prompt.replace(/{minAmount}/g, project?.minAmount || '1.00');
