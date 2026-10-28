@@ -55,7 +55,7 @@ export default function Navbar() {
           href="/"
           className="brand text-off-ink"
         >
-          ZFund
+          RaiseFundz
         </Link>
 
         {/* Desktop Nav */}

@@ -7,7 +7,7 @@ export function SidebarContent() {
     <>
       <div className="flex h-16 shrink-0 items-center border-b border-steel/40 px-6">
         <Link href="/admin" className="text-lg font-semibold tracking-tight">
-          ZFund
+          RaiseFundz
         </Link>
       </div>
       <SiderMenu />

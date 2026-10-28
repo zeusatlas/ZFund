@@ -127,7 +127,7 @@ export default function LoginPage() {
           </form>
 
           <p className="auth-access-note">
-            Accounts are created by your ZFund administrator. Need access? Contact them to be added.
+            Accounts are created by your RaiseFundz administrator. Need access? Contact them to be added.
           </p>
         </>
       )}

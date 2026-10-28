@@ -22,7 +22,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="auth-page" ref={root}>
       <header className="auth-header">
-        <Link href="/" className="auth-brand">ZFund<span aria-hidden="true">.</span></Link>
+        <Link href="/" className="auth-brand">RaiseFundz<span aria-hidden="true">.</span></Link>
         <Link href="/" className="auth-home"><ArrowLeft size={15} /> Back to home</Link>
       </header>
       <main className="auth-layout">
@@ -35,7 +35,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
             <div className="auth-connection" />
             <div className="auth-purpose"><Sprout size={25} /><span>Good things grow<br /><strong>when we give together.</strong></span></div>
           </div>
-          <div className="auth-story-bottom"><span>Built around Ghana’s communities.</span><Link href="/how-it-works" aria-label="Explore how ZFund works"><ArrowUpRight size={21} /></Link></div>
+          <div className="auth-story-bottom"><span>Built around Ghana’s communities.</span><Link href="/how-it-works" aria-label="Explore how RaiseFundz works"><ArrowUpRight size={21} /></Link></div>
         </aside>
         <section className="auth-workspace" aria-label="Sign in">
           <div className="auth-card">{children}</div>

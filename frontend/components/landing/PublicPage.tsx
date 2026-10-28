@@ -3,7 +3,7 @@ import { ArrowRight, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function PageIntro({ label, title, children }: { label: string; title: string; children: ReactNode }) {
-  return <section className="page-intro"><Link href="/" className="kicker underline underline-offset-4">ZFund</Link><span className="kicker"> / {label}</span><h1>{title}</h1><p>{children}</p></section>;
+  return <section className="page-intro"><Link href="/" className="kicker underline underline-offset-4">RaiseFundz</Link><span className="kicker"> / {label}</span><h1>{title}</h1><p>{children}</p></section>;
 }
 export function PageSection({ title, children }: { title: string; children: ReactNode }) {
   return <section className="page-section"><h2>{title}</h2>{children}</section>;

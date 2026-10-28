@@ -115,7 +115,7 @@ export default function AdminReports() {
 
   function exportCsv() {
     if (!overview.data || !trendPoints || !tx || !wd) return;
-    downloadCsv(`zfund-report-${new Date().toISOString().slice(0, 10)}.csv`, [
+    downloadCsv(`raisefundz-report-${new Date().toISOString().slice(0, 10)}.csv`, [
       {
         title: "Summary",
         rows: [

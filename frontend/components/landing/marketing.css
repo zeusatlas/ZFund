@@ -36,7 +36,7 @@
 .marketing .flow-stack:first-child .flow-node::after { content: ''; width: 64px; height: 1px; background: var(--color-ash); position: absolute; left: 100%; }
 .marketing .flow-stack:last-child .flow-node::before { content: ''; width: 64px; height: 1px; background: var(--color-ash); position: absolute; right: 100%; }
 .marketing .flow-hub { position: relative; border: 1px solid var(--color-gold); border-radius: 40px; background: var(--color-parchment); padding: 40px 16px; }
-.marketing .flow-hub strong { display: block; font-family: inherit; font-weight: 400; font-size: 45px; letter-spacing: -.06em; }
+.marketing .flow-hub strong { display: block; font-family: inherit; font-weight: 400; font-size: clamp(28px, 3vw, 40px); letter-spacing: -.06em; }
 .marketing .flow-hub span { display: block; color: var(--color-graphite); font-size: 11px; }
 .marketing .context-strip { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-block: 26px; border-block: 1px solid var(--color-ash); font-size: 12px; color: var(--color-graphite); }
 .marketing .context-strip span { display: flex; align-items: center; gap: 10px; }

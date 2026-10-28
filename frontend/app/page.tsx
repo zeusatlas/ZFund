@@ -21,13 +21,13 @@ export default function Home() {
             <HostCtaLink className="pill pill-primary">Host a campaign <ArrowRight size={16} /></HostCtaLink>
             <Link href="/how-it-works" className="pill">Explore how it works</Link>
           </div>
-          <div className="fund-flow" aria-label="Planned fundraising flow: communities, alumni and supporters connect through ZFund to campaigns, contributions and shared progress">
+          <div className="fund-flow" aria-label="Planned fundraising flow: communities, alumni and supporters connect through RaiseFundz to campaigns, contributions and shared progress">
             <div className="flow-stack">
               <div className="flow-node"><Users size={17} /> Communities</div>
               <div className="flow-node"><GraduationCap size={17} /> Alumni groups</div>
               <div className="flow-node"><HeartHandshake size={17} /> Supporters</div>
             </div>
-            <div className="flow-hub"><Sprout size={25} className="mx-auto text-gold" /><strong>ZFund</strong><span>One purpose. Brought together.</span></div>
+            <div className="flow-hub"><Sprout size={25} className="mx-auto text-gold" /><strong>RaiseFundz</strong><span>One purpose. Brought together.</span></div>
             <div className="flow-stack">
               <div className="flow-node"><ClipboardList size={17} /> Clear campaigns</div>
               <div className="flow-node"><Smartphone size={17} /> Simple giving</div>
@@ -73,9 +73,9 @@ export default function Home() {
         </div></section>
 
         <section className="wrap section"><div className="section-heading"><h2>A few things<br />before you begin.</h2><p>Get to know the experience we’re building.</p></div><FAQ items={[
-          { question: "Who is ZFund for?", answer: "Community organisers, alumni groups, congregations, and nonprofits in Ghana who want to bring people together around a clear fundraising goal." },
+          { question: "Who is RaiseFundz for?", answer: "Community organisers, alumni groups, congregations, and nonprofits in Ghana who want to bring people together around a clear fundraising goal." },
           { question: "Can I collect donations right now?", answer: "This site previews the fundraising experience. Live USSD collections and payouts are still in development. Example campaign figures are illustrative." },
-          { question: "Will supporters need a smartphone?", answer: "The planned giving journey uses USSD, so supporters can contribute from a basic mobile phone. No live ZFund shortcode has been published yet." },
+          { question: "Will supporters need a smartphone?", answer: "The planned giving journey uses USSD, so supporters can contribute from a basic mobile phone. No live RaiseFundz shortcode has been published yet." },
           { question: "What should I prepare for a campaign?", answer: "A clear purpose, a target in Ghana cedis, a budget, a closing date, and a named organiser. The host guide walks you through the details." },
         ]} /></section>
         <section className="wrap closing"><h2>Your community has a purpose.<br />Give it a place to grow.</h2><p>Start with the people you know and the change you want to make together.</p><HostCtaLink className="pill pill-dark">Explore your host dashboard <ArrowRight size={16} /></HostCtaLink></section>
