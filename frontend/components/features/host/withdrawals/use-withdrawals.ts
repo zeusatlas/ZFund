@@ -1,8 +1,8 @@
 "use client";
 import {useMemo,useSyncExternalStore} from "react";
 import {availableForCampaign,exampleWithdrawals,savedWithdrawalSchema,withdrawalFormSchema,type Withdrawal} from "@/components/features/host/withdrawals/withdrawals";
-const key="zfund-host-withdrawals-v1";
-const eventName="zfund-withdrawals-changed";
+const key="raisefundz-host-withdrawals-v1";
+const eventName="raisefundz-withdrawals-changed";
 function subscribe(notify:()=>void) {
   const storage=(event:StorageEvent)=>{if(event.key===key||event.key===null)notify();};
   window.addEventListener("storage",storage);window.addEventListener(eventName,notify);

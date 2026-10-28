@@ -8,11 +8,13 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     <RoleProvider>
       <Suspense fallback={<div className="min-h-screen bg-stone-light" />}>
         <RoleRouteGuard>
-          <div className="flex min-h-screen">
+          <div className="flex min-h-screen bg-stone-light">
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col">
               <Header />
-              <main className="flex-1 bg-stone-light p-4 sm:p-5 lg:p-6">{children}</main>
+              <main className="flex-1 px-4 pb-10 pt-6 sm:px-5 lg:px-8">
+                <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+              </main>
             </div>
           </div>
         </RoleRouteGuard>

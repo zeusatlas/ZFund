@@ -12,8 +12,8 @@ import { BarList, TrendChart, type BarRow } from "./charts";
 import { downloadCsv } from "./csv";
 
 // Status colours carry a fixed meaning (done / waiting / problem); every bar is also labelled.
-const GOOD = "#287754";
-const WAITING = "#a26c12";
+const GOOD = "#256b4a";
+const WAITING = "#8a5a10";
 const BAD = "#a13d3d";
 const NEUTRAL = "#2e4c6d";
 
@@ -56,7 +56,7 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <article className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
+    <article className="surface-card p-5 shadow-sm md:p-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h2 className="font-semibold text-navy">{title}</h2>
@@ -168,14 +168,14 @@ export default function AdminReports() {
     <div className="w-full space-y-7">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Reports</h1>
+          <h1 className="page-title">Reports</h1>
           <p className="mt-2 text-sm text-steel">How funds, payments and payouts are performing across the platform.</p>
         </div>
         <button
           type="button"
           onClick={exportCsv}
           disabled={!ready}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-steel disabled:opacity-50"
+          className="btn-primary w-fit disabled:opacity-50"
         >
           <Download size={17} />
           Export CSV
@@ -205,7 +205,7 @@ export default function AdminReports() {
               </div>
               <div>
                 <dt className="text-xs text-steel">Best {period === "30d" ? "day" : period === "12m" ? "month" : "week"}</dt>
-                <dd className="mt-1 font-semibold text-[#287754]">{formatMoney(trendPeak)}</dd>
+                <dd className="mt-1 font-semibold text-success">{formatMoney(trendPeak)}</dd>
               </div>
             </dl>
           </div>

@@ -62,7 +62,7 @@ export default function OtpInput({
             if (digits) setDigits(0, digits);
           }}
           onFocus={(e) => e.target.select()}
-          className="h-14 w-full min-w-0 rounded-xl border border-navy/15 bg-white text-center text-xl font-medium text-navy outline-none transition-colors focus:border-gold disabled:bg-stone-light disabled:opacity-60"
+           className="h-14 w-full min-w-0 rounded-2xl border border-navy/15 bg-stone-light text-center text-xl font-semibold text-navy outline-none transition-colors focus:border-gold focus:bg-white disabled:bg-stone-light disabled:opacity-60"
         />
       ))}
     </div>

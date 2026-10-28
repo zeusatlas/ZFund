@@ -23,19 +23,16 @@ export default function AdminDashboard() {
     <div className="w-full space-y-7">
       <section className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl" suppressHydrationWarning>
+          <p className="text-eyebrow mb-2 text-gold">Admin overview</p>
+          <h1 className="page-title" suppressHydrationWarning>
             {greeting()}{me ? `, ${me.firstName}` : ""}
           </h1>
-          <p className="mt-2 text-sm text-steel">
+          <p className="page-subtitle">
             Here’s what’s happening across your fund network today.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowAddHost(true)}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-steel"
-        >
+        <button type="button" onClick={() => setShowAddHost(true)} className="btn-primary w-fit">
           <UserPlus size={17} />
           Add host account
         </button>

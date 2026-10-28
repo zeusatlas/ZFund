@@ -28,7 +28,7 @@ export default function AdminCampaigns() {
   return (
     <div className="w-full space-y-6">
       <section>
-        <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Campaigns</h1>
+        <h1 className="page-title">Campaigns</h1>
         <p className="mt-2 text-sm text-steel">Every campaign your hosts have created, and how much each has raised.</p>
       </section>
 
@@ -40,7 +40,7 @@ export default function AdminCampaigns() {
         <MetricCard label="Drafts" value={counts ? formatCount(counts.draft) : dash} icon={FilePenLine} accent="gold" />
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
+      <section className="overflow-hidden surface-card">
         <ListToolbar
           search={search}
           onSearch={(value) => { setSearch(value); setPage(1); }}
@@ -72,7 +72,7 @@ export default function AdminCampaigns() {
                   <Link
                     key={campaign.id}
                     href={`/admin/campaigns/${campaign.id}`}
-                    className="flex flex-col rounded-xl border border-navy/10 bg-white p-5 transition hover:border-navy/25 hover:shadow-md"
+                    className="flex flex-col surface-card p-5 transition hover:border-navy/25 hover:shadow-md"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

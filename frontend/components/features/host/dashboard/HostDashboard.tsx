@@ -28,14 +28,14 @@ export default function HostDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-7">
+    <div className="w-full space-y-7">
       <section className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="text-sm font-medium text-gold">Host workspace</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-navy md:text-3xl">Welcome back, Amelia</h1>
+          <h1 className="page-title mt-1">Welcome back, Amelia</h1>
           <p className="mt-2 text-sm text-steel">Manage your funds and keep track of your latest activity.</p>
         </div>
-        <button type="button" onClick={() => setShowCreateFund(true)} className="inline-flex w-fit items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-steel">
+        <button type="button" onClick={() => setShowCreateFund(true)} className="btn-primary w-fit">
           <Plus size={17} />
           Generate funds
         </button>
@@ -55,18 +55,18 @@ export default function HostDashboard() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-        <article className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
+        <article className="surface-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-navy/10 p-5 md:p-6">
-            <div><h2 className="font-semibold text-navy">Recent transactions</h2><p className="mt-1 text-sm text-steel">A quick look at your latest fund activity.</p></div>
+            <div><h2 className="text-base font-semibold tracking-tight text-navy">Recent transactions</h2><p className="mt-1 text-sm text-steel">A quick look at your latest fund activity.</p></div>
           </div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left"><thead className="bg-stone-light text-xs uppercase tracking-wide text-steel"><tr><th className="px-5 py-3 font-medium">Reference</th><th className="px-4 py-3 font-medium">Description</th><th className="px-4 py-3 font-medium">Amount</th><th className="px-4 py-3 font-medium">Status</th><th className="px-5 py-3 font-medium">Date</th></tr></thead><tbody className="divide-y divide-navy/10">{recentTransactions.map((transaction) => <tr key={transaction.reference} className="text-sm"><td className="px-5 py-4 font-medium text-navy">{transaction.reference}</td><td className="px-4 py-4 text-steel">{transaction.description}</td><td className="px-4 py-4 font-medium text-ink">{transaction.amount}</td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${transaction.status === "Completed" ? "bg-[#e9f4ef] text-[#287754]" : "bg-[#fff4dc] text-[#a26c12]"}`}>{transaction.status}</span></td><td className="px-5 py-4 text-xs text-steel">{transaction.date}</td></tr>)}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left"><thead className="border-b border-navy/10 bg-stone-light text-[10px] font-semibold uppercase tracking-[0.1em] text-steel"><tr><th className="px-5 py-3 font-semibold">Reference</th><th className="px-4 py-3 font-semibold">Description</th><th className="px-4 py-3 font-semibold">Amount</th><th className="px-4 py-3 font-semibold">Status</th><th className="px-5 py-3 font-semibold">Date</th></tr></thead><tbody className="divide-y divide-navy/10">{recentTransactions.map((transaction) => <tr key={transaction.reference} className="text-sm"><td className="px-5 py-4 font-medium text-navy">{transaction.reference}</td><td className="px-4 py-4 text-steel">{transaction.description}</td><td className="px-4 py-4 font-medium text-ink">{transaction.amount}</td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${transaction.status === "Completed" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}>{transaction.status}</span></td><td className="px-5 py-4 text-xs text-steel">{transaction.date}</td></tr>)}</tbody></table></div>
         </article>
 
-        <article className="rounded-xl border border-navy/10 bg-navy p-6 text-white shadow-sm">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-gold"><FileText size={20} /></div>
+        <article className="surface-card self-start border-white/10 bg-navy p-6 text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-gold"><FileText size={20} /></div>
           <h2 className="mt-5 text-lg font-semibold">Need help with a fund?</h2>
           <p className="mt-2 text-sm leading-6 text-stone/70">Create a new fund request or review the guidelines before submitting your next allocation.</p>
-          <button type="button" onClick={() => setShowCreateFund(true)} className="mt-6 inline-flex items-center gap-2 rounded-lg bg-gold px-4 py-2.5 text-sm font-medium text-midnight hover:bg-white">Open fund request</button>
+          <button type="button" onClick={() => setShowCreateFund(true)} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2.5 text-sm font-semibold text-midnight transition-colors hover:bg-white">Open fund request</button>
         </article>
       </section>
       {showCreateFund && <CreateFundModal onClose={() => setShowCreateFund(false)} onCreate={createFund} />}

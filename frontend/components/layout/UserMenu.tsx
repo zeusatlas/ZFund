@@ -51,9 +51,9 @@ export default function UserMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-stone"
+        className="flex items-center gap-2 rounded-full border border-transparent p-1 pr-2 transition-colors hover:border-navy/10 hover:bg-stone"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-sm font-medium text-stone">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-sm font-semibold text-stone">
           {initials(user.name)}
         </span>
         <ChevronDown
@@ -65,17 +65,17 @@ export default function UserMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-56 rounded-md border border-navy/10 bg-white py-1 shadow-lg"
+          className="animate-drawer-in absolute right-0 mt-2 w-60 overflow-hidden surface-card shadow-lg"
         >
-          <div className="border-b border-navy/10 px-4 py-3">
-            <p className="text-sm font-medium text-ink">{user.name}</p>
+          <div className="border-b border-navy/10 bg-stone-light px-4 py-3">
+            <p className="text-sm font-semibold text-navy">{user.name}</p>
             <p className="truncate text-xs text-steel">{user.email}</p>
           </div>
           <button
             type="button"
             role="menuitem"
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 px-4 py-2 text-sm text-crimson transition-colors hover:bg-stone"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-crimson transition-colors hover:bg-crimson/5"
           >
             <LogOut size={16} />
             Log out

@@ -94,7 +94,7 @@ export default function LoginPage() {
               type="button"
               disabled={cooldown > 0 || requestOtp.isPending}
               onClick={() => sendCode(identity)}
-              className="font-medium text-navy underline decoration-gold decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50"
+              className="font-semibold text-navy underline decoration-gold decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50"
             >
               {cooldown > 0 ? `Resend code in ${formatTime(cooldown)}` : "Resend code"}
             </button>
@@ -109,11 +109,11 @@ export default function LoginPage() {
           </p>
 
           <form onSubmit={submitIdentity} className="mt-8 space-y-5">
-            <label className="block text-sm font-medium text-ink">
+            <label className="block text-sm font-semibold text-ink">
               Email
               <input required type="email" name="email" autoComplete="email" placeholder="you@example.com" className={inputClass} />
             </label>
-            <label className="block text-sm font-medium text-ink">
+            <label className="block text-sm font-semibold text-ink">
               Phone number
               <input required type="tel" name="phone" autoComplete="tel" placeholder="0541234567" className={inputClass} />
             </label>
