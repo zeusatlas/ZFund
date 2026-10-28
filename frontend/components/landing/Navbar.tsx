@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import HostCtaLink from "@/components/landing/HostCtaLink";
 
 const navLinks = [
   { href: "/how-it-works", label: "How it works" },
@@ -81,13 +82,12 @@ export default function Navbar() {
           >
             Sign in
           </Link>
-          <Link
-            href="/admin"
+          <HostCtaLink
             onClick={() => setMobileOpen(false)}
             className="rounded-full bg-lime px-5 py-2 text-[14px] font-medium text-off-ink transition-opacity hover:opacity-85"
           >
             Host a campaign
-          </Link>
+          </HostCtaLink>
         </div>
 
         {/* Mobile hamburger */}
@@ -127,13 +127,12 @@ export default function Navbar() {
             >
               Sign in
             </Link>
-            <Link
-              href="/admin"
+            <HostCtaLink
             onClick={() => setMobileOpen(false)}
               className="rounded-full bg-lime px-5 py-3 text-center text-[15px] font-medium text-off-ink"
             >
               Host a campaign
-            </Link>
+            </HostCtaLink>
           </div>
         </div>
       )}

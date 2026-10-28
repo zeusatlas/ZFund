@@ -11,14 +11,15 @@
   --color-midnight: #10192b;
   --color-ink: #1c1f26;
 
-  /* ── Perk Design System (Landing Pages) ── */
-  --color-lime: #beff50;
-  --color-parchment: #f5f5eb;
-  --color-ash: #d2d2c8;
-  --color-graphite: #6e6e64;
-  --color-charcoal: #30302a;
-  --color-off-ink: #14140f;
-  --color-smoke: #b9b9b7;
+  /* ── Landing Pages: blue-black + orange brand palette ──
+     Token names kept so existing classes keep working; "lime" is now the dashboard gold accent. */
+  --color-lime: #c08a2e; /* same as --color-gold in the dashboard */
+  --color-parchment: #f3f5f9;
+  --color-ash: #d6dce6;
+  --color-graphite: #5a6a82;
+  --color-charcoal: #12233f;
+  --color-off-ink: #0a1628;
+  --color-smoke: #b6bfcc;
 
   /* Softer elevation: lighter than Tailwind's defaults, applies to every shadow-* utility. */
   --shadow-sm: 0 1px 2px 0 rgb(16 24 40 / 0.05);

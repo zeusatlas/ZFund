@@ -1,6 +1,8 @@
 import { AppDataSource, initializeDatabase } from '../config/database';
 import { logger } from '../config/logger';
 import { PermissionCode, SystemRole } from '../common/types/auth';
+import { env } from '../config/env';
+import { normalizePhone } from '../common/utils/phone';
 import { CryptoUtil } from '../common/utils/crypto';
 import {
   ContributionPurpose,
@@ -79,12 +81,17 @@ export async function runSeeds(): Promise<void> {
         passwordHash,
         firstName: 'System',
         lastName: 'Administrator',
+        phone: env.SEED_ADMIN_PHONE ? normalizePhone(env.SEED_ADMIN_PHONE) : undefined,
         role: SystemRole.SUPER_ADMIN,
         status: UserStatus.ACTIVE,
         isEmailVerified: true,
       })
     );
     logger.info(`Seeded Super Admin user: ${adminEmail}`);
+  } else if (!existingAdmin.phone && env.SEED_ADMIN_PHONE) {
+    existingAdmin.phone = normalizePhone(env.SEED_ADMIN_PHONE);
+    await userRepo.save(existingAdmin);
+    logger.info(`Set phone for Super Admin user: ${adminEmail}`);
   }
 
   // 4. Seed Project Categories

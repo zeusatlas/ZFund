@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { mockSmsAdapter } from '../../src/services/mock-sms.adapter';
 import { createApp } from '../../src/app';
 import { AppDataSource } from '../../src/config/database';
 import { CryptoUtil } from '../../src/common/utils/crypto';
@@ -80,7 +81,7 @@ describe('Admin dashboard endpoints', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         email: 'new-host@zfund.org',
-        password: 'TempPass123',
+        phone: '0240000099',
         firstName: 'New',
         lastName: 'Host',
         role: SystemRole.ACCOUNT_OWNER,
@@ -162,9 +163,13 @@ describe('Admin dashboard endpoints', () => {
       .send({ status: 'ACTIVE' });
     expect(reactivate.body.data.status).toBe('PENDING_VERIFICATION');
 
+    await request(app)
+      .post('/api/v1/auth/request-otp')
+      .send({ email: 'new-host@zfund.org', phone: '0240000099' });
+    const code = mockSmsAdapter.sentMessages.at(-1)!.message.match(/\d{6}/)![0];
     const login = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'new-host@zfund.org', password: 'TempPass123' });
+      .post('/api/v1/auth/verify-otp')
+      .send({ email: 'new-host@zfund.org', phone: '0240000099', code });
     expect(login.status).toBe(200);
     expect(login.body.data.user.status).toBe('ACTIVE');
 

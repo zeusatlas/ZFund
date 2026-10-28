@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import HostCtaLink from "@/components/landing/HostCtaLink";
 
 // ─── Campaign Dashboard Mockup ────────────────────────────────────────────────
 function DashboardMockup() {
@@ -284,15 +285,11 @@ export default function Home() {
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section className="overflow-hidden bg-white">
-        <div className="mx-auto max-w-[1200px] px-6 py-24 md:py-32">
+        <div className="mx-auto max-w-300 px-6 py-24 md:py-32">
           <div className="grid items-center gap-16 md:grid-cols-[1fr_1.05fr]">
             {/* Left: copy */}
             <div>
-              <div className="mb-8 inline-flex items-center rounded-full bg-lime px-4 py-1.5">
-                <span className="text-eyebrow text-off-ink">
-                  Fundraising for Ghana
-                </span>
-              </div>
+              
 
               <h1 className="mb-6 text-[clamp(44px,5.2vw,68px)] font-medium leading-[0.94] tracking-[-2.5px] text-off-ink">
                 Donors give by phone.
@@ -309,13 +306,12 @@ export default function Home() {
               </p>
 
               <div className="flex flex-wrap items-center gap-5">
-                <Link
-                  href="/admin"
+                <HostCtaLink
                   className="inline-flex items-center gap-2 rounded-[28px] bg-lime px-6 py-3.5 text-[15px] font-medium text-off-ink transition-opacity hover:opacity-85"
                 >
                   Host a campaign
                   <ArrowRight size={16} />
-                </Link>
+                </HostCtaLink>
                 <Link
                   href="/how-it-works"
                   className="border-b border-off-ink pb-0.5 text-[15px] font-medium text-off-ink transition-colors hover:border-graphite hover:text-graphite"
@@ -409,15 +405,6 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-10">
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-2 rounded-full bg-lime px-6 py-3.5 text-[15px] font-medium text-off-ink transition-opacity hover:opacity-85"
-            >
-              Open host dashboard
-              <ArrowRight size={16} />
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -526,19 +513,17 @@ export default function Home() {
             shortcode your community can use from any mobile phone.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link
-              href="/admin"
+            <HostCtaLink
               className="inline-flex items-center gap-2 rounded-[28px] bg-off-ink px-8 py-4 text-[15px] font-medium text-white transition-opacity hover:opacity-85"
             >
               Host a campaign
               <ArrowRight size={17} />
-            </Link>
-            <Link
-              href="/admin"
+            </HostCtaLink>
+            <HostCtaLink
               className="border-b border-off-ink pb-0.5 text-[15px] font-medium text-off-ink"
             >
               Sign in to dashboard
-            </Link>
+            </HostCtaLink>
           </div>
         </div>
       </section>

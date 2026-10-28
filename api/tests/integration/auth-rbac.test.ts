@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { mockSmsAdapter } from '../../src/services/mock-sms.adapter';
 import { createApp } from '../../src/app';
 import { AppDataSource } from '../../src/config/database';
 import { CryptoUtil } from '../../src/common/utils/crypto';
@@ -42,76 +43,67 @@ describe('Authentication & Role-Based Access Control (RBAC)', () => {
   });
 
   const testUserEmail = 'pastor.james@church.org';
-  const testUserPassword = 'ChurchPassword123';
+  const testUserPhone = '0240000003';
   let accountOwnerToken = '';
   let accountOwnerRefreshToken = '';
 
-  it('should register a new account owner and securely hash the password with Argon2id', async () => {
+  const lastCode = () => mockSmsAdapter.sentMessages.at(-1)!.message.match(/\d{6}/)![0];
+
+  it('should let an admin create an account, texting the user their email and phone', async () => {
+    mockSmsAdapter.sentMessages.length = 0;
     const res = await request(app)
-      .post('/api/v1/auth/register')
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${superAdminToken}`)
       .send({
         email: testUserEmail,
-        password: testUserPassword,
         firstName: 'James',
         lastName: 'Mensah',
-        phone: '233240000003',
+        phone: testUserPhone,
         role: SystemRole.ACCOUNT_OWNER,
       });
 
     expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
     expect(res.body.data.email).toBe(testUserEmail);
-    expect(res.body.data.role).toBe(SystemRole.ACCOUNT_OWNER);
-    // Password hash must NEVER be returned in response
+    expect(res.body.data.smsSent).toBe(true);
     expect(res.body.data.passwordHash).toBeUndefined();
 
-    // Verify in database that password was hashed
-    const userRepo = AppDataSource.getRepository(User);
-    const dbUser = await userRepo
-      .createQueryBuilder('u')
-      .addSelect('u.passwordHash')
-      .where('u.email = :email', { email: testUserEmail })
-      .getOne();
-    expect(dbUser).toBeDefined();
-    expect(dbUser?.passwordHash).not.toBe(testUserPassword);
-    expect(dbUser?.passwordHash).toMatch(/^\$argon2id\$/);
+    const sms = mockSmsAdapter.sentMessages.at(-1)!;
+    expect(sms.recipient).toBe('233240000003');
+    expect(sms.message).toContain(testUserEmail);
+    expect(sms.message).toContain('233240000003');
   });
 
-  it('should reject registration if email is already registered', async () => {
-    const res = await request(app)
-      .post('/api/v1/auth/register')
-      .send({
-        email: testUserEmail,
-        password: testUserPassword,
-        firstName: 'Duplicate',
-        lastName: 'User',
-      });
-
-    expect(res.status).toBe(409);
-    expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('already exists');
+  it('should no longer offer public registration or password login', async () => {
+    const register = await request(app).post('/api/v1/auth/register').send({ email: 'x@y.org' });
+    const login = await request(app).post('/api/v1/auth/login').send({ email: testUserEmail, password: 'x' });
+    expect(register.status).toBe(404);
+    expect(login.status).toBe(404);
   });
 
-  it('should reject login with invalid password (401 Unauthorized)', async () => {
+  it('should not send a code when the phone does not match the account', async () => {
+    mockSmsAdapter.sentMessages.length = 0;
     const res = await request(app)
-      .post('/api/v1/auth/login')
-      .send({
-        email: testUserEmail,
-        password: 'WrongPassword999',
-      });
+      .post('/api/v1/auth/request-otp')
+      .send({ email: testUserEmail, phone: '0200000000' });
+
+    expect(res.status).toBe(200);
+    expect(mockSmsAdapter.sentMessages).toHaveLength(0);
+  });
+
+  it('should reject a wrong code (401 Unauthorized)', async () => {
+    await request(app).post('/api/v1/auth/request-otp').send({ email: testUserEmail, phone: testUserPhone });
+    const res = await request(app)
+      .post('/api/v1/auth/verify-otp')
+      .send({ email: testUserEmail, phone: testUserPhone, code: lastCode() === '000000' ? '111111' : '000000' });
 
     expect(res.status).toBe(401);
-    expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain('Invalid email or password');
+    expect(res.body.message).toContain('Invalid or expired code');
   });
 
-  it('should successfully log in with valid credentials, returning JWT and setting refresh token', async () => {
+  it('should sign in with the texted code, returning JWT and setting refresh token', async () => {
     const res = await request(app)
-      .post('/api/v1/auth/login')
-      .send({
-        email: testUserEmail,
-        password: testUserPassword,
-      });
+      .post('/api/v1/auth/verify-otp')
+      .send({ email: testUserEmail, phone: '+233 24 000 0003', code: lastCode() });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -128,6 +120,14 @@ describe('Authentication & Role-Based Access Control (RBAC)', () => {
     const dbSession = await sessionRepo.findOne({ where: { tokenHash: hashedToken } });
     expect(dbSession).toBeDefined();
     expect(dbSession?.isRevoked).toBe(false);
+  });
+
+  it('should not accept the same code twice', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/verify-otp')
+      .send({ email: testUserEmail, phone: testUserPhone, code: lastCode() });
+
+    expect(res.status).toBe(401);
   });
 
   it('should allow access to protected profile endpoint with valid access token', async () => {

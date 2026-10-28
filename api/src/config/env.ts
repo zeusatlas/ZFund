@@ -51,6 +51,12 @@ const envSchema = z.object({
   COOKIE_SECURE: booleanEnv(false),
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
+  // Public URL of the web app, used in SMS links
+  FRONTEND_URL: z.string().default('http://localhost:3000'),
+
+  // Phone number for the seeded super admin (needed to sign in with an SMS code)
+  SEED_ADMIN_PHONE: z.string().optional().default(''),
+
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:5173'),
 

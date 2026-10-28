@@ -4,29 +4,18 @@ import { ApiResponse } from '../common/utils/response';
 import { authService } from '../services/auth.service';
 
 export class AuthController {
-  async register(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async requestOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const user = await authService.register(req.body, req.ip, req.headers['user-agent']);
-      ApiResponse.success(
-        res,
-        {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-        },
-        'Account registered successfully',
-        201
-      );
+      await authService.requestOtp(req.body, req.ip, req.headers['user-agent']);
+      ApiResponse.success(res, null, 'If the details match an account, a code has been sent by SMS');
     } catch (err) {
       next(err);
     }
   }
 
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async verifyOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await authService.login(req.body, req.ip, req.headers['user-agent']);
+      const result = await authService.verifyOtp(req.body, req.ip, req.headers['user-agent']);
 
       // Set refresh token in secure HttpOnly cookie
       res.cookie('refreshToken', result.refreshToken, {

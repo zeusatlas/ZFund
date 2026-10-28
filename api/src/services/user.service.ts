@@ -2,6 +2,10 @@ import { AppDataSource } from '../config/database';
 import { ConflictError, NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
 import { CryptoUtil } from '../common/utils/crypto';
+import { normalizePhone } from '../common/utils/phone';
+import { env } from '../config/env';
+import { logger } from '../config/logger';
+import { smsService } from './sms.service';
 import { auditService } from './audit.service';
 import { User, UserStatus } from '../database/entities/user.entity';
 import { CreateUserInput, UpdateUserInput } from '../schemas/user.schemas';
@@ -52,19 +56,23 @@ export class UserService {
     return user;
   }
 
-  async createUser(input: CreateUserInput, actorId?: string): Promise<User> {
+  async createUser(
+    input: CreateUserInput,
+    actorId?: string
+  ): Promise<{ user: User; smsSent: boolean }> {
     const existing = await this.userRepo.findOne({ where: { email: input.email } });
     if (existing) {
       throw new ConflictError('A user with this email address already exists');
     }
 
-    const passwordHash = await CryptoUtil.hashPassword(input.password);
+    // Sign-in is by SMS code, so no usable password is ever issued.
+    const passwordHash = await CryptoUtil.hashPassword(CryptoUtil.generateRandomString(48));
     const user = this.userRepo.create({
       email: input.email,
       passwordHash,
       firstName: input.firstName,
       lastName: input.lastName,
-      phone: input.phone,
+      phone: normalizePhone(input.phone),
       role: input.role,
       // Becomes ACTIVE on first successful login.
       status: UserStatus.PENDING_VERIFICATION,
@@ -80,7 +88,20 @@ export class UserService {
       newValues: { email: saved.email, role: saved.role },
     });
 
-    return saved;
+    const sms = await smsService.send({
+      recipient: normalizePhone(input.phone),
+      message:
+        `Welcome to ZFund, ${saved.firstName}. Your account is ready. ` +
+        `Sign in at ${env.FRONTEND_URL}/login with your email (${saved.email}) ` +
+        `and phone number (${saved.phone}). We'll text you a code each time.`,
+    });
+    if (!sms.success) {
+      logger.error({ userId: saved.id, error: sms.error }, 'Failed to send account-created SMS');
+    }
+
+    // The saved entity still carries the hash; never hand it back to callers.
+    const { passwordHash: _passwordHash, ...safeUser } = saved;
+    return { user: safeUser as User, smsSent: sms.success };
   }
 
   async updateUser(id: string, input: UpdateUserInput, actorId?: string): Promise<User> {

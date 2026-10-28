@@ -43,6 +43,5 @@ export type NewHostInput = {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  password: string;
+  phone: string;
 };
