@@ -16,8 +16,14 @@ export default function HostCtaLink({
   children: React.ReactNode;
   onClick?: () => void;
 }) {
-  const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
-  const href = isClient ? (dashboardForStoredToken() ?? "/login") : "/login";
+  const href = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("storage", onStoreChange);
+      return () => window.removeEventListener("storage", onStoreChange);
+    },
+    () => dashboardForStoredToken() ?? "/login",
+    () => "/login",
+  );
 
   return (
     <Link href={href} className={className} onClick={onClick}>

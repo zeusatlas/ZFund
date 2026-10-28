@@ -13,7 +13,7 @@ type PaginationProps = {
 };
 
 const buttonClass =
-  "inline-flex items-center gap-1 rounded-md border border-navy/15 px-2.5 py-1.5 text-xs font-medium text-steel hover:bg-stone disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex items-center gap-1 rounded-lg border border-navy/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-steel transition-colors hover:bg-stone hover:text-navy disabled:cursor-not-allowed disabled:opacity-40";
 
 /** Stays out of the way until there is more than one page of rows. */
 export default function Pagination({ page, totalPages, total, pageSize = PAGE_SIZE, label, onPageChange }: PaginationProps) {
@@ -22,19 +22,19 @@ export default function Pagination({ page, totalPages, total, pageSize = PAGE_SI
   const last = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex items-center justify-between border-t border-navy/10 px-4 py-3 md:px-5">
+    <div className="flex flex-col gap-3 border-t border-navy/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-5">
       <p className="text-xs text-steel">
-        Showing {first}–{last} of {total} {label}
+        Showing <span className="font-semibold text-navy">{first}–{last}</span> of {total} {label}
       </p>
       <div className="flex items-center gap-2">
         <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className={buttonClass}>
-          <ChevronLeft size={14} /> Previous
+          <ChevronLeft size={14} aria-hidden="true" /> Previous
         </button>
-        <span className="text-xs font-medium text-navy">
+        <span className="rounded-full bg-stone px-3 py-1 text-xs font-semibold text-navy">
           {page} / {totalPages}
         </span>
         <button type="button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} className={buttonClass}>
-          Next <ChevronRight size={14} />
+          Next <ChevronRight size={14} aria-hidden="true" />
         </button>
       </div>
     </div>

@@ -16,7 +16,7 @@ import { getSelectStyles } from "@/components/ui/selectStyles";
 
 type Props = { onCreated: (name: string) => void };
 const inputClass =
-  "mt-2 w-full rounded-xl border border-navy/20 bg-white px-3 py-2.5 text-sm text-navy placeholder:text-steel/60 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy";
+  "field mt-2 bg-white";
 
 interface CategoryOption {
   value: string;

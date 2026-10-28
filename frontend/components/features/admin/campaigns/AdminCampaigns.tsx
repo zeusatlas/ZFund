@@ -13,6 +13,7 @@ import {
   ExternalLink,
   LayoutGrid,
   List,
+  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -25,6 +26,7 @@ import { formatCount, formatMoney } from "@/lib/format";
 import { useCampaigns, useUpdateCampaignStatus, type Fund } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
+import { ConfigureStepsDrawer } from "@/components/features/host/campaigns/ConfigureStepsDrawer";
 
 /** Three cards per row on wide screens, so page in threes. */
 const CARDS_PER_PAGE = 9;
@@ -37,6 +39,7 @@ export default function AdminCampaigns() {
   const [reviewingCampaign, setReviewingCampaign] = useState<Fund | null>(null);
   const [reviewAction, setReviewAction] = useState<"APPROVE" | "REJECT">("APPROVE");
   const [reviewNotes, setReviewNotes] = useState("");
+  const [configuringCampaign, setConfiguringCampaign] = useState<Fund | null>(null);
 
   const debouncedSearch = useDebouncedValue(search);
   const { data, isPending, isError, error, refetch, isPlaceholderData } = useCampaigns({
@@ -59,15 +62,19 @@ export default function AdminCampaigns() {
     setReviewNotes("");
   }
 
-  async function handleConfirmReview() {
+  async function handleConfirmReview(configureAfterApprove = false) {
     if (!reviewingCampaign) return;
+    const targetCampaign = reviewingCampaign;
     try {
       await updateStatusMutation.mutateAsync({
-        id: reviewingCampaign.id,
+        id: targetCampaign.id,
         status: reviewAction === "APPROVE" ? "PUBLISHED" : "REJECTED",
         notes: reviewNotes.trim() || undefined,
       });
       setReviewingCampaign(null);
+      if (reviewAction === "APPROVE" && configureAfterApprove) {
+        setConfiguringCampaign(targetCampaign);
+      }
     } catch {
       // Error is toasted by mutation
     }
@@ -112,7 +119,7 @@ export default function AdminCampaigns() {
         />
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
+      <section className="overflow-hidden surface-card">
         <ListToolbar
           search={search}
           onSearch={(value) => {
@@ -299,6 +306,17 @@ export default function AdminCampaigns() {
                                 </button>
                               </>
                             )}
+                            {(campaign.status === "PUBLISHED" || campaign.status === "APPROVED") && (
+                              <button
+                                type="button"
+                                onClick={() => setConfiguringCampaign(campaign)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-navy/15 bg-white px-2.5 py-1.5 text-xs font-medium text-navy hover:bg-stone transition-colors shadow-2xs"
+                                title="Configure USSD dial flow steps"
+                              >
+                                <SlidersHorizontal size={12} className="text-steel" />
+                                <span>Steps</span>
+                              </button>
+                            )}
                             <Link
                               href={`/admin/campaigns/${campaign.id}`}
                               className="inline-flex items-center gap-1 rounded-lg border border-navy/15 bg-white px-2.5 py-1.5 text-xs font-medium text-steel hover:text-navy hover:bg-stone transition-colors"
@@ -403,12 +421,25 @@ export default function AdminCampaigns() {
 
                     <div className="mt-auto pt-4 flex items-center justify-between border-t border-navy/10 text-xs text-steel">
                       <span>{formatCount(campaign.transactions)} contributions</span>
-                      <Link
-                        href={`/admin/campaigns/${campaign.id}`}
-                        className="inline-flex items-center gap-1 text-steel hover:text-navy transition-colors font-medium"
-                      >
-                        Details <ExternalLink size={12} />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {(campaign.status === "PUBLISHED" || campaign.status === "APPROVED") && (
+                          <button
+                            type="button"
+                            onClick={() => setConfiguringCampaign(campaign)}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-steel hover:text-navy transition-colors"
+                            title="Configure USSD dial steps"
+                          >
+                            <SlidersHorizontal size={12} />
+                            <span>Steps</span>
+                          </button>
+                        )}
+                        <Link
+                          href={`/admin/campaigns/${campaign.id}`}
+                          className="inline-flex items-center gap-1 text-steel hover:text-navy transition-colors font-medium"
+                        >
+                          Details <ExternalLink size={12} />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );
@@ -448,32 +479,56 @@ export default function AdminCampaigns() {
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleConfirmReview}
-                disabled={updateStatusMutation.isPending}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors shadow-sm ${reviewAction === "APPROVE"
-                    ? "bg-emerald-700 hover:bg-emerald-800"
-                    : "bg-crimson hover:bg-crimson/90"
-                  }`}
-              >
-                {updateStatusMutation.isPending ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin" />
-                    Updating...
-                  </>
-                ) : reviewAction === "APPROVE" ? (
-                  <>
-                    <Check size={15} />
-                    Confirm Approval & Go Live
-                  </>
-                ) : (
-                  <>
-                    <X size={15} />
-                    Confirm Rejection
-                  </>
-                )}
-              </button>
+              {reviewAction === "APPROVE" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmReview(true)}
+                    disabled={updateStatusMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-600/40 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs"
+                  >
+                    <SlidersHorizontal size={14} className="text-emerald-700" />
+                    Approve &amp; Configure Steps
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmReview(false)}
+                    disabled={updateStatusMutation.isPending}
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 transition-colors shadow-sm"
+                  >
+                    {updateStatusMutation.isPending ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={15} />
+                        Confirm Approval &amp; Go Live
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConfirmReview(false)}
+                  disabled={updateStatusMutation.isPending}
+                  className="inline-flex items-center gap-2 rounded-xl bg-crimson px-4 py-2 text-sm font-medium text-white hover:bg-crimson/90 transition-colors shadow-sm"
+                >
+                  {updateStatusMutation.isPending ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <X size={15} />
+                      Confirm Rejection
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           }
         >
@@ -537,6 +592,13 @@ export default function AdminCampaigns() {
           </div>
         </Modal>
       )}
+
+      {/* Configure USSD Dial Steps Drawer for Admin */}
+      <ConfigureStepsDrawer
+        campaign={configuringCampaign}
+        open={Boolean(configuringCampaign)}
+        onClose={() => setConfiguringCampaign(null)}
+      />
     </div>
   );
 }

@@ -22,13 +22,13 @@ export function RecentActivity() {
   const { data, isPending, isError, error, refetch } = useRecentActivity(3);
 
   return (
-    <article className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
-      <div className="flex items-start justify-between">
+    <article className="surface-card p-5 md:p-6">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-navy">Recent activity</h2>
+          <h2 className="text-base font-semibold tracking-tight text-navy">Recent activity</h2>
           <p className="mt-1 text-sm text-steel">Latest events requiring your attention</p>
         </div>
-        <Link href="/admin/activity" className="text-xs font-medium text-gold hover:text-navy">View all</Link>
+        <Link href="/admin/activity" className="shrink-0 text-xs font-semibold text-gold transition-colors hover:text-navy">View all</Link>
       </div>
 
       <div className="mt-5 space-y-4">
@@ -43,7 +43,7 @@ export function RecentActivity() {
             const t = tone(item);
             const icon = t === "warning" ? <Clock3 size={14} /> : t === "success" ? <CircleDollarSign size={14} /> : <Check size={14} />;
             const iconStyle =
-              t === "success" ? "bg-[#e9f4ef] text-[#287754]" : t === "warning" ? "bg-[#fff4dc] text-[#a26c12]" : "bg-[#eaf0f8] text-[#315b8a]";
+              t === "success" ? "bg-success-soft text-success" : t === "warning" ? "bg-warning-soft text-warning" : "bg-navy/8 text-steel";
             return (
               <div key={item.id} className="flex gap-3">
                 <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconStyle}`}>{icon}</span>
@@ -53,7 +53,7 @@ export function RecentActivity() {
                     <span className="shrink-0 text-[11px] text-steel">{timeAgo(item.createdAt)}</span>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-steel">{item.actorName ?? "System"} · {humanize(item.entityType)}</p>
-                  {item.amount && <p className="mt-1 text-xs font-semibold text-[#287754]">{formatMoney(item.amount)}</p>}
+                  {item.amount && <p className="mt-1 text-xs font-semibold text-success">{formatMoney(item.amount)}</p>}
                 </div>
               </div>
             );
@@ -61,7 +61,7 @@ export function RecentActivity() {
         )}
       </div>
 
-      <Link href="/admin/activity" className="mt-5 inline-flex items-center gap-1 text-xs font-medium text-gold hover:text-navy">
+      <Link href="/admin/activity" className="mt-5 inline-flex items-center gap-1 text-xs font-semibold text-gold transition-colors hover:text-navy">
         Open activity log
         <ChevronRight size={14} />
       </Link>

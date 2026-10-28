@@ -12,8 +12,8 @@ export function SecurityCard() {
   const { data, isPending } = useDashboardOverview();
 
   return (
-    <article className="self-start rounded-xl border border-navy/10 bg-navy p-5 text-white shadow-sm md:p-6">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-gold">
+    <article className="self-start overflow-hidden rounded-2xl border border-white/10 bg-navy p-5 text-white shadow-sm md:p-6">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-gold">
         <ShieldCheck size={21} />
       </div>
 

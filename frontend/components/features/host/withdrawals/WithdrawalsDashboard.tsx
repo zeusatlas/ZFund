@@ -32,12 +32,12 @@ import {
 function Status({ status }: { status: Withdrawal["status"] }) {
   const colour =
     status === "Paid"
-      ? "bg-emerald-50 text-emerald-800"
+      ? "bg-success-soft text-success"
       : status === "Rejected"
         ? "bg-crimson/10 text-crimson"
         : status === "Processing"
-          ? "bg-violet-50 text-violet-800"
-          : "bg-amber-50 text-amber-900";
+          ? "bg-navy/10 text-navy"
+          : "bg-warning-soft text-warning";
   return (
     <span className={"inline-flex rounded-full px-3 py-1 text-xs font-medium " + colour}>
       {status}
@@ -141,7 +141,7 @@ function WithdrawalSheet({
               "mt-6 rounded-2xl p-5 " +
               (item.status === "Rejected"
                 ? "bg-crimson/10 text-crimson"
-                : "bg-teal-50 text-teal-900")
+                : "bg-stone text-steel")
             }
           >
             <h3 className="text-sm font-medium">Latest update</h3>
@@ -307,7 +307,7 @@ export default function WithdrawalsDashboard() {
           <ShieldCheck
             size={23}
             aria-hidden="true"
-            className="mt-1 shrink-0 text-teal-700"
+            className="mt-1 shrink-0 text-gold"
           />
           <div>
             <h2 className="font-medium text-navy">Every request has a review step</h2>
@@ -336,7 +336,7 @@ export default function WithdrawalsDashboard() {
           <div>
             <h2
               id="withdrawal-history-title"
-              className="text-xl font-medium tracking-tight text-navy"
+              className="text-lg font-semibold tracking-tight text-navy"
             >
               Withdrawal history
             </h2>
@@ -392,7 +392,7 @@ export default function WithdrawalsDashboard() {
                 setStatus(event.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-xl border border-navy/15 bg-white px-4 py-3 text-sm text-navy"
+              className="w-full field"
             >
               <option value="All">All statuses</option>
               {withdrawalStatuses.map((value) => (

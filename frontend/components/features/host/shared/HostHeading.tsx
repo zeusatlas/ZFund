@@ -10,13 +10,13 @@ export default function HostHeading({
   children?: ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+    <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
       <div>
-        <h1 className="text-3xl font-medium tracking-tight text-navy md:text-4xl">{title}</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-steel">{description}</p>
+        <p className="text-eyebrow mb-2 text-gold">Overview</p>
+        <h1 className="page-title">{title}</h1>
+        <p className="page-subtitle">{description}</p>
       </div>
       {children}
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
-const ACCESS_KEY = "zfund_access_token";
-const REFRESH_KEY = "zfund_refresh_token";
+const ACCESS_KEY = "raisefundz_access_token";
+const REFRESH_KEY = "raisefundz_refresh_token";
 
 const isBrowser = () => typeof window !== "undefined";
 

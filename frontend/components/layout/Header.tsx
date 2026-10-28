@@ -18,13 +18,16 @@ export default function Header() {
   const pageTitle = currentItem?.label ?? "Dashboard";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy/10 bg-white px-3 sm:h-16 sm:px-5 lg:px-6">
-      <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-navy/10 bg-white/85 px-3 backdrop-blur-md sm:h-16 sm:px-5 lg:px-8">
+      <div className="flex min-w-0 items-center gap-2">
         <MobileNav>
           <SidebarContent />
         </MobileNav>
-        <div>
-          <h1 className="text-base font-semibold uppercase text-navy md:text-[17px]">
+        <div className="min-w-0">
+          <p className="hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-steel sm:block">
+            {role === "admin" ? "Admin console" : "Host workspace"}
+          </p>
+          <h1 className="truncate text-base font-semibold tracking-tight text-navy md:text-[17px]">
             {pageTitle}
           </h1>
         </div>

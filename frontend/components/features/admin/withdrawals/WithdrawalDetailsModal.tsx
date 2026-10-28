@@ -10,7 +10,7 @@ import { actionLabel, methodLabel, nextStatuses, WithdrawalStatusBadge } from ".
 const buttonStyle = {
   PROCESSING: "border border-navy/15 bg-white text-navy hover:bg-stone",
   DONE: "bg-navy text-white hover:bg-steel",
-  REJECTED: "border border-[#e3b9b9] bg-white text-crimson hover:bg-[#fbeaea]",
+  REJECTED: "border border-crimson/25 bg-white text-crimson hover:bg-danger-soft",
 } as const;
 
 export default function WithdrawalDetailsModal({ withdrawal, onClose }: Readonly<{ withdrawal: Withdrawal; onClose: () => void }>) {
@@ -96,7 +96,7 @@ export default function WithdrawalDetailsModal({ withdrawal, onClose }: Readonly
             maxLength={500}
             rows={2}
             placeholder="e.g. Paid via MTN MoMo, reference 12345"
-            className="mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold"
+            className="field mt-1.5"
           />
         </label>
       )}

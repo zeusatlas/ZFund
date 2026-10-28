@@ -150,7 +150,7 @@ export default function HostOverview() {
       <section className="mt-10">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-medium tracking-tight text-navy">
+            <h2 className="text-lg font-semibold tracking-tight text-navy sm:text-xl">
               Campaigns in motion
             </h2>
             <p className="mt-1 text-sm text-steel">
