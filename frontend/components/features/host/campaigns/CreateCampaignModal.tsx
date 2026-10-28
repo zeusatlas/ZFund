@@ -28,13 +28,12 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
   const [open, setOpen] = useState(false);
   const [today, setToday] = useState("");
   const [error, setError] = useState("");
-  const [eventCode, setEventCode] = useState("1001");
   const [selectedCategory, setSelectedCategory] = useState<CategoryOption | null>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   const { data: backendCategories = [], isLoading: categoriesLoading } = useProjectCategoriesQuery();
   const { data: existingProjects = [] } = useProjectsQuery();
-  const nextCodeQuery = useNextCampaignCodeQuery(open);
+  const nextCodeQuery = useNextCampaignCodeQuery(true);
   const createMutation = useCreateProjectMutation();
 
   const categoryOptions: CategoryOption[] = useMemo(() => {
@@ -69,7 +68,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
   }, [open, createMutation.isPending]);
 
   const effectiveCode =
-    eventCode || nextCodeQuery.data || computeNextCampaignCode(existingProjects);
+    nextCodeQuery.data || computeNextCampaignCode(existingProjects) || "1001";
 
   useEffect(() => {
     if (error) errorRef.current?.focus();
@@ -80,10 +79,6 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
     setSelectedCategory(null);
     setError("");
     setToday(new Date().toISOString().slice(0, 10));
-
-    // Calculate next code based on last campaign code (fallback or cached server code)
-    const fallbackCode = computeNextCampaignCode(existingProjects);
-    setEventCode(nextCodeQuery.data || fallbackCode);
     nextCodeQuery.refetch();
     setOpen(true);
   }
@@ -279,7 +274,11 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                         Campaign code <span className="text-crimson">*</span>
                       </label>
                       <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2.5 py-0.5 text-[11px] font-semibold text-navy">
-                        <Sparkles size={11} className="text-gold" />
+                        {nextCodeQuery.isFetching ? (
+                          <Loader2 size={11} className="animate-spin text-gold" />
+                        ) : (
+                          <Sparkles size={11} className="text-gold" />
+                        )}
                         Auto-generated
                       </span>
                     </div>
