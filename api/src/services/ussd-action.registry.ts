@@ -2,6 +2,7 @@ import { MoneyUtil } from '../common/utils/decimal';
 import { Project } from '../database/entities/project.entity';
 import { UssdMenuOption } from '../database/entities/ussd-menu-option.entity';
 import { UssdSession } from '../database/entities/ussd-session.entity';
+import { paymentService } from './payment.service';
 
 export interface UssdActionContext {
   session: UssdSession;
@@ -47,8 +48,13 @@ export class UssdActionRegistry {
 // Built-in Approved Action Handlers (Allowlisted only)
 // ----------------------------------------------------------------------------
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 UssdActionRegistry.register('SELECT_PURPOSE', async (ctx) => {
-  const purposeId = (ctx.selectedOption?.validationConfig?.purposeId as string) || ctx.userInput;
+  const cfgPurposeId = ctx.selectedOption?.validationConfig?.purposeId as string | undefined;
+  const isCfgUuid = cfgPurposeId && UUID_REGEX.test(cfgPurposeId);
+  const isInputUuid = ctx.userInput && UUID_REGEX.test(ctx.userInput.trim());
+  const purposeId = isCfgUuid ? cfgPurposeId : isInputUuid ? ctx.userInput.trim() : undefined;
   const customName = ctx.selectedOption?.label;
 
   return {
@@ -109,16 +115,152 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
   const amount = (ctx.session.contextData.amount as string) || '0.00';
   const currency = ctx.project?.currency || 'GHS';
   const msisdn = ctx.session.msisdn;
+  const projectId = ctx.project?.id || ctx.session.projectId;
 
-  // Returning payment prompt instruction for contributor
-  return {
-    customMessage: `Payment of ${currency} ${amount} initiated for ${msisdn}. Please approve prompt with your MoMo PIN.`,
-    terminate: true,
-    contextUpdates: {
-      paymentInitiated: true,
-      paymentInitiatedAt: new Date().toISOString(),
-    },
-  };
+  if (!projectId) {
+    return {
+      customMessage: 'Invalid project session. Payment cannot be initiated.',
+      terminate: true,
+    };
+  }
+
+  try {
+    const paymentResult = await paymentService.initiateUssdPayment({
+      msisdn,
+      amount,
+      projectId,
+      purposeId: ctx.session.contextData.selectedPurposeId as string | undefined,
+    });
+
+    const { chargeResult, paymentAttempt } = paymentResult;
+
+    if (chargeResult.requiresOtp || chargeResult.status === 'send_otp') {
+      const promptText =
+        chargeResult.displayText ||
+        (chargeResult.message?.includes('Voucher')
+          ? chargeResult.message
+          : 'Please enter the OTP/voucher code sent to your phone (or 0 to cancel):');
+
+      return {
+        customMessage: promptText,
+        nextMenuKey: 'ENTER_PAYMENT_OTP',
+        terminate: false,
+        contextUpdates: {
+          paymentReference: paymentAttempt.reference,
+          waitingForPaymentOtp: true,
+        },
+      };
+    }
+
+    if (chargeResult.status === 'success') {
+      return {
+        customMessage: `Payment of ${currency} ${amount} received successfully! Thank you for supporting ${ctx.project?.name || 'ZFund'}.`,
+        terminate: true,
+        contextUpdates: {
+          paymentReference: paymentAttempt.reference,
+          paymentConfirmed: true,
+        },
+      };
+    }
+
+    if (chargeResult.status === 'failed') {
+      return {
+        customMessage: chargeResult.displayText || chargeResult.message || 'Payment failed. Please try again.',
+        terminate: true,
+        contextUpdates: {
+          paymentReference: paymentAttempt.reference,
+          paymentFailed: true,
+        },
+      };
+    }
+
+    // Default 'pay_offline' -> Direct network prompt
+    const offlineMsg =
+      chargeResult.displayText ||
+      `Payment of ${currency} ${amount} initiated for ${msisdn}. Please approve prompt with your MoMo PIN.`;
+
+    return {
+      customMessage: offlineMsg,
+      terminate: true,
+      contextUpdates: {
+        paymentReference: paymentAttempt.reference,
+        paymentInitiated: true,
+        paymentInitiatedAt: new Date().toISOString(),
+      },
+    };
+  } catch (err: any) {
+    return {
+      customMessage: err?.message || 'Payment initiation error. Please try again.',
+      terminate: true,
+    };
+  }
+});
+
+UssdActionRegistry.register('SUBMIT_PAYMENT_OTP', async (ctx) => {
+  const userInput = ctx.userInput.trim();
+  const paymentReference = ctx.session.contextData.paymentReference as string;
+
+  if (userInput === '0') {
+    return {
+      customMessage: 'Payment cancelled.',
+      terminate: true,
+      contextUpdates: {
+        waitingForPaymentOtp: false,
+        paymentCancelled: true,
+      },
+    };
+  }
+
+  if (!paymentReference) {
+    return {
+      customMessage: 'Payment session expired. Please start again.',
+      terminate: true,
+    };
+  }
+
+  try {
+    const result = await paymentService.submitUssdPaymentOtp({
+      reference: paymentReference,
+      otp: userInput,
+    });
+
+    if (result.status === 'success') {
+      return {
+        customMessage: result.displayText || 'Payment verified successfully! Thank you for your contribution.',
+        terminate: true,
+        contextUpdates: {
+          waitingForPaymentOtp: false,
+          paymentConfirmed: true,
+        },
+      };
+    }
+
+    if (result.status === 'pay_offline') {
+      return {
+        customMessage:
+          result.displayText ||
+          result.message ||
+          'OTP verified. Please approve the MoMo prompt on your phone to complete.',
+        terminate: true,
+        contextUpdates: {
+          waitingForPaymentOtp: false,
+        },
+      };
+    }
+
+    // Failed OTP -> let the contributor retry or enter 0 to cancel
+    return {
+      customMessage: `${result.displayText || result.message || 'Invalid OTP code.'}\nPlease enter valid OTP (or 0 to cancel):`,
+      nextMenuKey: 'ENTER_PAYMENT_OTP',
+      terminate: false,
+    };
+  } catch (err: any) {
+    return {
+      customMessage: `${err?.message || 'Verification error.'}\nPlease enter valid OTP (or 0 to cancel):`,
+      nextMenuKey: 'ENTER_PAYMENT_OTP',
+      terminate: false,
+    };
+  }
 });
 
 UssdActionRegistry.register('LOOKUP_PROJECT_BY_CODE', async (ctx) => {

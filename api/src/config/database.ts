@@ -16,7 +16,7 @@ export const AppDataSource = new DataSource({
   entities: allEntities,
   synchronize: true,
   logging: env.TYPEORM_LOGGING,
-  dropSchema: false, // Never drop schema automatically
+  dropSchema: false,
   extra: {
     max: 25,
     connectionTimeoutMillis: 5000,
@@ -40,7 +40,6 @@ export async function initializeDatabase(): Promise<DataSource> {
     );
     return AppDataSource;
   } catch (error: any) {
-    // If the database does not exist (PostgreSQL error code 3D000) and we are not in production, attempt to create it
     if (error?.code === '3D000' && env.NODE_ENV !== 'production') {
       try {
         logger.info(`Database "${env.DB_NAME}" does not exist. Attempting to create it automatically...`);
@@ -57,22 +56,12 @@ export async function initializeDatabase(): Promise<DataSource> {
         await defaultClient.query(`CREATE DATABASE "${env.DB_NAME.replace(/"/g, '""')}"`);
         await defaultClient.end();
         logger.info(`Database "${env.DB_NAME}" created successfully. Retrying connection...`);
-
         await AppDataSource.initialize();
-        logger.info(
-          {
-            database: env.DB_NAME,
-            entitiesCount: allEntities.length,
-            synchronize: AppDataSource.options.synchronize,
-          },
-          'PostgreSQL Database connection initialized successfully with TypeORM entity synchronization'
-        );
         return AppDataSource;
       } catch (creationError) {
         logger.error({ err: creationError }, 'Failed to automatically create database');
       }
     }
-
     logger.error({ err: error }, 'Failed to initialize database connection');
     throw error;
   }

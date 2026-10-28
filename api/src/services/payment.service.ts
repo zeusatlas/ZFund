@@ -14,6 +14,15 @@ import { ProviderWebhookEvent } from '../database/entities/provider-webhook-even
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
 import { paystackProvider } from './paystack.provider';
 
+export interface InitiateUssdPaymentInput {
+  msisdn: string;
+  amount: string;
+  projectId: string;
+  purposeId?: string;
+  name?: string;
+  email?: string;
+}
+
 export class PaymentService {
   private get paymentAttemptRepo() { return AppDataSource.getRepository(PaymentAttempt); }
   private get contributionRepo() { return AppDataSource.getRepository(Contribution); }
@@ -63,10 +72,16 @@ export class PaymentService {
 
     // Create Contribution
     const contributionRef = CryptoUtil.generateReference('ZF-CON');
+    const validPurposeId =
+      input.purposeId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.purposeId)
+        ? input.purposeId
+        : undefined;
+
     const contribution = this.contributionRepo.create({
       reference: contributionRef,
       projectId: project.id,
-      purposeId: input.purposeId,
+      purposeId: validPurposeId,
       contributorId: contributor.id,
       amount: input.amount,
       currency: project.currency,
@@ -130,6 +145,216 @@ export class PaymentService {
   }
 
   /**
+   * Initiates direct Mobile Money charge for USSD donation via Paystack
+   */
+  async initiateUssdPayment(input: InitiateUssdPaymentInput): Promise<{
+    paymentAttempt: PaymentAttempt;
+    contribution: Contribution;
+    chargeResult: any;
+  }> {
+    const project = await this.projectRepo.findOne({
+      where: { id: input.projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundError('Project not found');
+    }
+
+    if (project.status !== ProjectStatus.PUBLISHED || !project.acceptsContributions) {
+      throw new BadRequestError('This project is not currently accepting contributions.');
+    }
+
+    if (MoneyUtil.compare(input.amount, project.minAmount) < 0) {
+      throw new BadRequestError(`Amount cannot be less than minimum of ${project.currency} ${project.minAmount}`);
+    }
+    if (MoneyUtil.compare(input.amount, project.maxAmount) > 0) {
+      throw new BadRequestError(`Amount cannot exceed maximum of ${project.currency} ${project.maxAmount}`);
+    }
+
+    // Find or create Contributor
+    let contributor = await this.contributorRepo.findOne({ where: { msisdn: input.msisdn } });
+    if (!contributor) {
+      contributor = this.contributorRepo.create({
+        msisdn: input.msisdn,
+        name: input.name || `Donor ${input.msisdn.slice(-4)}`,
+        email: input.email,
+      });
+      contributor = await this.contributorRepo.save(contributor);
+    }
+
+    // Create Contribution
+    const contributionRef = CryptoUtil.generateReference('ZF-CON');
+    const validPurposeId =
+      input.purposeId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.purposeId)
+        ? input.purposeId
+        : undefined;
+
+    const contribution = this.contributionRepo.create({
+      reference: contributionRef,
+      projectId: project.id,
+      purposeId: validPurposeId,
+      contributorId: contributor.id,
+      amount: input.amount,
+      currency: project.currency,
+      status: ContributionStatus.INITIATED,
+    });
+    const savedContribution = await this.contributionRepo.save(contribution);
+
+    // Create Payment Attempt
+    const paymentRef = CryptoUtil.generateReference('ZF-PAY');
+    const paymentAttempt = this.paymentAttemptRepo.create({
+      reference: paymentRef,
+      contributionId: savedContribution.id,
+      provider: 'PAYSTACK',
+      channel: PaymentChannel.MOBILE_MONEY,
+      msisdn: input.msisdn,
+      amount: input.amount,
+      currency: project.currency,
+      status: PaymentStatus.INITIATED,
+      fee: '0.00',
+    });
+    const savedAttempt = await this.paymentAttemptRepo.save(paymentAttempt);
+
+    const customerEmail = input.email || `${input.msisdn}@contributors.zfund.org`;
+
+    try {
+      const chargeResult = await paystackProvider.chargeMobileMoney({
+        reference: paymentRef,
+        amount: input.amount,
+        currency: project.currency,
+        phone: input.msisdn,
+        email: customerEmail,
+        metadata: {
+          contributionId: savedContribution.id,
+          projectId: project.id,
+          channel: 'USSD',
+        },
+      });
+
+      savedAttempt.providerReference = chargeResult.reference || paymentRef;
+      savedAttempt.metadata = {
+        ...savedAttempt.metadata,
+        requiresOtp: chargeResult.requiresOtp,
+        displayText: chargeResult.displayText,
+        chargeStatus: chargeResult.status,
+      };
+
+      if (chargeResult.status === 'success') {
+        savedAttempt.status = PaymentStatus.SUCCESSFUL;
+        savedAttempt.completedAt = new Date();
+        await this.paymentAttemptRepo.save(savedAttempt);
+
+        savedContribution.status = ContributionStatus.CONFIRMED;
+        await this.contributionRepo.save(savedContribution);
+
+        await AppDataSource.transaction(async (manager) => {
+          await financialService.recordPaymentConfirmed(savedContribution, savedAttempt, manager);
+        });
+
+        await notificationService.sendNotification({
+          templateKey: 'CONTRIBUTION_CONFIRMED_CONTRIBUTOR',
+          recipientPhone: savedAttempt.msisdn,
+          eventType: 'PAYMENT_SUCCESS',
+          variables: {
+            amount: savedAttempt.amount,
+            currency: savedAttempt.currency,
+            projectName: project.name,
+            reference: savedAttempt.reference,
+          },
+        });
+      } else if (chargeResult.status === 'failed') {
+        savedAttempt.status = PaymentStatus.FAILED;
+        savedAttempt.providerStatus = chargeResult.displayText || chargeResult.message || 'Charge failed';
+        await this.paymentAttemptRepo.save(savedAttempt);
+
+        savedContribution.status = ContributionStatus.FAILED;
+        await this.contributionRepo.save(savedContribution);
+      } else {
+        // 'send_otp' or 'pay_offline'
+        savedAttempt.status = PaymentStatus.PENDING;
+        await this.paymentAttemptRepo.save(savedAttempt);
+
+        savedContribution.status = ContributionStatus.PENDING;
+        await this.contributionRepo.save(savedContribution);
+      }
+
+      return {
+        paymentAttempt: savedAttempt,
+        contribution: savedContribution,
+        chargeResult,
+      };
+    } catch (err) {
+      savedAttempt.status = PaymentStatus.FAILED;
+      await this.paymentAttemptRepo.save(savedAttempt);
+      savedContribution.status = ContributionStatus.FAILED;
+      await this.contributionRepo.save(savedContribution);
+      throw err;
+    }
+  }
+
+  /**
+   * Submits OTP received from contributor via USSD to Paystack
+   */
+  async submitUssdPaymentOtp(params: { reference: string; otp: string }): Promise<{
+    status: 'success' | 'pay_offline' | 'pending' | 'failed';
+    displayText?: string;
+    message: string;
+    paymentAttempt: PaymentAttempt;
+  }> {
+    const paymentAttempt = await this.paymentAttemptRepo.findOne({
+      where: { reference: params.reference },
+      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+    });
+
+    if (!paymentAttempt) {
+      throw new NotFoundError(`Payment attempt with reference '${params.reference}' not found`);
+    }
+
+    const otpResult = await paystackProvider.submitOtp({
+      reference: params.reference,
+      otp: params.otp,
+    });
+
+    if (otpResult.status === 'success') {
+      const chargeData = (otpResult.rawResponse?.data as Record<string, unknown>) || {
+        reference: paymentAttempt.reference,
+        amount: MoneyUtil.toMinorUnit(paymentAttempt.amount),
+        currency: paymentAttempt.currency,
+        id: paymentAttempt.providerReference || paymentAttempt.reference,
+      };
+
+      const webhookRecord = this.webhookEventRepo.create({
+        provider: 'PAYSTACK',
+        eventType: 'charge.success',
+        reference: paymentAttempt.reference,
+        rawPayload: chargeData,
+        isProcessed: false,
+      });
+
+      await this.processSuccessfulCharge(chargeData, webhookRecord);
+    } else if (otpResult.status === 'failed') {
+      paymentAttempt.metadata = {
+        ...paymentAttempt.metadata,
+        lastOtpFailure: otpResult.message,
+      };
+      await this.paymentAttemptRepo.save(paymentAttempt);
+    }
+
+    const updatedAttempt = (await this.paymentAttemptRepo.findOne({
+      where: { reference: params.reference },
+      relations: ['contribution'],
+    })) || paymentAttempt;
+
+    return {
+      status: otpResult.status,
+      displayText: otpResult.displayText,
+      message: otpResult.message,
+      paymentAttempt: updatedAttempt,
+    };
+  }
+
+  /**
    * Handles authenticated Paystack webhook event idempotently
    */
   async handleWebhook(rawBody: string | Buffer, eventPayload: Record<string, unknown>): Promise<void> {
@@ -173,7 +398,7 @@ export class PaymentService {
 
   private async processSuccessfulCharge(
     data: Record<string, unknown>,
-    webhookRecord: ProviderWebhookEvent
+    webhookRecord?: ProviderWebhookEvent
   ): Promise<void> {
     const reference = String(data.reference);
     const amountInMinor = Number(data.amount);
@@ -188,17 +413,21 @@ export class PaymentService {
 
     if (!paymentAttempt) {
       logger.warn({ reference }, 'Payment attempt not found for successful charge webhook');
-      webhookRecord.isProcessed = true;
-      webhookRecord.processingResult = 'PaymentAttempt not found';
-      await this.webhookEventRepo.save(webhookRecord);
+      if (webhookRecord && webhookRecord.eventType) {
+        webhookRecord.isProcessed = true;
+        webhookRecord.processingResult = 'PaymentAttempt not found';
+        await this.webhookEventRepo.save(webhookRecord);
+      }
       return;
     }
 
     if (paymentAttempt.status === PaymentStatus.SUCCESSFUL) {
       logger.info({ reference }, 'PaymentAttempt already marked successful (idempotent skip)');
-      webhookRecord.isProcessed = true;
-      webhookRecord.processingResult = 'Already successful';
-      await this.webhookEventRepo.save(webhookRecord);
+      if (webhookRecord && webhookRecord.eventType) {
+        webhookRecord.isProcessed = true;
+        webhookRecord.processingResult = 'Already successful';
+        await this.webhookEventRepo.save(webhookRecord);
+      }
       return;
     }
 
@@ -218,9 +447,11 @@ export class PaymentService {
         discrepancy: `Expected ${paymentAttempt.amount}, received ${amountInMajor}`,
       };
       await this.paymentAttemptRepo.save(paymentAttempt);
-      webhookRecord.isProcessed = true;
-      webhookRecord.processingResult = 'Amount discrepancy';
-      await this.webhookEventRepo.save(webhookRecord);
+      if (webhookRecord && webhookRecord.eventType) {
+        webhookRecord.isProcessed = true;
+        webhookRecord.processingResult = 'Amount discrepancy';
+        await this.webhookEventRepo.save(webhookRecord);
+      }
       return;
     }
 
@@ -254,11 +485,13 @@ export class PaymentService {
       // Record double-entry financial ledger entry
       await financialService.recordPaymentConfirmed(contribution, paymentAttempt, manager);
 
-      // Mark webhook processed
-      webhookRecord.isProcessed = true;
-      webhookRecord.processedAt = new Date();
-      webhookRecord.processingResult = 'Payment confirmed and ledger updated';
-      await manager.save(webhookRecord);
+      // Mark webhook processed if valid record supplied
+      if (webhookRecord && webhookRecord.eventType && webhookRecord.rawPayload) {
+        webhookRecord.isProcessed = true;
+        webhookRecord.processedAt = new Date();
+        webhookRecord.processingResult = 'Payment confirmed and ledger updated';
+        await manager.save(webhookRecord);
+      }
     });
 
     // Trigger contributor and project owner SMS notifications (non-blocking)
@@ -322,10 +555,15 @@ export class PaymentService {
     const verifyResult = await paystackProvider.verifyTransaction(reference);
 
     if (verifyResult.status === 'success') {
-      await this.processSuccessfulCharge(
-        (verifyResult.rawResponse?.data as Record<string, unknown>) || {},
-        this.webhookEventRepo.create({ isProcessed: false })
-      );
+      const chargePayload = (verifyResult.rawResponse?.data as Record<string, unknown>) || {};
+      const webhookRecord = this.webhookEventRepo.create({
+        provider: 'PAYSTACK',
+        eventType: 'charge.success',
+        reference,
+        rawPayload: chargePayload,
+        isProcessed: false,
+      });
+      await this.processSuccessfulCharge(chargePayload, webhookRecord);
     }
 
     return (await this.paymentAttemptRepo.findOne({ where: { reference } }))!;

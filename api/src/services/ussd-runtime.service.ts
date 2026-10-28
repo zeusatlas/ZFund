@@ -21,7 +21,10 @@ export class UssdRuntimeService {
       const response = await this.executeTurn(request);
       return NaloAdapter.formatResponse(request, response);
     } catch (err) {
-      logger.error({ err, sessionId: request.sessionId }, 'Error executing USSD turn');
+      logger.error(
+        { err, msisdn: request.msisdn, sessionId: request.sessionId },
+        'Error executing USSD turn'
+      );
       return NaloAdapter.formatResponse(request, {
         message: 'A temporary service error occurred. Please try again later.',
         continueSession: false,
@@ -30,7 +33,22 @@ export class UssdRuntimeService {
   }
 
   private async executeTurn(request: InternalUssdRequest): Promise<InternalUssdResponse> {
-    const lockAcquired = await ussdSessionService.acquireLock(request.sessionId);
+    // 1. Resolve active session:
+    // If request has explicit sessionId use it, otherwise resolve active session by MSISDN (NALO standard)
+    let session = request.sessionId
+      ? await ussdSessionService.getSession(request.sessionId)
+      : await ussdSessionService.getActiveSessionByMsisdn(request.msisdn);
+
+    // Initial dial detection:
+    // A request is an initial dial if:
+    // 1. No active session exists, OR
+    // 2. The user dialed a new USSD string starting with '*' (e.g. *920*969#)
+    // If an active session exists and input is menu selection (e.g. '1', '50'), treat as continuation
+    const isNewDialCode = request.userInput.startsWith('*');
+    const isInitial = !session || isNewDialCode || (request.isInitialRequest && !session);
+
+    const lockIdentifier = session?.sessionId || request.sessionId || `nalo_${request.msisdn}`;
+    const lockAcquired = await ussdSessionService.acquireLock(lockIdentifier);
     if (!lockAcquired) {
       return {
         message: 'Request in progress. Please wait...',
@@ -39,10 +57,8 @@ export class UssdRuntimeService {
     }
 
     try {
-      let session = await ussdSessionService.getSession(request.sessionId);
-
       // Handle Initial Request (New Session)
-      if (request.isInitialRequest || !session) {
+      if (isInitial) {
         const resolved = await ussdRoutingService.resolveFlow(request);
         if (!resolved.flow || !resolved.version) {
           return {
@@ -51,8 +67,10 @@ export class UssdRuntimeService {
           };
         }
 
+        const newSessionId = request.sessionId || `nalo_${request.msisdn}_${Date.now()}`;
+
         session = await ussdSessionService.createSession({
-          sessionId: request.sessionId,
+          sessionId: newSessionId,
           msisdn: request.msisdn,
           network: request.network,
           provider: request.provider,
@@ -92,14 +110,14 @@ export class UssdRuntimeService {
         };
       }
 
-      // Handle Continuing Session
+      // Handle Continuing Session (session is guaranteed here)
       const version = await this.versionRepo.findOne({
-        where: { id: session.flowVersionId },
+        where: { id: session!.flowVersionId },
         relations: ['menus', 'menus.options'],
       });
 
       if (!version) {
-        await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.FAILED);
+        await ussdSessionService.endSession(session!.sessionId, UssdSessionStatus.FAILED);
         return {
           message: 'Session flow configuration unavailable. Session ended.',
           continueSession: false,
@@ -112,17 +130,57 @@ export class UssdRuntimeService {
         m.options.sort((a, b) => a.displayOrder - b.displayOrder);
       }
 
+      const project = session!.projectId ? await projectService.getProjectById(session!.projectId) : null;
+      const userInput = request.userInput.trim();
+
+      // Special Interceptor: Contributor is entering Paystack OTP/voucher
+      if (session!.currentMenuKey === 'ENTER_PAYMENT_OTP') {
+        const actionResult = await UssdActionRegistry.execute('SUBMIT_PAYMENT_OTP', {
+          session: session!,
+          project,
+          userInput,
+        });
+
+        if (actionResult.contextUpdates) {
+          session!.contextData = { ...session!.contextData, ...actionResult.contextUpdates };
+        }
+
+        if (actionResult.terminate) {
+          await ussdSessionService.endSession(session!.sessionId, UssdSessionStatus.COMPLETED);
+          return {
+            message: actionResult.customMessage || 'Thank you for using ZFund.',
+            continueSession: false,
+          };
+        }
+
+        session!.currentMenuKey = actionResult.nextMenuKey || 'ENTER_PAYMENT_OTP';
+        await ussdSessionService.updateSession(session!);
+
+        const msg = actionResult.customMessage || 'Please enter the OTP/voucher code:';
+        await ussdSessionService.recordEvent({
+          ussdSessionId: session!.id,
+          msisdn: request.msisdn,
+          stepNumber: (session!.navigationHistory?.length || 0) + 1,
+          menuKey: session!.currentMenuKey,
+          userInput: request.userInput,
+          renderedMessage: msg,
+          msgType: true,
+        });
+
+        return {
+          message: msg,
+          continueSession: true,
+        };
+      }
+
       const currentMenu = version.menus.find((m) => m.menuKey === session!.currentMenuKey);
       if (!currentMenu) {
-        await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.FAILED);
+        await ussdSessionService.endSession(session!.sessionId, UssdSessionStatus.FAILED);
         return {
           message: 'Menu state error. Session ended.',
           continueSession: false,
         };
       }
-
-      const project = session.projectId ? await projectService.getProjectById(session.projectId) : null;
-      const userInput = request.userInput.trim();
 
       // State transition variables
       let targetMenuKey: string | null = null;
@@ -130,25 +188,25 @@ export class UssdRuntimeService {
       let terminateSession = false;
 
       // Handle universal Back (0) navigation if previous history exists
-      if (userInput === '0' && session.navigationHistory && session.navigationHistory.length > 0) {
-        targetMenuKey = session.navigationHistory.pop()!;
+      if (userInput === '0' && session!.navigationHistory && session!.navigationHistory.length > 0) {
+        targetMenuKey = session!.navigationHistory.pop()!;
       } else if (currentMenu.menuType === UssdMenuType.INPUT) {
         // Execute input handler (e.g. ENTER_AMOUNT)
         const actionResult = await UssdActionRegistry.execute('ENTER_AMOUNT', {
-          session,
+          session: session!,
           project,
           userInput,
         });
 
         if (actionResult.contextUpdates) {
-          session.contextData = { ...session.contextData, ...actionResult.contextUpdates };
+          session!.contextData = { ...session!.contextData, ...actionResult.contextUpdates };
         }
 
         if (actionResult.customMessage) {
           customDisplayMessage = actionResult.customMessage;
           targetMenuKey = actionResult.nextMenuKey || currentMenu.menuKey;
         } else {
-          session.navigationHistory.push(currentMenu.menuKey);
+          session!.navigationHistory.push(currentMenu.menuKey);
           targetMenuKey = actionResult.nextMenuKey || 'CONFIRM_PAYMENT';
         }
       } else {
@@ -158,7 +216,7 @@ export class UssdRuntimeService {
 
         if (!matchedOption) {
           // Re-render current menu with error prefix
-          const reRendered = `Invalid choice.\n${this.renderMenu(currentMenu, project, session)}`;
+          const reRendered = `Invalid choice.\n${this.renderMenu(currentMenu, project, session!)}`;
           return {
             message: reRendered,
             continueSession: true,
@@ -166,18 +224,18 @@ export class UssdRuntimeService {
         }
 
         if (matchedOption.optionType === UssdOptionType.NAVIGATION) {
-          session.navigationHistory.push(currentMenu.menuKey);
+          session!.navigationHistory.push(currentMenu.menuKey);
           targetMenuKey = matchedOption.targetMenuKey || 'WELCOME';
         } else if (matchedOption.optionType === UssdOptionType.ACTION && matchedOption.actionReference) {
           const actionResult = await UssdActionRegistry.execute(matchedOption.actionReference, {
-            session,
+            session: session!,
             project,
             userInput,
             selectedOption: matchedOption,
           });
 
           if (actionResult.contextUpdates) {
-            session.contextData = { ...session.contextData, ...actionResult.contextUpdates };
+            session!.contextData = { ...session!.contextData, ...actionResult.contextUpdates };
           }
 
           if (actionResult.terminate) {
@@ -188,7 +246,7 @@ export class UssdRuntimeService {
               customDisplayMessage = actionResult.customMessage;
             }
             if (actionResult.nextMenuKey) {
-              session.navigationHistory.push(currentMenu.menuKey);
+              session!.navigationHistory.push(currentMenu.menuKey);
               targetMenuKey = actionResult.nextMenuKey;
             }
           }
@@ -197,44 +255,67 @@ export class UssdRuntimeService {
 
       // If action requested termination
       if (terminateSession) {
-        await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.COMPLETED);
+        await ussdSessionService.endSession(session!.sessionId, UssdSessionStatus.COMPLETED);
         return {
           message: customDisplayMessage || 'Thank you for using ZFund.',
           continueSession: false,
         };
       }
 
+      // If next step is awaiting Paystack payment OTP
+      if (targetMenuKey === 'ENTER_PAYMENT_OTP') {
+        session!.currentMenuKey = 'ENTER_PAYMENT_OTP';
+        await ussdSessionService.updateSession(session!);
+
+        const renderedMessage =
+          customDisplayMessage || 'Please enter the OTP/voucher code sent to your phone (or 0 to cancel):';
+
+        await ussdSessionService.recordEvent({
+          ussdSessionId: session!.id,
+          msisdn: request.msisdn,
+          stepNumber: (session!.navigationHistory?.length || 0) + 1,
+          menuKey: 'ENTER_PAYMENT_OTP',
+          userInput: request.userInput,
+          renderedMessage,
+          msgType: true,
+        });
+
+        return {
+          message: renderedMessage,
+          continueSession: true,
+        };
+      }
+
       // Resolve and render the next menu from DB
       const nextMenu = version.menus.find((m) => m.menuKey === targetMenuKey);
       if (!nextMenu) {
-        // If target menu not found, render custom message or finish
         if (customDisplayMessage) {
           return {
             message: customDisplayMessage,
             continueSession: false,
           };
         }
-        await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.COMPLETED);
+        await ussdSessionService.endSession(session!.sessionId, UssdSessionStatus.COMPLETED);
         return {
           message: 'Thank you for using ZFund.',
           continueSession: false,
         };
       }
 
-      session.currentMenuKey = nextMenu.menuKey;
-      await ussdSessionService.updateSession(session);
+      session!.currentMenuKey = nextMenu.menuKey;
+      await ussdSessionService.updateSession(session!);
 
-      const renderedMessage = customDisplayMessage || this.renderMenu(nextMenu, project, session);
+      const renderedMessage = customDisplayMessage || this.renderMenu(nextMenu, project, session!);
       const continueSession = nextMenu.menuType !== UssdMenuType.TERMINAL;
 
       if (!continueSession) {
-        await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.COMPLETED);
+        await ussdSessionService.endSession(session!.sessionId, UssdSessionStatus.COMPLETED);
       }
 
       await ussdSessionService.recordEvent({
-        ussdSessionId: session.id,
+        ussdSessionId: session!.id,
         msisdn: request.msisdn,
-        stepNumber: (session.navigationHistory?.length || 0) + 1,
+        stepNumber: (session!.navigationHistory?.length || 0) + 1,
         menuKey: nextMenu.menuKey,
         userInput: request.userInput,
         renderedMessage,
@@ -246,7 +327,7 @@ export class UssdRuntimeService {
         continueSession,
       };
     } finally {
-      await ussdSessionService.releaseLock(request.sessionId);
+      await ussdSessionService.releaseLock(lockIdentifier);
     }
   }
 

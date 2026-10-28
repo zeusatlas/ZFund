@@ -1,3 +1,4 @@
+import { IsNull } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { cache } from '../config/redis';
 import { BadRequestError, NotFoundError } from '../common/errors/app-error';
@@ -298,7 +299,7 @@ export class UssdFlowService {
    */
   async getGeneralPublishedFlow(): Promise<{ flow: UssdFlow; version: UssdFlowVersion } | null> {
     const flow = await this.flowRepo.findOne({
-      where: { projectId: undefined, status: UssdFlowStatus.PUBLISHED },
+      where: { projectId: IsNull(), status: UssdFlowStatus.PUBLISHED },
     });
 
     if (!flow || !flow.activeVersionId) return null;

@@ -38,11 +38,11 @@ const envSchema = z.object({
   REDIS_PASSWORD: z.string().optional().default(''),
   REDIS_DB: z.coerce.number().default(0),
   REDIS_ENABLED: booleanEnv(false),
-  REDIS_KEY_PREFIX: z.string().default('zfund:'),
+  REDIS_KEY_PREFIX: z.string().default('zfund:'), 
 
   // Auth & JWT
-  JWT_ACCESS_SECRET: z.string().min(16).default('dev_jwt_access_secret_super_secure_key_change_in_production_123456789'),
-  JWT_REFRESH_SECRET: z.string().min(16).default('dev_jwt_refresh_secret_super_secure_key_change_in_production_987654321'),
+  JWT_ACCESS_SECRET: z.string().min(16),
+  JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   ARGON2_MEMORY_COST: z.coerce.number().default(65536),
@@ -58,28 +58,23 @@ const envSchema = z.object({
   SEED_ADMIN_PHONE: z.string().optional().default(''),
 
   // CORS
-  CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:5173'),
+  CORS_ORIGIN: z.string().default('*'),
 
   // NALO USSD
-  NALO_USER_ID: z.string().default('NALOTest'),
-  NALO_AUTH_TOKEN: z.string().optional().default(''),
+  NALO_USER_ID: z.string().default('ZEUS2028'),
   NALO_DEFAULT_CODE: z.string().default('*920*969#'),
   NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(120),
 
   // Paystack
-  PAYSTACK_SECRET_KEY: z.string().default('sk_test_placeholder_key_for_zfund_integration'),
-  PAYSTACK_PUBLIC_KEY: z.string().default('pk_test_placeholder_key_for_zfund_integration'),
+  PAYSTACK_SECRET_KEY: z.string(),
+  PAYSTACK_PUBLIC_KEY: z.string(),
   PAYSTACK_BASE_URL: z.string().default('https://api.paystack.co'),
-  PAYSTACK_WEBHOOK_SECRET: z.string().default('sk_test_placeholder_key_for_zfund_integration'),
 
-  // SMS (mNotify as used in ZDesk, Arkesel, Mock)
-  SMS_PROVIDER: z.enum(['mock', 'mnotify', 'arkesel', 'nalo']).default('mock'),
+  // SMS
+  SMS_PROVIDER: z.enum(['mock', 'mnotify', 'arkesel', 'nalo']).default('mnotify'),
   SMS_API_KEY: z.string().optional().default(''),
-  SMS_SENDER_ID: z.string().default('ZFund'),
-  SMS_API_URL: z.string().default('https://sms.arkesel.com/api/v2/sms/send'),
-  MNOTIFY_API_KEY: z.string().optional().default(''),
-  MNOTIFY_URL: z.string().default('https://api.mnotify.com/api/sms/quick'),
-  MNOTIFY_SENDER_ID: z.string().default('ZFund'),
+  SMS_SENDER_ID: z.string().default('RaiseFunds'),
+  SMS_API_URL: z.string().default('https://api.mnotify.com/api/sms/quick'),
 
   // Storage
   UPLOAD_DIR: z.string().default('storage/documents'),

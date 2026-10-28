@@ -47,9 +47,44 @@ export interface InitiateRefundResult {
   rawResponse?: Record<string, unknown>;
 }
 
+export interface ChargeMobileMoneyParams {
+  reference: string;
+  amount: string; // Major currency unit (e.g. "50.00")
+  currency: string;
+  email: string;
+  phone: string;
+  provider?: 'mtn' | 'vod' | 'tgo' | 'atl' | string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChargeMobileMoneyResult {
+  reference: string;
+  status: 'success' | 'send_otp' | 'pay_offline' | 'pending' | 'failed';
+  requiresOtp: boolean;
+  message: string;
+  displayText?: string;
+  gatewayResponse?: string;
+  rawResponse?: Record<string, unknown>;
+}
+
+export interface SubmitOtpParams {
+  reference: string;
+  otp: string;
+}
+
+export interface SubmitOtpResult {
+  reference: string;
+  status: 'success' | 'pay_offline' | 'pending' | 'failed';
+  message: string;
+  displayText?: string;
+  rawResponse?: Record<string, unknown>;
+}
+
 export interface IPaymentProvider {
   readonly code: string;
   initializePayment(params: InitializePaymentParams): Promise<InitializePaymentResult>;
   verifyTransaction(reference: string): Promise<VerifyTransactionResult>;
   initiateRefund(params: InitiateRefundParams): Promise<InitiateRefundResult>;
+  chargeMobileMoney?(params: ChargeMobileMoneyParams): Promise<ChargeMobileMoneyResult>;
+  submitOtp?(params: SubmitOtpParams): Promise<SubmitOtpResult>;
 }
