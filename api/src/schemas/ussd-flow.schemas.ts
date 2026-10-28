@@ -43,11 +43,17 @@ export const publishFlowSchema = z.object({
 
 export const initializeProjectFlowSchema = z.object({
   welcomePrompt: z.string().max(120).optional(),
+  amountPrompt: z.string().max(120).optional(),
+  confirmPrompt: z.string().max(120).optional(),
+  otpPrompt: z.string().max(120).optional(),
+  allowDirectAmount: z.boolean().optional(),
+  currency: z.string().length(3).optional(),
   purposes: z
     .array(
       z.object({
         label: z.string().min(1).max(50),
         purposeId: z.string().uuid().optional(),
+        subSteps: z.array(z.string().min(1).max(50)).optional(),
       })
     )
     .optional(),

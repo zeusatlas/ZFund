@@ -4,7 +4,9 @@ export type ProjectStatus =
   | "DRAFT"
   | "PENDING_REVIEW"
   | "APPROVED"
+  | "SCHEDULED"
   | "PUBLISHED"
+  | "REJECTED"
   | "SUSPENDED"
   | "COMPLETED"
   | "ARCHIVED";
@@ -61,17 +63,18 @@ export interface BackendProject {
 export interface CreateProjectInput {
   name: string;
   description?: string;
-  eventCode: string;
+  eventCode?: string;
   currency?: string;
   targetAmount?: string;
   minAmount?: string;
   maxAmount?: string;
   welcomeMessage?: string;
-  startDate?: string;
+  startDate: string;
   endDate?: string;
   acceptsContributions?: boolean;
   categoryId?: string;
   organizationId?: string;
+  status?: ProjectStatus;
 }
 
 export interface UpdateProjectInput extends Partial<Omit<CreateProjectInput, "eventCode">> {
@@ -127,6 +130,10 @@ export async function updateProject(id: string, input: UpdateProjectInput): Prom
   return data.data;
 }
 
+export async function deleteProject(id: string): Promise<void> {
+  await api.delete(`/projects/${id}`);
+}
+
 export interface CategoriesResponse {
   success: boolean;
   message: string;
@@ -138,11 +145,37 @@ export async function getProjectCategories(): Promise<ProjectCategory[]> {
   return data.data ?? [];
 }
 
+export interface NextCodeResponse {
+  success: boolean;
+  message: string;
+  data: { code: string };
+}
+
+export async function getNextProjectCode(): Promise<string> {
+  const { data } = await api.get<NextCodeResponse>("/projects/next-code");
+  return data.data?.code || "1001";
+}
+
 export async function updateProjectStatus(
   id: string,
   status: ProjectStatus,
   notes?: string
 ): Promise<BackendProject> {
   const { data } = await api.patch<SingleProjectResponse>(`/projects/${id}/status`, { status, notes });
+  return data.data;
+}
+
+export interface ProjectStats {
+  totalRaised: number;
+  totalRaisedFormatted: string;
+  campaignsCreated: number;
+  activeCampaigns: number;
+  completedCampaigns: number;
+  draftCampaigns: number;
+  contributorsPaid: number;
+}
+
+export async function getProjectStats(): Promise<ProjectStats> {
+  const { data } = await api.get<{ success: boolean; data: ProjectStats }>("/projects/stats");
   return data.data;
 }

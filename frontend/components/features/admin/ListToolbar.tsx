@@ -8,9 +8,18 @@ type ListToolbarProps = {
   status: string;
   onStatus: (value: string) => void;
   statuses: { value: string; label: string }[];
+  extraControls?: React.ReactNode;
 };
 
-export default function ListToolbar({ search, onSearch, searchLabel, status, onStatus, statuses }: ListToolbarProps) {
+export default function ListToolbar({
+  search,
+  onSearch,
+  searchLabel,
+  status,
+  onStatus,
+  statuses,
+  extraControls,
+}: ListToolbarProps) {
   return (
     <div className="flex flex-col gap-3 border-b border-navy/10 p-4 sm:flex-row sm:items-center sm:justify-between md:p-5">
       <div className="relative w-full sm:max-w-xs">
@@ -23,13 +32,20 @@ export default function ListToolbar({ search, onSearch, searchLabel, status, onS
           className="w-full rounded-lg border border-navy/15 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-gold"
         />
       </div>
-      <FilterSelect
-        label="Filter by status"
-        className="w-full sm:w-48"
-        value={status}
-        onChange={onStatus}
-        options={[{ value: "", label: "All statuses" }, ...statuses]}
-      />
+      <div className="flex items-center gap-2">
+        <select
+          value={status}
+          onChange={(event) => onStatus(event.target.value)}
+          aria-label="Filter by status"
+          className="rounded-lg border border-navy/15 bg-white px-3 py-2.5 text-sm text-steel outline-none focus:border-gold"
+        >
+          <option value="">All statuses</option>
+          {statuses.map((item) => (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          ))}
+        </select>
+        {extraControls}
+      </div>
     </div>
   );
 }

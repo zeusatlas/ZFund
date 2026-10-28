@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../common/errors/app-error';
 import { CryptoUtil } from '../common/utils/crypto';
 import { MoneyUtil } from '../common/utils/decimal';
+import { SystemRole } from '../common/types/auth';
 import { Contribution, ContributionStatus } from '../database/entities/contribution.entity';
 import { Project } from '../database/entities/project.entity';
 import { User } from '../database/entities/user.entity';
@@ -11,7 +12,7 @@ import {
   WithdrawalRequest,
   WithdrawalStatus,
 } from '../database/entities/withdrawal-request.entity';
-import { CreateWithdrawalInput } from '../schemas/withdrawal.schemas';
+import { CreateWithdrawalInput, UpdateWithdrawalInput } from '../schemas/withdrawal.schemas';
 import { auditService } from './audit.service';
 
 const COLLECTED = [
@@ -65,6 +66,13 @@ export interface WithdrawalCounts {
   paidOut: string;
 }
 
+export interface WithdrawalBalanceSummary {
+  raised: string;
+  reserved: string;
+  paid: string;
+  available: string;
+}
+
 export class WithdrawalService {
   private get repo() { return AppDataSource.getRepository(WithdrawalRequest); }
   private get userRepo() { return AppDataSource.getRepository(User); }
@@ -72,11 +80,23 @@ export class WithdrawalService {
   private get contributionRepo() { return AppDataSource.getRepository(Contribution); }
 
   /** Collected funds minus everything already requested, for a host (optionally one project). */
-  async getAvailable(hostId: string, projectId?: string): Promise<{ raised: string; reserved: string; available: string }> {
-    const projects = await this.projectRepo.find({
-      where: projectId ? { id: projectId, ownerId: hostId } : { ownerId: hostId },
-      select: ['id'],
-    });
+  async getAvailable(hostId?: string, projectId?: string): Promise<WithdrawalBalanceSummary> {
+    const projectsQuery = this.projectRepo.createQueryBuilder('p');
+    if (projectId) {
+      projectsQuery.andWhere('p.id = :projectId', { projectId });
+    }
+    if (hostId) {
+      const user = await this.userRepo.findOne({ where: { id: hostId } });
+      const isPlatformStaff =
+        user &&
+        [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN, SystemRole.AUDITOR].includes(user.role);
+      if (!isPlatformStaff) {
+        projectsQuery
+          .leftJoin('project_members', 'pm', 'pm.projectId = p.id AND pm.userId = :hostId', { hostId })
+          .andWhere('(p.ownerId = :hostId OR pm.id IS NOT NULL)', { hostId });
+      }
+    }
+    const projects = await projectsQuery.select(['p.id']).getMany();
     let raised = '0.00';
     if (projects.length > 0) {
       const contributions = await this.contributionRepo
@@ -87,12 +107,33 @@ export class WithdrawalService {
       raised = contributions.reduce((t, c) => MoneyUtil.add(t, c.amount), '0.00');
     }
 
-    const requests = await this.repo.find({
-      where: { hostId, status: In(RESERVED), ...(projectId ? { projectId } : {}) },
-    });
-    const reserved = requests.reduce((t, r) => MoneyUtil.add(t, r.amount), '0.00');
-    const left = MoneyUtil.subtract(raised, reserved);
-    return { raised, reserved, available: MoneyUtil.isPositive(left) ? left : '0.00' };
+    const reqQuery = this.repo.createQueryBuilder('w');
+    if (projectId) {
+      reqQuery.andWhere('w.projectId = :projectId', { projectId });
+    }
+    if (hostId) {
+      const user = await this.userRepo.findOne({ where: { id: hostId } });
+      const isPlatformStaff =
+        user &&
+        [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN, SystemRole.AUDITOR].includes(user.role);
+      if (!isPlatformStaff) {
+        reqQuery.andWhere('w.hostId = :hostId', { hostId });
+      }
+    }
+
+    const allRequests = await reqQuery.getMany();
+    const reservedRequests = allRequests.filter((r) =>
+      [WithdrawalStatus.PENDING, WithdrawalStatus.PROCESSING].includes(r.status)
+    );
+    const paidRequests = allRequests.filter((r) => r.status === WithdrawalStatus.DONE);
+
+    const reserved = reservedRequests.reduce((t, r) => MoneyUtil.add(t, r.amount), '0.00');
+    const paid = paidRequests.reduce((t, r) => MoneyUtil.add(t, r.amount), '0.00');
+    const totalDeducted = MoneyUtil.add(reserved, paid);
+    const left = MoneyUtil.subtract(raised, totalDeducted);
+    const available = MoneyUtil.isPositive(left) ? left : '0.00';
+
+    return { raised, reserved, paid, available };
   }
 
   async create(hostId: string, input: CreateWithdrawalInput): Promise<WithdrawalRequest> {
@@ -103,7 +144,12 @@ export class WithdrawalService {
     if (input.projectId) {
       const project = await this.projectRepo.findOne({ where: { id: input.projectId } });
       if (!project) throw new NotFoundError('Campaign not found');
-      if (project.ownerId !== hostId) throw new ForbiddenError('You can only withdraw from your own campaigns');
+      const user = await this.userRepo.findOne({ where: { id: hostId } });
+      const isStaff =
+        user && [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(user.role);
+      if (project.ownerId && project.ownerId !== hostId && !isStaff) {
+        throw new ForbiddenError('You can only withdraw from your own campaigns');
+      }
     }
 
     const { available } = await this.getAvailable(hostId, input.projectId);
@@ -137,14 +183,105 @@ export class WithdrawalService {
     return saved;
   }
 
+  async getById(id: string): Promise<WithdrawalView> {
+    const request = await this.repo.findOne({
+      where: [{ id }, { reference: id }],
+    });
+    if (!request) throw new NotFoundError('Withdrawal request not found');
+    const views = await this.toViews([request]);
+    return views[0];
+  }
+
+  async update(id: string, input: UpdateWithdrawalInput, hostId?: string): Promise<WithdrawalView> {
+    const request = await this.repo.findOne({ where: [{ id }, { reference: id }] });
+    if (!request) throw new NotFoundError('Withdrawal request not found');
+
+    if (request.status !== WithdrawalStatus.PENDING) {
+      throw new BadRequestError('Only pending withdrawal requests can be modified');
+    }
+
+    if (hostId && request.hostId !== hostId) {
+      const user = await this.userRepo.findOne({ where: { id: hostId } });
+      const isStaff =
+        user && [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(user.role);
+      if (!isStaff) throw new ForbiddenError('You can only modify your own withdrawal requests');
+    }
+
+    if (input.amount && MoneyUtil.compare(input.amount, request.amount) !== 0) {
+      if (!MoneyUtil.isPositive(input.amount)) {
+        throw new BadRequestError('Withdrawal amount must be greater than zero');
+      }
+      const { available } = await this.getAvailable(request.hostId, request.projectId);
+      const effectiveAvailable = MoneyUtil.add(available, request.amount);
+      if (MoneyUtil.compare(input.amount, effectiveAvailable) > 0) {
+        throw new BadRequestError(`Requested amount exceeds available balance of GHS ${effectiveAvailable}`);
+      }
+      request.amount = input.amount;
+    }
+
+    if (input.method) request.method = input.method;
+    if (input.recipientName) request.recipientName = input.recipientName;
+    if (input.institution) request.institution = input.institution;
+    if (input.accountNumber) request.accountNumber = input.accountNumber;
+    if (input.purpose) request.purpose = input.purpose;
+
+    await this.repo.save(request);
+
+    if (hostId) {
+      await auditService.log({
+        userId: hostId,
+        entityType: 'WITHDRAWAL',
+        entityId: request.id,
+        action: 'WITHDRAWAL_UPDATED',
+        newValues: { reference: request.reference, amount: request.amount },
+      });
+    }
+
+    return (await this.toViews([request]))[0];
+  }
+
+  async delete(id: string, hostId?: string): Promise<void> {
+    const request = await this.repo.findOne({ where: [{ id }, { reference: id }] });
+    if (!request) throw new NotFoundError('Withdrawal request not found');
+
+    if (request.status !== WithdrawalStatus.PENDING) {
+      throw new BadRequestError('Only pending withdrawal requests can be cancelled');
+    }
+
+    if (hostId && request.hostId !== hostId) {
+      const user = await this.userRepo.findOne({ where: { id: hostId } });
+      const isStaff =
+        user && [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(user.role);
+      if (!isStaff) throw new ForbiddenError('You can only cancel your own withdrawal requests');
+    }
+
+    await this.repo.remove(request);
+
+    if (hostId) {
+      await auditService.log({
+        userId: hostId,
+        entityType: 'WITHDRAWAL',
+        entityId: id,
+        action: 'WITHDRAWAL_CANCELLED',
+        oldValues: { reference: request.reference, amount: request.amount },
+      });
+    }
+  }
+
   private async toViews(rows: WithdrawalRequest[]): Promise<WithdrawalView[]> {
     if (rows.length === 0) return [];
-    const userIds = [...new Set(rows.flatMap((r) => [r.hostId, r.reviewedById]).filter((id): id is string => !!id))];
+    const userIds = [
+      ...new Set(rows.flatMap((r) => [r.hostId, r.reviewedById]).filter((id): id is string => !!id)),
+    ];
     const users = await this.userRepo.find({ where: { id: In(userIds) } });
     const byId = new Map(users.map((u) => [u.id, u]));
 
-    const projectIds = [...new Set(rows.map((r) => r.projectId).filter((id): id is string => !!id))];
-    const projects = projectIds.length ? await this.projectRepo.find({ where: { id: In(projectIds) } }) : [];
+    const projectIds = [
+      ...new Set(rows.map((r) => r.projectId).filter((id): id is string => !!id)),
+    ];
+    const projects = projectIds.length
+      ? await this.projectRepo.find({ where: { id: In(projectIds) } })
+      : [];
     const projectNames = new Map(projects.map((p) => [p.id, p.name]));
 
     const fullName = (u?: User) => (u ? `${u.firstName} ${u.lastName}`.trim() : null);
@@ -178,16 +315,34 @@ export class WithdrawalService {
     search?: string;
     status?: WithdrawalStatus;
     hostId?: string;
-  }): Promise<{ items: WithdrawalView[]; total: number }> {
+    projectId?: string;
+  }): Promise<{ items: WithdrawalView[]; total: number; balance: WithdrawalBalanceSummary }> {
     const page = params.page || 1;
     const limit = Math.min(params.limit || 10, 100);
 
-    const query = this.repo.createQueryBuilder('w').leftJoin('w.host', 'host');
-    if (params.hostId) query.andWhere('w.hostId = :hostId', { hostId: params.hostId });
-    if (params.status) query.andWhere('w.status = :status', { status: params.status });
+    const query = this.repo
+      .createQueryBuilder('w')
+      .leftJoin('w.host', 'host')
+      .leftJoin('w.project', 'project');
+
+    if (params.hostId) {
+      const user = await this.userRepo.findOne({ where: { id: params.hostId } });
+      const isPlatformStaff =
+        user &&
+        [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN, SystemRole.AUDITOR].includes(user.role);
+      if (!isPlatformStaff) {
+        query.andWhere('w.hostId = :hostId', { hostId: params.hostId });
+      }
+    }
+    if (params.projectId && params.projectId !== 'All') {
+      query.andWhere('w.projectId = :projectId', { projectId: params.projectId });
+    }
+    if (params.status) {
+      query.andWhere('w.status = :status', { status: params.status });
+    }
     if (params.search) {
       query.andWhere(
-        '(LOWER(w.reference) LIKE :s OR LOWER(w.recipientName) LIKE :s OR LOWER(host.firstName) LIKE :s OR LOWER(host.lastName) LIKE :s)',
+        '(LOWER(w.reference) LIKE :s OR LOWER(w.recipientName) LIKE :s OR LOWER(w.accountNumber) LIKE :s OR LOWER(host.firstName) LIKE :s OR LOWER(host.lastName) LIKE :s OR LOWER(project.name) LIKE :s)',
         { s: `%${params.search.toLowerCase()}%` }
       );
     }
@@ -197,7 +352,9 @@ export class WithdrawalService {
       .take(limit);
 
     const [rows, total] = await query.getManyAndCount();
-    return { items: await this.toViews(rows), total };
+    const balance = await this.getAvailable(params.hostId, params.projectId !== 'All' ? params.projectId : undefined);
+
+    return { items: await this.toViews(rows), total, balance };
   }
 
   async getCounts(): Promise<WithdrawalCounts> {
@@ -217,12 +374,19 @@ export class WithdrawalService {
     };
   }
 
-  async updateStatus(id: string, status: WithdrawalStatus, note: string | undefined, actorId: string): Promise<WithdrawalView> {
-    const request = await this.repo.findOne({ where: { id } });
+  async updateStatus(
+    id: string,
+    status: WithdrawalStatus,
+    note: string | undefined,
+    actorId: string
+  ): Promise<WithdrawalView> {
+    const request = await this.repo.findOne({ where: [{ id }, { reference: id }] });
     if (!request) throw new NotFoundError('Withdrawal request not found');
 
     if (!TRANSITIONS[request.status].includes(status)) {
-      throw new BadRequestError(`A ${request.status.toLowerCase()} request cannot be moved to ${status.toLowerCase()}`);
+      throw new BadRequestError(
+        `A ${request.status.toLowerCase()} request cannot be moved to ${status.toLowerCase()}`
+      );
     }
 
     const previous = request.status;

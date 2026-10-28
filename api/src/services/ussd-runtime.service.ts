@@ -63,6 +63,12 @@ export class UssdRuntimeService {
       // Handle Initial Request (New Session)
       if (isInitial) {
         const resolved = await ussdRoutingService.resolveFlow(request);
+        if (resolved.rejectionMessage) {
+          return {
+            message: resolved.rejectionMessage,
+            continueSession: false,
+          };
+        }
         if (!resolved.flow || !resolved.version) {
           return {
             message: 'Welcome to RaiseFunds. No active USSD service is currently available. Please contact support.',

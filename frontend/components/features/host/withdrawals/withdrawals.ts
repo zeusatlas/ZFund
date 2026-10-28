@@ -1,7 +1,26 @@
 import { z } from "zod";
 import { campaignTotals, hostStats } from "@/components/features/host/shared/demo";
 export const withdrawalStatuses = ["In review", "Processing", "Paid", "Rejected"] as const;
-export type Withdrawal = { id: string; campaignId: string; amount: number; status: typeof withdrawalStatuses[number]; date: string; method: "Mobile money" | "Bank transfer"; recipient: string; institution: string; destination: string; purpose: string; note: string };
+export type WithdrawalStatus = typeof withdrawalStatuses[number];
+
+export type Withdrawal = {
+  id: string;
+  reference?: string;
+  campaignId: string;
+  campaignName?: string | null;
+  amount: number;
+  status: WithdrawalStatus;
+  rawStatus?: string;
+  date: string;
+  time?: string;
+  method: "Mobile money" | "Bank transfer";
+  recipient: string;
+  institution: string;
+  destination: string;
+  accountNumber?: string;
+  purpose: string;
+  note: string;
+};
 export const exampleWithdrawals: Withdrawal[] = [
   { id:"WD-005", campaignId:"ZF-004", amount:250000, status:"In review", date:"2026-10-26", method:"Mobile money",recipient:"Akosua Mensah",institution:"Mobile money wallet",destination:"•••• 0345",purpose:"Medical support for an association member.",note:"Awaiting administrator review." },
   { id:"WD-004", campaignId:"ZF-005", amount:100000, status:"Processing", date:"2026-10-25", method:"Bank transfer",recipient:"School library committee",institution:"Bank account",destination:"•••• 0891",purpose:"First order of books and reading materials.",note:"Approved in this example. Payout confirmation is pending." },
@@ -23,12 +42,30 @@ export const withdrawalFormSchema=z.object({
   if(!valid) context.addIssue({code:"custom",path:["account"],message:data.method==="Mobile money" ? "Enter a 10-digit Ghana mobile number, or +233 followed by 9 digits." : "Enter a bank account number containing 6–24 digits."});
 });
 export const savedWithdrawalSchema=z.object({id:z.string().startsWith("WD-LOCAL-"),campaignId:z.string(),amount:z.number().int().positive(),status:z.literal("In review"),date:z.iso.date(),method:z.enum(["Mobile money","Bank transfer"]),recipient:z.string().max(100),institution:z.string().max(100),destination:z.string().regex(/^•••• \d{4}$/),purpose:z.string().max(500),note:z.string()});
-export function isReserved(item: Withdrawal) { return item.status==="In review" || item.status==="Processing"; }
-export function availableForCampaign(id:string,items:Withdrawal[]) {
-  return Math.max(0,campaignTotals(id).raised-items.filter(item=>item.campaignId===id&&(item.status==="Paid"||isReserved(item))).reduce((sum,item)=>sum+item.amount,0));
+export function isReserved(item: Withdrawal) {
+  return item.status === "In review" || item.status === "Processing";
 }
-export function withdrawalBalances(items:Withdrawal[]) {
-  const paid=items.filter(item=>item.status==="Paid").reduce((sum,item)=>sum+item.amount,0);
-  const reserved=items.filter(isReserved).reduce((sum,item)=>sum+item.amount,0);
-  return {raised:hostStats.raised,paid,reserved,available:Math.max(0,hostStats.raised-paid-reserved)};
+
+export function availableForCampaign(id: string, items: Withdrawal[], campaignRaised?: number) {
+  const raised = campaignRaised !== undefined ? campaignRaised : campaignTotals(id).raised;
+  const deducted = items
+    .filter((item) => item.campaignId === id && (item.status === "Paid" || isReserved(item)))
+    .reduce((sum, item) => sum + item.amount, 0);
+  return Math.max(0, raised - deducted);
+}
+
+export function withdrawalBalances(items: Withdrawal[], totalRaised?: number) {
+  const raised = totalRaised !== undefined ? totalRaised : hostStats.raised;
+  const paid = items
+    .filter((item) => item.status === "Paid")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const reserved = items
+    .filter(isReserved)
+    .reduce((sum, item) => sum + item.amount, 0);
+  return {
+    raised,
+    paid,
+    reserved,
+    available: Math.max(0, raised - paid - reserved),
+  };
 }

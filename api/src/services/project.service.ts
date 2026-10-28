@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/database';
 import { logger } from '../config/logger';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
+import { MoneyUtil } from '../common/utils/decimal';
 import { auditService } from './audit.service';
 import { ussdFlowService } from './ussd-flow.service';
 import { smsService } from './sms.service';
@@ -14,6 +15,7 @@ import { PaymentMethodType, ProjectPaymentMethod } from '../database/entities/pr
 import { Project, ProjectStatus } from '../database/entities/project.entity';
 import { ProjectCategory } from '../database/entities/project-category.entity';
 import { Contribution, ContributionStatus } from '../database/entities/contribution.entity';
+import { ProjectSetting } from '../database/entities/project-setting.entity';
 import {
   ConfigurePaymentMethodsInput,
   ConfigurePurposesInput,
@@ -30,16 +32,64 @@ export class ProjectService {
   private get purposeRepo() { return AppDataSource.getRepository(ContributionPurpose); }
   private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
   private get contributionRepo() { return AppDataSource.getRepository(Contribution); }
+  private get settingRepo() { return AppDataSource.getRepository(ProjectSetting); }
 
   async getCategories(): Promise<ProjectCategory[]> {
     return this.categoryRepo.find({ where: { isActive: true }, order: { name: 'ASC' } });
   }
 
+  async getNextProjectCode(): Promise<string> {
+    const recentProjects = await this.projectRepo
+      .createQueryBuilder('project')
+      .select(['project.eventCode', 'project.createdAt'])
+      .orderBy('project.createdAt', 'DESC')
+      .take(100)
+      .getMany();
+
+    let lastCodeNumber: number | null = null;
+    for (const p of recentProjects) {
+      const code = p.eventCode?.trim();
+      if (code && /^\d{4}$/.test(code)) {
+        const num = parseInt(code, 10);
+        if (!isNaN(num) && num >= 1000 && num <= 9999) {
+          lastCodeNumber = num;
+          break;
+        }
+      }
+    }
+
+    const allProjects = await this.projectRepo
+      .createQueryBuilder('project')
+      .select(['project.eventCode'])
+      .getMany();
+
+    const existingCodes = new Set(allProjects.map((p) => p.eventCode?.trim()).filter(Boolean));
+    const all4DigitNumbers = Array.from(existingCodes)
+      .filter((c): c is string => !!c && /^\d{4}$/.test(c))
+      .map((c) => parseInt(c, 10))
+      .filter((n) => !isNaN(n) && n >= 1000 && n <= 9999);
+
+    const maxCode = all4DigitNumbers.length > 0 ? Math.max(...all4DigitNumbers) : 1000;
+
+    let candidate = lastCodeNumber !== null ? lastCodeNumber + 1 : (maxCode >= 1001 ? maxCode + 1 : 1001);
+
+    while (existingCodes.has(candidate.toString())) {
+      candidate++;
+    }
+
+    return candidate.toString();
+  }
+
   async createProject(input: CreateProjectInput, ownerId: string): Promise<Project> {
-    // Verify eventCode uniqueness
-    const existingCode = await this.projectRepo.findOne({ where: { eventCode: input.eventCode } });
-    if (existingCode) {
-      throw new ConflictError(`USSD Event Code '${input.eventCode}' is already assigned to another project.`);
+    let eventCode = input.eventCode?.trim();
+    if (!eventCode) {
+      eventCode = await this.getNextProjectCode();
+    } else {
+      // Verify eventCode uniqueness
+      const existingCode = await this.projectRepo.findOne({ where: { eventCode } });
+      if (existingCode) {
+        throw new ConflictError(`Campaign code '${eventCode}' is already assigned to another project.`);
+      }
     }
 
     const project = this.projectRepo.create({
@@ -48,7 +98,7 @@ export class ProjectService {
       organizationId: input.organizationId,
       ownerId,
       categoryId: input.categoryId,
-      eventCode: input.eventCode,
+      eventCode,
       currency: input.currency || 'GHS',
       targetAmount: input.targetAmount,
       minAmount: input.minAmount || '1.00',
@@ -57,7 +107,7 @@ export class ProjectService {
       startDate: input.startDate ? new Date(input.startDate) : undefined,
       endDate: input.endDate ? new Date(input.endDate) : undefined,
       acceptsContributions: input.acceptsContributions,
-      status: ProjectStatus.DRAFT,
+      status: input.status || ProjectStatus.PENDING_REVIEW,
     });
 
     const savedProject = await this.projectRepo.save(project);
@@ -112,7 +162,7 @@ export class ProjectService {
     search?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ projects: Project[]; total: number }> {
+  }): Promise<{ projects: Project[]; total: number; summary?: Record<string, unknown> }> {
     const page = params.page || 1;
     const limit = Math.min(params.limit || 20, 100);
     const skip = (page - 1) * limit;
@@ -201,7 +251,88 @@ export class ProjectService {
       });
     });
 
-    return { projects: projectsWithStats, total };
+    const overviewStats = await this.getOverviewStats(params.userId, params.userRole);
+
+    return { projects: projectsWithStats, total, summary: overviewStats };
+  }
+
+  async getOverviewStats(userId?: string, userRole?: string): Promise<{
+    totalRaised: number;
+    totalRaisedFormatted: string;
+    campaignsCreated: number;
+    activeCampaigns: number;
+    completedCampaigns: number;
+    draftCampaigns: number;
+    contributorsPaid: number;
+  }> {
+    const isPlatformStaff = [
+      SystemRole.SUPER_ADMIN,
+      SystemRole.PLATFORM_ADMIN,
+      SystemRole.AUDITOR,
+    ].includes(userRole as SystemRole);
+
+    const projectQuery = this.projectRepo.createQueryBuilder('project');
+    if (!isPlatformStaff && userId) {
+      projectQuery.innerJoin(
+        'project_members',
+        'pm',
+        '(pm.projectId = project.id AND pm.userId = :userId) OR project.ownerId = :userId',
+        { userId }
+      );
+    }
+
+    const projects = await projectQuery.select(['project.id', 'project.status']).getMany();
+    const campaignsCreated = projects.length;
+    const activeCampaigns = projects.filter(
+      (p) => p.status === ProjectStatus.PUBLISHED || p.status === ProjectStatus.APPROVED
+    ).length;
+    const completedCampaigns = projects.filter(
+      (p) => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.ARCHIVED
+    ).length;
+    const draftCampaigns = projects.filter(
+      (p) =>
+        p.status === ProjectStatus.DRAFT ||
+        p.status === ProjectStatus.PENDING_REVIEW ||
+        p.status === ProjectStatus.SUSPENDED
+    ).length;
+
+    const projectIds = projects.map((p) => p.id);
+    let totalRaisedPesewas = 0;
+    let contributorsPaid = 0;
+
+    if (projectIds.length > 0) {
+      const stats = await this.contributionRepo
+        .createQueryBuilder('c')
+        .select([
+          'COALESCE(SUM(CASE WHEN c.status IN (:...confirmedStatuses) THEN CAST(c.amount AS numeric) ELSE 0 END), 0) AS "totalRaised"',
+          'COUNT(DISTINCT CASE WHEN c.status IN (:...confirmedStatuses) THEN c.contributorId ELSE NULL END) AS "contributorsCount"',
+        ])
+        .where('c.projectId IN (:...projectIds)', {
+          projectIds,
+          confirmedStatuses: [
+            ContributionStatus.CONFIRMED,
+            ContributionStatus.PARTIALLY_REFUNDED,
+            ContributionStatus.REFUNDED,
+          ],
+        })
+        .getRawOne();
+
+      totalRaisedPesewas = Math.round(parseFloat(stats?.totalRaised || '0') * 100);
+      contributorsPaid = parseInt(stats?.contributorsCount || '0', 10);
+    }
+
+    return {
+      totalRaised: totalRaisedPesewas,
+      totalRaisedFormatted: `GH₵ ${(totalRaisedPesewas / 100).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+      campaignsCreated,
+      activeCampaigns,
+      completedCampaigns,
+      draftCampaigns,
+      contributorsPaid,
+    };
   }
 
   async getProjectById(id: string, userId?: string, userRole?: string): Promise<Project> {
@@ -262,8 +393,18 @@ export class ProjectService {
   }
 
   async getProjectByEventCode(eventCode: string): Promise<Project | null> {
+    const project = await this.getProjectByEventCodeRaw(eventCode);
+    if (!project) return null;
+    const now = new Date();
+    if (project.status !== ProjectStatus.PUBLISHED || !project.acceptsContributions) return null;
+    if (project.startDate && new Date(project.startDate) > now) return null;
+    if (project.endDate && new Date(project.endDate) < now) return null;
+    return project;
+  }
+
+  async getProjectByEventCodeRaw(eventCode: string): Promise<Project | null> {
     return this.projectRepo.findOne({
-      where: { eventCode, status: ProjectStatus.PUBLISHED, acceptsContributions: true },
+      where: { eventCode },
       relations: ['purposes', 'purposes.purpose', 'paymentMethods'],
     });
   }
@@ -313,6 +454,33 @@ export class ProjectService {
     return saved;
   }
 
+  async deleteProject(id: string, userId: string, userRole: string): Promise<void> {
+    const project = await this.getProjectById(id, userId, userRole);
+    if (project.status !== ProjectStatus.DRAFT) {
+      throw new BadRequestError('Only draft campaigns can be deleted.');
+    }
+
+    const count = await this.contributionRepo.count({ where: { projectId: id } });
+    if (count > 0) {
+      throw new BadRequestError('Cannot delete a campaign that already has contributions.');
+    }
+
+    await this.memberRepo.delete({ projectId: id });
+    await this.paymentMethodRepo.delete({ projectId: id });
+    await this.projectPurposeRepo.delete({ projectId: id });
+    await this.settingRepo.delete({ projectId: id });
+    await this.projectRepo.delete(id);
+
+    await auditService.log({
+      userId,
+      organizationId: project.organizationId,
+      entityType: 'PROJECT',
+      entityId: project.id,
+      action: 'DELETE_PROJECT',
+      oldValues: { name: project.name, eventCode: project.eventCode, status: project.status },
+    });
+  }
+
   async updateProjectStatus(
     id: string,
     input: UpdateProjectStatusInput,
@@ -321,22 +489,57 @@ export class ProjectService {
   ): Promise<Project> {
     const project = await this.getProjectById(id, userId, userRole);
     const currentStatus = project.status;
-    const targetStatus = input.status;
+    let targetStatus = input.status;
 
     // Validate state transition
     const validTransitions: Record<ProjectStatus, ProjectStatus[]> = {
       [ProjectStatus.DRAFT]: [ProjectStatus.PENDING_REVIEW, ProjectStatus.ARCHIVED],
-      [ProjectStatus.PENDING_REVIEW]: [ProjectStatus.APPROVED, ProjectStatus.DRAFT],
-      [ProjectStatus.APPROVED]: [ProjectStatus.PUBLISHED, ProjectStatus.DRAFT],
+      [ProjectStatus.PENDING_REVIEW]: [
+        ProjectStatus.APPROVED,
+        ProjectStatus.SCHEDULED,
+        ProjectStatus.PUBLISHED,
+        ProjectStatus.REJECTED,
+        ProjectStatus.DRAFT,
+      ],
+      [ProjectStatus.APPROVED]: [
+        ProjectStatus.SCHEDULED,
+        ProjectStatus.PUBLISHED,
+        ProjectStatus.REJECTED,
+        ProjectStatus.DRAFT,
+      ],
+      [ProjectStatus.SCHEDULED]: [
+        ProjectStatus.PUBLISHED,
+        ProjectStatus.SUSPENDED,
+        ProjectStatus.REJECTED,
+        ProjectStatus.DRAFT,
+      ],
       [ProjectStatus.PUBLISHED]: [ProjectStatus.SUSPENDED, ProjectStatus.COMPLETED],
+      [ProjectStatus.REJECTED]: [
+        ProjectStatus.PENDING_REVIEW,
+        ProjectStatus.DRAFT,
+        ProjectStatus.ARCHIVED,
+      ],
       [ProjectStatus.SUSPENDED]: [
         ProjectStatus.PUBLISHED,
+        ProjectStatus.SCHEDULED,
         ProjectStatus.COMPLETED,
         ProjectStatus.ARCHIVED,
       ],
       [ProjectStatus.COMPLETED]: [ProjectStatus.ARCHIVED],
       [ProjectStatus.ARCHIVED]: [],
     };
+
+    // When approving/publishing, check if the start date hasn't reached yet
+    if (targetStatus === ProjectStatus.PUBLISHED || targetStatus === ProjectStatus.APPROVED) {
+      const now = new Date();
+      if (project.startDate && new Date(project.startDate) > now) {
+        targetStatus = ProjectStatus.SCHEDULED;
+        project.acceptsContributions = false;
+      } else {
+        targetStatus = ProjectStatus.PUBLISHED;
+        project.acceptsContributions = true;
+      }
+    }
 
     // Platform Super Admin / Platform Admin can override transitions
     const isPlatformAdmin = [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(
@@ -357,6 +560,9 @@ export class ProjectService {
     }
 
     project.status = targetStatus;
+    if (targetStatus === ProjectStatus.PUBLISHED) {
+      project.acceptsContributions = true;
+    }
     const saved = await this.projectRepo.save(project);
 
     await auditService.log({
@@ -439,6 +645,9 @@ export class ProjectService {
     return saved;
   }
 
+  
+
+
   async configurePaymentMethods(
     projectId: string,
     input: ConfigurePaymentMethodsInput,
@@ -473,6 +682,9 @@ export class ProjectService {
 
     return saved;
   }
+
+  
+
 }
 
 export const projectService = new ProjectService();
