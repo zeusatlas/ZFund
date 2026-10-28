@@ -5,6 +5,8 @@ import { ContributionStatus } from '../database/entities/contribution.entity';
 import { ProjectStatus } from '../database/entities/project.entity';
 import { UserStatus } from '../database/entities/user.entity';
 import { adminDashboardService, TrendPeriod } from '../services/admin-dashboard.service';
+import { projectService } from '../services/project.service';
+import { ussdFlowService } from '../services/ussd-flow.service';
 
 const pageParams = (req: Request, defaultLimit: number) => ({
   page: parseInt(req.query.page as string, 10) || 1,
@@ -121,6 +123,33 @@ export class AdminController {
         status,
       });
       ApiResponse.paginated(res, result.items, page, limit, result.total, 'Contributions retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateFundStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const fundId = requireId(req.params.id, 'Campaign');
+      const status = req.body.status as ProjectStatus;
+      const notes = req.body.notes as string | undefined;
+
+      const updated = await projectService.updateProjectStatus(
+        fundId,
+        { status, notes },
+        req.user!.id,
+        req.user!.role
+      );
+
+      // If published, ensure USSD flow exists
+      if (status === ProjectStatus.PUBLISHED) {
+        const existingFlow = await ussdFlowService.getProjectPublishedFlow(fundId);
+        if (!existingFlow) {
+          await ussdFlowService.initializeProjectFlow(fundId, undefined, req.user?.id);
+        }
+      }
+
+      ApiResponse.success(res, updated, `Campaign status updated to ${status}`);
     } catch (err) {
       next(err);
     }

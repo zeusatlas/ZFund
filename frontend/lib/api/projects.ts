@@ -4,7 +4,9 @@ export type ProjectStatus =
   | "DRAFT"
   | "PENDING_REVIEW"
   | "APPROVED"
+  | "SCHEDULED"
   | "PUBLISHED"
+  | "REJECTED"
   | "SUSPENDED"
   | "COMPLETED"
   | "ARCHIVED";
@@ -67,11 +69,12 @@ export interface CreateProjectInput {
   minAmount?: string;
   maxAmount?: string;
   welcomeMessage?: string;
-  startDate?: string;
+  startDate: string;
   endDate?: string;
   acceptsContributions?: boolean;
   categoryId?: string;
   organizationId?: string;
+  status?: ProjectStatus;
 }
 
 export interface UpdateProjectInput extends Partial<Omit<CreateProjectInput, "eventCode">> {

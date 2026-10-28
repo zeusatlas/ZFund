@@ -1,7 +1,13 @@
 const styles: Record<string, { label: string; className: string }> = {
   PUBLISHED: { label: "Published", className: "bg-[#e9f4ef] text-[#287754]" },
-  DRAFT: { label: "Draft", className: "bg-[#fff4dc] text-[#a26c12]" },
+  APPROVED: { label: "Approved", className: "bg-[#e9f4ef] text-[#287754]" },
+  SCHEDULED: { label: "Upcoming", className: "bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd]" },
+  PENDING_REVIEW: { label: "Pending Review", className: "bg-[#fff4dc] text-[#a26c12] border border-[#f0d696]/60" },
+  REJECTED: { label: "Rejected", className: "bg-[#fbeaea] text-[#a13d3d] border border-crimson/20" },
+  DRAFT: { label: "Draft", className: "bg-stone text-steel" },
   SUSPENDED: { label: "Suspended", className: "bg-[#fbeaea] text-[#a13d3d]" },
+  COMPLETED: { label: "Completed", className: "bg-[#eaf0f8] text-[#234d79]" },
+  ARCHIVED: { label: "Archived", className: "bg-stone text-steel" },
 };
 
 export function CampaignStatusBadge({ status }: Readonly<{ status: string }>) {

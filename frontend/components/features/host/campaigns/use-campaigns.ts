@@ -36,11 +36,25 @@ export function projectToCampaign(project: BackendProject): Campaign {
     DRAFT: "Draft",
     PENDING_REVIEW: "Draft",
     APPROVED: "Active",
+    SCHEDULED: "Upcoming",
     PUBLISHED: "Active",
+    REJECTED: "Draft",
     SUSPENDED: "Draft",
     COMPLETED: "Completed",
     ARCHIVED: "Completed",
   };
+
+  const now = new Date();
+  const hasFutureStartDate = Boolean(project.startDate && new Date(project.startDate) > now);
+  let resolvedStatus = statusMap[project.status] || "Active";
+  if (
+    hasFutureStartDate &&
+    (project.status === "APPROVED" ||
+      project.status === "PUBLISHED" ||
+      project.status === "SCHEDULED")
+  ) {
+    resolvedStatus = "Upcoming";
+  }
 
   return {
     id: project.id,
@@ -52,10 +66,12 @@ export function projectToCampaign(project: BackendProject): Campaign {
     goal: goalInPesewas,
     raised: raisedInPesewas,
     contributors,
-    status: statusMap[project.status] || "Active",
+    status: resolvedStatus,
     rawStatus: project.status,
     created: project.createdAt ? project.createdAt.slice(0, 10) : "",
     closing: project.endDate ? project.endDate.slice(0, 10) : "",
+    startDate: project.startDate ? project.startDate.slice(0, 10) : undefined,
+    welcomeMessage: project.welcomeMessage || undefined,
     currency: project.currency,
     acceptsContributions: project.acceptsContributions,
   };

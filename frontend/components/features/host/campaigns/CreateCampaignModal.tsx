@@ -109,10 +109,10 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
     // Use the auto-generated eventCode
     const code = String(effectiveCode || formData.get("eventCode") || "").trim();
     const goal = String(formData.get("goal") || "").trim();
+    const startDate = String(formData.get("startDate") || "").trim();
     const closing = String(formData.get("closing") || "").trim();
     const location = String(formData.get("location") || "").trim();
     const description = String(formData.get("description") || "").trim();
-    const welcomeMessage = String(formData.get("welcomeMessage") || "").trim();
 
     if (name.length < 2) {
       const msg = "Campaign name must be at least 2 characters.";
@@ -132,19 +132,35 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
       toast.error(msg);
       return;
     }
+    if (!startDate) {
+      const msg = "Start date is required.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (startDate < today) {
+      const msg = "Start date must be today or a future date.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     if (closing && closing < today) {
       const msg = "Closing date must be today or later.";
       setError(msg);
       toast.error(msg);
       return;
     }
+    if (closing && startDate > closing) {
+      const msg = "Start date cannot be after closing date.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
 
     try {
-      const computedWelcome =
-        welcomeMessage ||
-        (location
-          ? `Welcome to ${name} (${location}). Dial 1 to contribute.`
-          : `Welcome to ${name}. Dial 1 to contribute.`);
+      const computedWelcome = location
+        ? `Welcome to ${name} (${location}). Dial 1 to contribute.`
+        : `Welcome to ${name}. Dial 1 to contribute.`;
 
       const payload: CreateProjectInput = {
         name,
@@ -157,11 +173,15 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
         welcomeMessage: computedWelcome.slice(0, 120),
         description: description || undefined,
         categoryId: selectedCategory.value,
+        startDate: `${startDate}T00:00:00.000Z`,
         endDate: closing ? `${closing}T23:59:59.000Z` : undefined,
+        status: "DRAFT",
       };
 
       await createMutation.mutateAsync(payload);
-      toast.success(`Campaign "${name}" created successfully!`);
+      toast.success(
+        `Campaign "${name}" created in Draft. You can now configure steps and submit for admin review!`
+      );
       onCreated(name);
       closeDrawer();
     } catch (err: unknown) {
@@ -329,25 +349,46 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                     </div>
                   </div>
 
-                  {/* Goal & Closing Date */}
+                  {/* Goal */}
+                  <div>
+                    <label htmlFor="new-campaign-goal" className="text-sm font-medium">
+                      Fundraising goal (GH₵) <span className="text-crimson">*</span>
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      max="100000000"
+                      step="0.01"
+                      inputMode="decimal"
+                      id="new-campaign-goal"
+                      name="goal"
+                      placeholder="25000.00"
+                      className={inputClass}
+                      disabled={createMutation.isPending}
+                    />
+                  </div>
+
+                  {/* Start Date & Closing Date */}
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="new-campaign-goal" className="text-sm font-medium">
-                        Fundraising goal (GH₵) <span className="text-crimson">*</span>
+                      <label htmlFor="new-campaign-start" className="text-sm font-medium">
+                        Start date <span className="text-crimson">*</span>
                       </label>
                       <input
                         required
-                        type="number"
-                        min="1"
-                        max="100000000"
-                        step="0.01"
-                        inputMode="decimal"
-                        id="new-campaign-goal"
-                        name="goal"
-                        placeholder="25000.00"
+                        type="date"
+                        min={today}
+                        max="9999-12-31"
+                        id="new-campaign-start"
+                        name="startDate"
+                        defaultValue={today}
                         className={inputClass}
                         disabled={createMutation.isPending}
                       />
+                      <p className="mt-1 text-[11px] text-steel">
+                        Mandatory start date. Campaign is Upcoming until this date is reached.
+                      </p>
                     </div>
                     <div>
                       <label htmlFor="new-campaign-closing" className="text-sm font-medium">
@@ -362,25 +403,10 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                         className={inputClass}
                         disabled={createMutation.isPending}
                       />
+                      <p className="mt-1 text-[11px] text-steel">
+                        Optional deadline for contributions.
+                      </p>
                     </div>
-                  </div>
-
-                  {/* USSD Welcome Prompt */}
-                  <div>
-                    <label htmlFor="new-campaign-welcome" className="text-sm font-medium">
-                      USSD Welcome Message (Optional)
-                    </label>
-                    <input
-                      maxLength={120}
-                      id="new-campaign-welcome"
-                      name="welcomeMessage"
-                      placeholder="e.g. Welcome to Ho Borehole Fund. Dial 1 to donate."
-                      className={inputClass}
-                      disabled={createMutation.isPending}
-                    />
-                    <p className="mt-1 text-xs text-steel">
-                      Displayed on donor&apos;s handset upon dialing the campaign code (max 120 chars).
-                    </p>
                   </div>
 
                   {/* Description */}

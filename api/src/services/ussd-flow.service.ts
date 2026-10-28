@@ -394,6 +394,10 @@ export class UssdFlowService {
       project.welcomeMessage ||
       `Welcome to ${project.name}.\nSelect:`;
 
+    // Persist welcome message to project entity
+    project.welcomeMessage = welcomePrompt.slice(0, 120);
+    await this.projectRepo.save(project);
+
     const welcomeMenu = await this.menuRepo.save(
       this.menuRepo.create({
         flowVersionId: version.id,
@@ -407,7 +411,7 @@ export class UssdFlowService {
     );
 
     // Options from input or project.purposes
-    const purposeList: Array<{ label: string; purposeId?: string }> =
+    const purposeList: Array<{ label: string; purposeId?: string; subSteps?: string[] }> =
       input?.purposes && input.purposes.length > 0
         ? input.purposes
         : project.purposes && project.purposes.length > 0
@@ -416,25 +420,80 @@ export class UssdFlowService {
             purposeId: p.purposeId,
           }))
         : [
-            { label: 'Offering' },
-            { label: 'Tithe' },
+            { label: 'General Donation' },
+            { label: 'Building Fund' },
+            { label: 'Welfare' },
           ];
 
     let optionOrder = 1;
     for (const p of purposeList) {
+      const hasSubSteps = Array.isArray(p.subSteps) && p.subSteps.length > 0;
+      const subMenuKey = `SUB_PURPOSE_${optionOrder}`;
+      const targetMenuKey = hasSubSteps ? subMenuKey : 'AMOUNT_INPUT';
+
       await this.optionRepo.save(
         this.optionRepo.create({
           menuId: welcomeMenu.id,
           displayOrder: optionOrder,
           optionKey: String(optionOrder),
           label: p.label.slice(0, 50),
-          optionType: UssdOptionType.ACTION,
-          actionReference: 'SELECT_PURPOSE',
-          targetMenuKey: 'AMOUNT_INPUT',
+          optionType: hasSubSteps ? UssdOptionType.NAVIGATION : UssdOptionType.ACTION,
+          actionReference: hasSubSteps ? undefined : 'SELECT_PURPOSE',
+          targetMenuKey,
           validationConfig: p.purposeId ? { purposeId: p.purposeId } : {},
           isActive: true,
         })
       );
+
+      if (hasSubSteps && p.subSteps) {
+        const subMenu = await this.menuRepo.save(
+          this.menuRepo.create({
+            flowVersionId: version.id,
+            menuKey: subMenuKey,
+            title: `${p.label} Submenu`,
+            prompt: `Select ${p.label.slice(0, 30)}:\n`.slice(0, 120),
+            menuType: UssdMenuType.SELECT,
+            displayOrder: 2,
+            isActive: true,
+          })
+        );
+
+        let subOrder = 1;
+        for (const sub of p.subSteps) {
+          await this.optionRepo.save(
+            this.optionRepo.create({
+              menuId: subMenu.id,
+              displayOrder: subOrder,
+              optionKey: String(subOrder),
+              label: sub.slice(0, 50),
+              optionType: UssdOptionType.ACTION,
+              actionReference: 'SELECT_SUB_PURPOSE',
+              targetMenuKey: 'AMOUNT_INPUT',
+              validationConfig: {
+                parentPurpose: p.label,
+                subPurpose: sub,
+                purposeId: p.purposeId,
+              },
+              isActive: true,
+            })
+          );
+          subOrder++;
+        }
+
+        // Back navigation option
+        await this.optionRepo.save(
+          this.optionRepo.create({
+            menuId: subMenu.id,
+            displayOrder: subOrder,
+            optionKey: String(subOrder),
+            label: 'Back',
+            optionType: UssdOptionType.NAVIGATION,
+            targetMenuKey: 'WELCOME',
+            isActive: true,
+          })
+        );
+      }
+
       optionOrder++;
     }
 
@@ -452,12 +511,15 @@ export class UssdFlowService {
     );
 
     // 2. Amount Input Menu
+    const amountPrompt =
+      input?.amountPrompt ||
+      `Enter Amount in ${input?.currency || project.currency || 'GHS'}:`;
     await this.menuRepo.save(
       this.menuRepo.create({
         flowVersionId: version.id,
         menuKey: 'AMOUNT_INPUT',
         title: 'Enter Amount',
-        prompt: `Enter Amount in ${project.currency || 'GHS'}:`,
+        prompt: amountPrompt.slice(0, 120),
         menuType: UssdMenuType.INPUT,
         displayOrder: 2,
         isActive: true,
@@ -465,12 +527,15 @@ export class UssdFlowService {
     );
 
     // 3. Confirm Payment Menu
+    const confirmPrompt =
+      input?.confirmPrompt ||
+      `Contribute ${input?.currency || project.currency || 'GHS'} {amount} to ${project.name}?`;
     const confirmMenu = await this.menuRepo.save(
       this.menuRepo.create({
         flowVersionId: version.id,
         menuKey: 'CONFIRM_PAYMENT',
         title: 'Confirm Contribution',
-        prompt: `Contribute ${project.currency || 'GHS'} {amount} to ${project.name}?`,
+        prompt: confirmPrompt.slice(0, 120),
         menuType: UssdMenuType.SELECT,
         displayOrder: 3,
         isActive: true,
@@ -499,12 +564,15 @@ export class UssdFlowService {
     ]);
 
     // 4. Enter Payment OTP Menu
+    const otpPrompt =
+      input?.otpPrompt ||
+      'Enter the OTP/voucher code sent to your phone (or 0 to cancel):';
     await this.menuRepo.save(
       this.menuRepo.create({
         flowVersionId: version.id,
         menuKey: 'ENTER_PAYMENT_OTP',
         title: 'Enter Payment OTP',
-        prompt: 'Enter the OTP/voucher code sent to your phone (or 0 to cancel):',
+        prompt: otpPrompt.slice(0, 120),
         menuType: UssdMenuType.INPUT,
         displayOrder: 4,
         isActive: true,

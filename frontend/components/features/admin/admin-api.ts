@@ -33,7 +33,14 @@ export type Fund = {
   createdAt: string;
 };
 
-export type FundCounts = { total: number; published: number; draft: number; suspended: number; raised: string };
+export type FundCounts = {
+  total: number;
+  published: number;
+  draft: number;
+  suspended: number;
+  pendingReview?: number;
+  raised: string;
+};
 
 export type FundDetail = Fund & {
   description?: string;
@@ -229,5 +236,45 @@ export function useUpdateHostStatus() {
       );
     },
     onError: (error) => toast.error((error as { message?: string }).message ?? "Could not update the host."),
+  });
+}
+
+export function useUpdateCampaignStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      status,
+      notes,
+    }: {
+      id: string;
+      status: "PUBLISHED" | "APPROVED" | "DRAFT" | "SUSPENDED" | "REJECTED" | "SCHEDULED";
+      notes?: string;
+    }) => {
+      const { data } = await api.patch<ApiEnvelope<Fund>>(`/admin/funds/${id}/status`, {
+        status,
+        notes: notes || undefined,
+      });
+      return data.data;
+    },
+    onSuccess: (fund) => {
+      queryClient.invalidateQueries({ queryKey: adminRoot });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      const verb =
+        fund.status === "PUBLISHED"
+          ? "approved and is now live on the USSD network!"
+          : fund.status === "SCHEDULED"
+            ? "approved and scheduled to go live on start date!"
+            : fund.status === "REJECTED"
+              ? "rejected"
+              : fund.status === "DRAFT"
+                ? "returned to draft"
+                : fund.status === "APPROVED"
+                  ? "approved"
+                  : "updated";
+      toast.success(`Campaign "${fund.name}" ${verb}.`);
+    },
+    onError: (error) =>
+      toast.error((error as { message?: string }).message ?? "Could not update the campaign status."),
   });
 }

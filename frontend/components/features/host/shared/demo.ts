@@ -1,4 +1,4 @@
-export type CampaignStatus = "Active" | "Completed" | "Draft";
+export type CampaignStatus = "Active" | "Upcoming" | "Completed" | "Draft";
 export type Campaign = {
   id: string;
   name: string;
@@ -9,6 +9,8 @@ export type Campaign = {
   status: CampaignStatus;
   created: string;
   closing: string;
+  startDate?: string;
+  welcomeMessage?: string;
   eventCode?: string;
   rawStatus?: string;
   currency?: string;

@@ -37,7 +37,7 @@ export default function Modal({ title, eyebrow, onClose, children, footer }: Rea
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-0 bg-white shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4 border-b border-navy/10 p-5 sm:p-6">
           <div>

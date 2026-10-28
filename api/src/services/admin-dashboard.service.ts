@@ -1,4 +1,4 @@
-import { In } from 'typeorm';
+import { In, Not } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
@@ -86,6 +86,9 @@ export interface FundCounts {
   published: number;
   draft: number;
   suspended: number;
+  pendingReview: number;
+  rejected?: number;
+  approved?: number;
   raised: string;
 }
 
@@ -398,7 +401,12 @@ export class AdminDashboardService {
     const limit = Math.min(params.limit || 10, 100);
 
     const query = this.projectRepo.createQueryBuilder('p');
-    if (params.status) query.andWhere('p.status = :status', { status: params.status });
+    if (params.status && params.status !== ProjectStatus.DRAFT) {
+      query.andWhere('p.status = :status', { status: params.status });
+    } else {
+      // Exclude campaigns created by host which are saved as draft
+      query.andWhere('p.status != :draftStatus', { draftStatus: ProjectStatus.DRAFT });
+    }
     if (params.ownerId) query.andWhere('p.ownerId = :ownerId', { ownerId: params.ownerId });
     if (params.search) {
       query.andWhere('(LOWER(p.name) LIKE :s OR LOWER(p.eventCode) LIKE :s)', {
@@ -552,13 +560,29 @@ export class AdminDashboardService {
 
   async getFundCounts(): Promise<FundCounts> {
     const countFor = (status: ProjectStatus) => this.projectRepo.count({ where: { status } });
-    const [published, draft, suspended, collected] = await Promise.all([
-      countFor(ProjectStatus.PUBLISHED),
-      countFor(ProjectStatus.DRAFT),
-      countFor(ProjectStatus.SUSPENDED),
-      this.collectedBetween(),
-    ]);
-    return { total: await this.projectRepo.count(), published, draft, suspended, raised: this.sum(collected) };
+    const [published, draft, suspended, pendingReview, rejected, approved, collected] =
+      await Promise.all([
+        countFor(ProjectStatus.PUBLISHED),
+        countFor(ProjectStatus.DRAFT),
+        countFor(ProjectStatus.SUSPENDED),
+        countFor(ProjectStatus.PENDING_REVIEW),
+        countFor(ProjectStatus.REJECTED),
+        countFor(ProjectStatus.APPROVED),
+        this.collectedBetween(),
+      ]);
+    const totalVisible = await this.projectRepo.count({
+      where: { status: Not(ProjectStatus.DRAFT) },
+    });
+    return {
+      total: totalVisible,
+      published,
+      draft,
+      suspended,
+      pendingReview,
+      rejected,
+      approved,
+      raised: this.sum(collected),
+    };
   }
 
   async getTransactionCounts(): Promise<TransactionCounts> {

@@ -104,7 +104,7 @@ export class ProjectService {
       startDate: input.startDate ? new Date(input.startDate) : undefined,
       endDate: input.endDate ? new Date(input.endDate) : undefined,
       acceptsContributions: input.acceptsContributions,
-      status: ProjectStatus.DRAFT,
+      status: input.status || ProjectStatus.PENDING_REVIEW,
     });
 
     const savedProject = await this.projectRepo.save(project);
@@ -390,8 +390,18 @@ export class ProjectService {
   }
 
   async getProjectByEventCode(eventCode: string): Promise<Project | null> {
+    const project = await this.getProjectByEventCodeRaw(eventCode);
+    if (!project) return null;
+    const now = new Date();
+    if (project.status !== ProjectStatus.PUBLISHED || !project.acceptsContributions) return null;
+    if (project.startDate && new Date(project.startDate) > now) return null;
+    if (project.endDate && new Date(project.endDate) < now) return null;
+    return project;
+  }
+
+  async getProjectByEventCodeRaw(eventCode: string): Promise<Project | null> {
     return this.projectRepo.findOne({
-      where: { eventCode, status: ProjectStatus.PUBLISHED, acceptsContributions: true },
+      where: { eventCode },
       relations: ['purposes', 'purposes.purpose', 'paymentMethods'],
     });
   }
@@ -476,22 +486,57 @@ export class ProjectService {
   ): Promise<Project> {
     const project = await this.getProjectById(id, userId, userRole);
     const currentStatus = project.status;
-    const targetStatus = input.status;
+    let targetStatus = input.status;
 
     // Validate state transition
     const validTransitions: Record<ProjectStatus, ProjectStatus[]> = {
       [ProjectStatus.DRAFT]: [ProjectStatus.PENDING_REVIEW, ProjectStatus.ARCHIVED],
-      [ProjectStatus.PENDING_REVIEW]: [ProjectStatus.APPROVED, ProjectStatus.DRAFT],
-      [ProjectStatus.APPROVED]: [ProjectStatus.PUBLISHED, ProjectStatus.DRAFT],
+      [ProjectStatus.PENDING_REVIEW]: [
+        ProjectStatus.APPROVED,
+        ProjectStatus.SCHEDULED,
+        ProjectStatus.PUBLISHED,
+        ProjectStatus.REJECTED,
+        ProjectStatus.DRAFT,
+      ],
+      [ProjectStatus.APPROVED]: [
+        ProjectStatus.SCHEDULED,
+        ProjectStatus.PUBLISHED,
+        ProjectStatus.REJECTED,
+        ProjectStatus.DRAFT,
+      ],
+      [ProjectStatus.SCHEDULED]: [
+        ProjectStatus.PUBLISHED,
+        ProjectStatus.SUSPENDED,
+        ProjectStatus.REJECTED,
+        ProjectStatus.DRAFT,
+      ],
       [ProjectStatus.PUBLISHED]: [ProjectStatus.SUSPENDED, ProjectStatus.COMPLETED],
+      [ProjectStatus.REJECTED]: [
+        ProjectStatus.PENDING_REVIEW,
+        ProjectStatus.DRAFT,
+        ProjectStatus.ARCHIVED,
+      ],
       [ProjectStatus.SUSPENDED]: [
         ProjectStatus.PUBLISHED,
+        ProjectStatus.SCHEDULED,
         ProjectStatus.COMPLETED,
         ProjectStatus.ARCHIVED,
       ],
       [ProjectStatus.COMPLETED]: [ProjectStatus.ARCHIVED],
       [ProjectStatus.ARCHIVED]: [],
     };
+
+    // When approving/publishing, check if the start date hasn't reached yet
+    if (targetStatus === ProjectStatus.PUBLISHED || targetStatus === ProjectStatus.APPROVED) {
+      const now = new Date();
+      if (project.startDate && new Date(project.startDate) > now) {
+        targetStatus = ProjectStatus.SCHEDULED;
+        project.acceptsContributions = false;
+      } else {
+        targetStatus = ProjectStatus.PUBLISHED;
+        project.acceptsContributions = true;
+      }
+    }
 
     // Platform Super Admin / Platform Admin can override transitions
     const isPlatformAdmin = [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(
@@ -508,6 +553,9 @@ export class ProjectService {
     }
 
     project.status = targetStatus;
+    if (targetStatus === ProjectStatus.PUBLISHED) {
+      project.acceptsContributions = true;
+    }
     const saved = await this.projectRepo.save(project);
 
     await auditService.log({
