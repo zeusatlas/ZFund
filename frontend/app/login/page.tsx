@@ -8,9 +8,9 @@ import { adminRoles, useRequestOtp, useVerifyOtp } from "@/lib/auth/auth";
 import type { ApiError } from "@/lib/api/client";
 
 const inputClass =
-  "mt-1.5 w-full rounded-xl border border-navy/15 bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-gold";
+  "mt-2 w-full rounded-2xl border border-navy/15 bg-stone-light px-4 py-3.5 text-sm text-ink outline-none transition-colors placeholder:text-steel/60 focus:border-gold focus:bg-white";
 const buttonClass =
-  "w-full rounded-xl bg-navy px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-steel disabled:opacity-60";
+  "w-full rounded-2xl bg-navy px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-steel disabled:cursor-not-allowed disabled:opacity-60";
 const CODE_LENGTH = 6;
 const CODE_SECONDS = 120; // matches how long the code stays valid
 const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -74,8 +74,9 @@ export default function LoginPage() {
     <AuthShell>
       {identity ? (
         <>
-          <h1 className="text-[30px] font-medium tracking-tight text-navy">Enter your code</h1>
-          <p className="mt-2 text-sm text-steel">
+          <p className="text-eyebrow text-gold">Secure sign in</p>
+          <h1 className="mt-3 text-[32px] font-semibold tracking-[-1px] text-navy">Enter your code</h1>
+          <p className="mt-3 text-sm leading-relaxed text-steel">
             We sent a {CODE_LENGTH}-digit code to <span className="font-medium text-navy">{identity.phone}</span>.
           </p>
           <p role="timer" aria-live="off" className="mt-4 text-sm font-medium text-navy">
@@ -84,7 +85,7 @@ export default function LoginPage() {
 
           <form onSubmit={submitCode} className="mt-8 space-y-5">
             <OtpInput value={code} onChange={setCode} disabled={locked || cooldown === 0} />
-            {error && <p role="alert" className="text-sm text-[#a13d3d]">{error}</p>}
+            {error && <p role="alert" className="text-sm text-crimson">{error}</p>}
             <button type="submit" disabled={verifyOtp.isPending || locked || cooldown === 0 || code.length < CODE_LENGTH} className={buttonClass}>
               {verifyOtp.isPending ? "Verifying…" : "Verify and sign in"}
             </button>
@@ -95,7 +96,7 @@ export default function LoginPage() {
               type="button"
               disabled={cooldown > 0 || requestOtp.isPending}
               onClick={() => sendCode(identity)}
-              className="font-medium text-navy underline decoration-gold decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50"
+              className="font-semibold text-navy underline decoration-gold decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50"
             >
               {cooldown > 0 ? `Resend code in ${formatTime(cooldown)}` : "Resend code"}
             </button>
@@ -103,28 +104,29 @@ export default function LoginPage() {
         </>
       ) : (
         <>
-          <h1 className="text-[30px] font-medium tracking-tight text-navy">Welcome back</h1>
-          <p className="mt-2 text-sm text-steel">
+          <p className="text-eyebrow text-gold">Host and admin access</p>
+          <h1 className="mt-3 text-[32px] font-semibold tracking-[-1px] text-navy">Welcome back</h1>
+          <p className="mt-3 text-sm leading-relaxed text-steel">
             Enter the email and phone number your administrator registered. We&apos;ll text you a code.
           </p>
 
           <form onSubmit={submitIdentity} className="mt-8 space-y-5">
-            <label className="block text-sm font-medium text-ink">
+            <label className="block text-sm font-semibold text-ink">
               Email
               <input required type="email" name="email" autoComplete="email" placeholder="you@example.com" className={inputClass} />
             </label>
-            <label className="block text-sm font-medium text-ink">
+            <label className="block text-sm font-semibold text-ink">
               Phone number
               <input required type="tel" name="phone" autoComplete="tel" placeholder="0541234567" className={inputClass} />
             </label>
-            {error && <p role="alert" className="text-sm text-[#a13d3d]">{error}</p>}
+            {error && <p role="alert" className="text-sm text-crimson">{error}</p>}
             <button type="submit" disabled={requestOtp.isPending} className={buttonClass}>
               {requestOtp.isPending ? "Sending code…" : "Send code"}
             </button>
           </form>
 
-          <p className="mt-8 text-sm text-steel">
-            Accounts are created by your ZFund administrator. Need access? Contact them to be added.
+          <p className="mt-8 rounded-2xl bg-stone-light px-4 py-3 text-xs leading-relaxed text-steel">
+            Accounts are created by your RaiseFundz administrator. Need access? Contact them to be added.
           </p>
         </>
       )}

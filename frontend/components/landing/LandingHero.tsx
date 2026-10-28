@@ -85,7 +85,7 @@ function DashboardMockup() {
       <div>
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-ash">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-lime to-[#c48a1e]"
+            className="h-full rounded-full bg-lime"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -121,7 +121,7 @@ export default function LandingHero() {
     <section className="relative overflow-hidden bg-parchment text-off-ink">
       {/* Background glows */}
       <div className="pointer-events-none absolute -right-40 -top-40 h-[600px] w-[600px] rounded-full bg-lime/15 blur-[80px]" />
-      <div className="pointer-events-none absolute -bottom-32 left-0 h-[400px] w-[400px] rounded-full bg-[#d47f57]/12 blur-[70px]" />
+      <div className="pointer-events-none absolute -bottom-32 left-0 h-[400px] w-[400px] rounded-full bg-crimson/10 blur-[70px]" />
 
       <div className="relative mx-auto max-w-[1240px] px-5 py-16 sm:px-6 md:py-24 lg:py-28">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
@@ -131,13 +131,13 @@ export default function LandingHero() {
             <h1 className="mb-6 text-[clamp(48px,6vw,80px)] font-bold leading-[0.93] tracking-[-3.5px] text-off-ink">
               Raise funds.
               <br />
-              <span className="text-gradient-lime">Any phone.</span>
+              <span className="text-lime-dark">Any phone.</span>
               <br />
               <span className="text-graphite font-medium">Any network.</span>
             </h1>
 
             <p className="mb-10 max-w-[440px] text-[18px] leading-[1.6] text-graphite">
-              ZFund lets your community donate via USSD shortcode — no app, no internet needed.
+              RaiseFundz lets your community donate via USSD shortcode — no app, no internet needed.
               Launch a campaign, share a code, collect in real time.
             </p>
 
@@ -171,7 +171,7 @@ export default function LandingHero() {
             </div>
 
             {/* Main mockup */}
-            <div className="animate-float rounded-[36px] border border-ash/50 bg-white/50 p-3 shadow-2xl backdrop-blur-sm sm:p-4">
+            <div className="animate-float rounded-[36px] border border-ash/50 bg-white/50 p-3 shadow-2xl sm:p-4">
               <div className="rounded-[28px] bg-parchment p-5 shadow-xl sm:p-6">
                 <DashboardMockup />
               </div>
@@ -179,7 +179,7 @@ export default function LandingHero() {
 
             {/* USSD code badge */}
             <div
-              className="absolute -bottom-4 -right-2 z-10 hidden rounded-2xl bg-gradient-to-br from-[#d47f57] to-[#c06040] px-4 py-3 shadow-xl sm:block"
+              className="absolute -bottom-4 -right-2 z-10 hidden rounded-2xl bg-crimson px-4 py-3 shadow-xl sm:block"
               style={{ animation: "float 7s 1.2s ease-in-out infinite" }}
             >
               <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Give via USSD</p>

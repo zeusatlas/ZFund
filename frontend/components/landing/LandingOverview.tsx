@@ -38,7 +38,7 @@ function SocialProofTicker() {
 
 function StatsBar() {
   const stats = [
-    { value: "GH₵ 2.4M+", label: "raised through ZFund" },
+    { value: "GH₵ 2.4M+", label: "raised through RaiseFundz" },
     { value: "12,000+", label: "contributions processed" },
     { value: "98%", label: "successful campaigns" },
     { value: "16 regions", label: "reached across Ghana" },
@@ -71,7 +71,7 @@ function FeatureCard({
   return (
     <div className={`card-hover group rounded-[28px] p-7 ${
       highlight
-        ? "bg-gradient-to-br from-off-ink to-charcoal text-parchment"
+        ? "bg-off-ink text-parchment"
         : "border border-ash/70 bg-white"
     }`}>
       <div className={`mb-5 flex h-11 w-11 items-center justify-center rounded-[18px] transition-colors ${
@@ -119,10 +119,10 @@ function StepCard({
   return (
     <div className="relative">
       <div className="mb-6 flex items-center gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-lime to-[#c48a1e] text-[13px] font-bold text-off-ink shadow-md">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-lime text-[13px] font-bold text-off-ink shadow-md">
           {number}
         </span>
-        {!isLast && <div className="hidden h-px flex-1 bg-gradient-to-r from-lime/60 to-transparent md:block" />}
+        {!isLast && <div className="hidden h-px flex-1 bg-lime/40 md:block" />}
       </div>
       <h3 className="mb-3 text-[20px] font-bold tracking-[-0.3px] text-off-ink">{title}</h3>
       <p className="text-[15px] leading-relaxed text-graphite">{description}</p>
@@ -205,7 +205,7 @@ export default function LandingOverview() {
       </section>
 
       {/* For organisations */}
-      <section id="for-organizations" className="scroll-mt-20 bg-[#f2e6d6] py-24">
+      <section id="for-organizations" className="scroll-mt-20 bg-stone py-24">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-4">
             <SectionLabel>For organisations</SectionLabel>
@@ -219,7 +219,7 @@ export default function LandingOverview() {
             <div>
               <p className="text-[16px] leading-relaxed text-graphite md:max-w-sm">
                 Whether you&apos;re a community group of 30 or a national NGO running dozens of campaigns,
-                ZFund scales with you — admin controls that match your governance needs.
+                RaiseFundz scales with you — admin controls that match your governance needs.
               </p>
               <div className="mt-6 flex items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 text-[13px] text-graphite">

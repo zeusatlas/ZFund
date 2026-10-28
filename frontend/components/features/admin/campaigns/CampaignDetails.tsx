@@ -16,12 +16,12 @@ import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-st
 type Tab = "overview" | "contributions";
 
 const contributionStatus: Record<string, { label: string; className: string }> = {
-  CONFIRMED: { label: "Paid", className: "bg-[#e9f4ef] text-[#287754]" },
-  PENDING: { label: "Pending", className: "bg-[#fff4dc] text-[#a26c12]" },
-  INITIATED: { label: "Pending", className: "bg-[#fff4dc] text-[#a26c12]" },
-  FAILED: { label: "Failed", className: "bg-[#fbeaea] text-[#a13d3d]" },
-  REFUNDED: { label: "Refunded", className: "bg-[#eaf0f8] text-[#315b8a]" },
-  PARTIALLY_REFUNDED: { label: "Part refunded", className: "bg-[#eaf0f8] text-[#315b8a]" },
+  CONFIRMED: { label: "Paid", className: "bg-success-soft text-success" },
+  PENDING: { label: "Pending", className: "bg-warning-soft text-warning" },
+  INITIATED: { label: "Pending", className: "bg-warning-soft text-warning" },
+  FAILED: { label: "Failed", className: "bg-danger-soft text-crimson" },
+  REFUNDED: { label: "Refunded", className: "bg-navy/8 text-steel" },
+  PARTIALLY_REFUNDED: { label: "Part refunded", className: "bg-navy/8 text-steel" },
 };
 
 function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
@@ -32,7 +32,7 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
   const { data, isPending, isError, error, refetch, isPlaceholderData } = useCampaignContributions(campaignId, { page, search: debouncedSearch, status });
 
   return (
-    <section className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
+    <section className="overflow-hidden surface-card">
       <ListToolbar
         search={search}
         onSearch={(value) => { setSearch(value); setPage(1); }}
@@ -58,7 +58,7 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
       ) : (
         <div className={`overflow-x-auto transition-opacity ${isPlaceholderData ? "opacity-60" : ""}`}>
           <table className="w-full min-w-[680px] text-left">
-            <thead className="bg-stone-light text-xs uppercase tracking-wide text-steel">
+            <thead className="border-b border-navy/10 bg-stone-light text-[10px] font-semibold uppercase tracking-[0.1em] text-steel">
               <tr>
                 <th className="px-5 py-3 font-medium">Contributor</th>
                 <th className="px-4 py-3 font-medium">Amount paid</th>
@@ -141,7 +141,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
     <div className="w-full space-y-6">
       {back}
 
-      <section className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
+      <section className="surface-card p-5 shadow-sm md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -176,11 +176,11 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
 
       {tab === "overview" ? (
         <section className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-          <article className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
+          <article className="surface-card p-5 shadow-sm md:p-6">
             <h2 className="font-semibold text-navy">About this campaign</h2>
             <p className="mt-3 whitespace-pre-line text-sm leading-6 text-ink">{campaign.description || "The host has not added a description."}</p>
           </article>
-          <article className="self-start rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
+          <article className="self-start surface-card p-5 shadow-sm md:p-6">
             <h2 className="font-semibold text-navy">Details</h2>
             <dl className="mt-3 divide-y divide-navy/10 text-sm">
               {details.map(([label, value]) => (

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── ZFund Dashboard Tokens ── */
+  /* ── RaiseFundz Dashboard Tokens ── */
   --color-navy: #0b2545;
   --color-steel: #2e4c6d;
   --color-gold: #c08a2e;
@@ -21,6 +21,13 @@
   --color-charcoal: #3b2b22;
   --color-off-ink: #271c16;
   --color-smoke: #b8a89b;
+
+  /* ── Semantic status tints (derived from the RaiseFundz palette) ── */
+  --color-success: #256b4a;
+  --color-success-soft: #e9f2ec;
+  --color-warning: #8a5a10;
+  --color-warning-soft: #fdf3e1;
+  --color-danger-soft: #fbeaea;
 
   /* Elevation */
   --shadow-sm: 0 1px 2px 0 rgb(16 24 40 / 0.05);
@@ -46,6 +53,99 @@ body {
   background: var(--color-stone);
   color: var(--color-ink);
   font-family: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ========================================================
+   SHARED SURFACES & CONTROLS
+   One visual language for admin, host and auth screens.
+   ======================================================== */
+
+@layer components {
+
+.surface-card {
+  border-radius: 1rem;
+  border: 1px solid rgb(11 37 69 / 0.1);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: var(--color-navy);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-primary:hover {
+  background: var(--color-steel);
+  box-shadow: var(--shadow-md);
+}
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(11 37 69 / 0.15);
+  background: #fff;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-navy);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.btn-secondary:hover {
+  background: var(--color-stone);
+  border-color: rgb(11 37 69 / 0.25);
+}
+
+.field {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(11 37 69 / 0.15);
+  background: var(--color-stone-light);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  outline: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.field::placeholder {
+  color: color-mix(in srgb, var(--color-steel) 60%, transparent);
+}
+.field:focus {
+  border-color: var(--color-gold);
+  background: #fff;
+}
+
+.page-title {
+  font-size: clamp(1.5rem, 2.2vw, 1.875rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-navy);
+  line-height: 1.15;
+}
+
+.page-subtitle {
+  margin-top: 0.5rem;
+  max-width: 42rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-steel);
+}
+
 }
 
 /* ── Eyebrow Label ── */
@@ -130,6 +230,13 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-drawer-in { animation: drawer-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Side drawer slides in from the left */
+@keyframes drawer-left {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-drawer-left { animation: drawer-left 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Card pop on hover */
 .card-hover {

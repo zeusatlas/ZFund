@@ -17,7 +17,7 @@ export const defaultHostSettings: HostSettings = {
   fullName: "Jane Doe",
   organisation: "Aburi Community Projects",
   phone: "0240000345",
-  email: "jane@zfund.com",
+  email: "jane@raisefundz.com",
   contributionAlerts: true,
   withdrawalUpdates: true,
   campaignDigest: false,

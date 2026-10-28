@@ -63,33 +63,24 @@ export default function HostOverview() {
       <section className="mt-10">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-medium tracking-tight text-navy">
+            <h2 className="text-lg font-semibold tracking-tight text-navy sm:text-xl">
               Campaigns in motion
             </h2>
             <p className="mt-1 text-sm text-steel">
               Your active fundraisers and how far they have come.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/host/campaigns"
-              className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel"
-            >
-              <Plus size={17} aria-hidden="true" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link href="/host/campaigns" className="btn-primary">
+              <Plus size={16} aria-hidden="true" />
               Create campaign
             </Link>
-            <Link
-              href="/host/withdrawals"
-              className="inline-flex items-center gap-2 rounded-xl border border-navy/15 bg-white px-4 py-2.5 text-sm font-medium text-navy hover:bg-stone"
-            >
-              <Wallet size={17} aria-hidden="true" />
+            <Link href="/host/withdrawals" className="btn-secondary">
+              <Wallet size={16} aria-hidden="true" />
               Request withdrawal
             </Link>
-            <Link
-              href="/host/campaigns"
-              className="inline-flex items-center gap-2 rounded-xl border border-navy/15 bg-white px-4 py-2.5 text-sm font-medium text-navy hover:bg-stone"
-            >
-              All campaigns <ArrowUpRight aria-hidden="true" size={16} />
+            <Link href="/host/campaigns" className="btn-secondary">
+              All campaigns <ArrowUpRight aria-hidden="true" size={15} />
             </Link>
           </div>
         </div>

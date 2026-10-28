@@ -12,7 +12,7 @@ import { getSelectStyles } from "@/components/ui/selectStyles";
 
 type Props = { onCreated: (name: string) => void };
 const inputClass =
-  "mt-2 w-full rounded-xl border border-navy/20 bg-white px-3 py-2.5 text-sm text-navy placeholder:text-steel/60 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy";
+  "field mt-2 bg-white";
 
 interface CategoryOption {
   value: string;
@@ -141,7 +141,7 @@ export default function CreateCampaignModal({ onCreated }: Props) {
       <button
         type="button"
         onClick={showModal}
-        className="inline-flex items-center justify-center gap-2 rounded-lg bg-navy px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-steel"
+        className="btn-primary"
       >
         <Plus size={18} aria-hidden="true" />
         Create campaign
@@ -152,11 +152,11 @@ export default function CreateCampaignModal({ onCreated }: Props) {
         aria-labelledby="create-campaign-title"
         aria-describedby="create-campaign-description"
         onClose={() => setOpen(false)}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border-0 bg-stone-light p-0 text-navy shadow-2xl backdrop:bg-midnight/60"
+        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-[28px] border-0 bg-white p-0 text-navy shadow-2xl backdrop:bg-midnight/60"
       >
         <div className="flex items-start justify-between gap-4 border-b border-navy/10 bg-white p-6">
           <div>
-            <h2 id="create-campaign-title" className="text-2xl font-medium tracking-tight">
+            <h2 id="create-campaign-title" className="text-lg font-semibold tracking-tight">
               Create a campaign
             </h2>
             <p id="create-campaign-description" className="mt-1 text-sm leading-relaxed text-steel">
@@ -167,7 +167,7 @@ export default function CreateCampaignModal({ onCreated }: Props) {
             type="button"
             onClick={() => dialog.current?.close()}
             aria-label="Close create campaign"
-            className="shrink-0 rounded-lg p-2 text-steel hover:bg-stone"
+            className="shrink-0 rounded-full p-1.5 text-steel transition-colors hover:bg-stone hover:text-navy"
           >
             <X size={20} aria-hidden="true" />
           </button>
@@ -193,7 +193,7 @@ export default function CreateCampaignModal({ onCreated }: Props) {
           </div>
 
           {/* USSD Shortcode Generator / Input */}
-          <div className="rounded-xl border border-navy/10 bg-white p-4">
+          <div className="surface-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label htmlFor="new-campaign-code" className="text-sm font-medium flex items-center gap-1.5">
                 <PhoneCall size={16} className="text-gold" />
@@ -373,14 +373,14 @@ export default function CreateCampaignModal({ onCreated }: Props) {
               type="button"
               onClick={() => dialog.current?.close()}
               disabled={createMutation.isPending}
-              className="rounded-xl border border-navy/20 bg-white px-5 py-3 text-sm font-medium hover:bg-stone disabled:opacity-50"
+              className="btn-secondary disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel disabled:opacity-50"
+              className="btn-primary disabled:opacity-50"
             >
               {createMutation.isPending ? (
                 <>

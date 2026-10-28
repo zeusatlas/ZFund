@@ -23,13 +23,13 @@ function TestimonialCard({
     <div className="card-hover flex flex-col rounded-[28px] border border-ash/70 bg-white p-8">
       <div className="mb-4 flex items-center gap-1">
         {[...Array(5)].map((_, i) => (
-          <Star key={i} size={14} fill="#e5aa45" className="text-lime" />
+          <Star key={i} size={14} fill="currentColor" className="text-lime" />
         ))}
       </div>
       <Quote size={20} className="mb-4 text-lime opacity-50" />
       <p className="mb-8 flex-1 text-[15px] leading-[1.7] text-graphite">&ldquo;{quote}&rdquo;</p>
       <div className="flex items-center gap-3 border-t border-ash pt-5">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-lime to-[#c48a1e] text-[14px] font-bold text-off-ink">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime text-[14px] font-bold text-off-ink">
           {initials}
         </span>
         <div>
@@ -51,7 +51,7 @@ function CampaignCard({
     <div className="card-hover rounded-[28px] bg-white p-8">
       <p className="mb-6 text-[15px] leading-[1.7] text-graphite">{description}</p>
       <div className="mb-5 h-2 overflow-hidden rounded-full bg-ash">
-        <div className="h-full w-3/5 rounded-full bg-gradient-to-r from-lime to-[#c48a1e]" />
+        <div className="h-full w-3/5 rounded-full bg-lime" />
       </div>
       <div className="flex items-end justify-between border-t border-ash pt-5">
         <div>
@@ -95,13 +95,13 @@ export default function LandingTrust() {
       initials: "MA",
     },
     {
-      quote: "ZFund made our school fees drive transparent for the first time. Parents could see the progress in real time, and we completed the campaign 20 days ahead of schedule.",
+      quote: "RaiseFundz made our school fees drive transparent for the first time. Parents could see the progress in real time, and we completed the campaign 20 days ahead of schedule.",
       name: "Emmanuel Boateng",
       role: "Headmaster, Cape Coast Community School",
       initials: "EB",
     },
     {
-      quote: "As an NGO we needed proper audit trails for our donors. ZFund's exportable records and withdrawal approval flow made our compliance reporting straightforward.",
+      quote: "As an NGO we needed proper audit trails for our donors. RaiseFundz's exportable records and withdrawal approval flow made our compliance reporting straightforward.",
       name: "Akosua Mensah",
       role: "Director, Kumasi Women's Welfare Trust",
       initials: "AM",
@@ -147,7 +147,7 @@ export default function LandingTrust() {
               </h2>
             </div>
             <p className="max-w-sm text-[15px] leading-relaxed text-parchment/50 md:pb-2">
-              ZFund is built from the ground up with controls that protect every cedi raised and every person involved.
+              RaiseFundz is built from the ground up with controls that protect every cedi raised and every person involved.
             </p>
           </div>
           <div className="grid gap-5 md:grid-cols-3">
@@ -170,7 +170,7 @@ export default function LandingTrust() {
           <div className="mb-16 text-center">
             <SectionLabel>What people say</SectionLabel>
             <h2 className="mt-2 text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-off-ink">
-              Communities that chose ZFund
+              Communities that chose RaiseFundz
             </h2>
           </div>
           <div className="grid gap-5 md:grid-cols-3">
@@ -182,7 +182,7 @@ export default function LandingTrust() {
       </section>
 
       {/* Campaigns */}
-      <section className="bg-[#f2e6d6] py-24">
+      <section className="bg-stone py-24">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-16">
             <SectionLabel>Illustrative campaigns</SectionLabel>
@@ -201,7 +201,7 @@ export default function LandingTrust() {
       </section>
 
       {/* Grand CTA */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-lime via-[#d4a030] to-[#c48a1e] py-28">
+      <section className="relative overflow-hidden bg-lime py-28">
         {/* decorative radial glow */}
         <div className="pointer-events-none absolute -right-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/15 blur-[80px]" />
         <div className="pointer-events-none absolute -bottom-24 left-0 h-[350px] w-[350px] rounded-full bg-off-ink/10 blur-[60px]" />

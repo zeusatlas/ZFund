@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, Smartphone, TrendingUp } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Smartphone, TrendingUp } from "lucide-react";
 
 const highlights = [
   { icon: Smartphone, text: "Donors give by USSD from any phone" },
@@ -10,31 +10,41 @@ const highlights = [
 /** Full-screen split layout: brand panel on the left, form on the right. */
 export default function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-screen bg-white lg:grid-cols-[1.05fr_1fr]">
-      <aside className="relative hidden overflow-hidden bg-off-ink text-white lg:flex lg:flex-col lg:justify-between lg:p-14">
+    <main className="min-h-screen bg-stone-light lg:grid lg:grid-cols-[0.92fr_1.08fr]">
+      <aside className="relative hidden overflow-hidden bg-navy text-white lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div
           aria-hidden="true"
-          className="absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full bg-lime/20 blur-3xl"
+          className="absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full bg-gold/20 blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="absolute -bottom-40 -left-24 h-[460px] w-[460px] rounded-full bg-charcoal blur-2xl"
+          className="absolute -bottom-40 -left-24 h-[460px] w-[460px] rounded-full bg-midnight blur-2xl"
         />
 
-        <Link href="/" className="relative text-[22px] font-medium tracking-tight">
-          ZFund
+        <Link
+          href="/home"
+          className="relative inline-flex w-fit items-center gap-3 text-[20px] font-semibold tracking-tight"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-sm text-navy">
+            R
+          </span>
+          RaiseFundz
         </Link>
 
         <div className="relative max-w-md">
-          <p className="text-eyebrow mb-5 text-lime">Fundraising for Ghana</p>
-          <h2 className="text-[44px] font-medium leading-[1.02] tracking-[-1.5px]">
-            Bring your community together around one goal.
+          <p className="text-eyebrow mb-5 text-gold">Fundraising for Ghana</p>
+          <h2 className="text-[clamp(40px,4vw,60px)] font-medium leading-[0.98] tracking-[-2px]">
+            One trusted place for every contribution.
           </h2>
+          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-white/60">
+            Sign in to manage campaigns, follow contributions as they arrive, and keep
+            every cedi accounted for.
+          </p>
           <ul className="mt-10 space-y-4">
             {highlights.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-center gap-3 text-[15px] text-white/75">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                  <Icon size={17} className="text-lime" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10">
+                  <Icon size={17} className="text-gold" />
                 </span>
                 {text}
               </li>
@@ -42,23 +52,34 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
           </ul>
         </div>
 
-        <div className="relative w-full max-w-md rounded-3xl bg-white/[0.07] p-6 backdrop-blur">
-          <p className="text-eyebrow text-white/50">Example campaign</p>
-          <p className="mt-1.5 text-[16px] font-medium">Aburi Community Water Project</p>
-          <p className="mt-4 text-[30px] font-medium leading-none tracking-[-1px]">GH₵ 28,475</p>
-          <p className="mt-1 text-[12px] text-white/50">raised of GH₵ 50,000 goal</p>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/15">
-            <div className="h-full w-[57%] rounded-full bg-lime" />
-          </div>
-        </div>
+        <p className="relative flex items-center gap-2 text-xs text-white/40">
+          <ShieldCheck size={14} className="text-gold" />
+          Secured with one-time codes — no passwords to remember.
+        </p>
       </aside>
 
-      <section className="flex items-center px-6 py-12 sm:px-10 lg:px-16 xl:px-24">
-        <div className="w-full max-w-[420px] text-left">
-          <Link href="/" className="mb-10 block text-[20px] font-medium tracking-tight text-off-ink lg:hidden">
-            ZFund
-          </Link>
-          {children}
+      <section className="flex items-center px-5 py-8 sm:px-10 lg:px-12 xl:px-24">
+        <div className="mx-auto w-full max-w-[480px]">
+          <div className="mb-8 flex items-center justify-between">
+            <Link
+              href="/home"
+              className="inline-flex items-center gap-2 text-[18px] font-semibold tracking-tight text-navy lg:hidden"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-xs text-navy">
+                R
+              </span>
+              RaiseFundz
+            </Link>
+            <Link
+              href="/home"
+              className="ml-auto inline-flex items-center gap-1.5 text-sm text-steel transition-colors hover:text-navy"
+            >
+              Back to home <ArrowUpRight size={15} />
+            </Link>
+          </div>
+          <div className="rounded-[32px] border border-navy/10 bg-white p-6 shadow-sm sm:p-9">
+            {children}
+          </div>
         </div>
       </section>
     </main>

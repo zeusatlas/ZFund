@@ -39,13 +39,13 @@ function StatusBadge({
 
   if (rawStatus === "PENDING_REVIEW") {
     label = "In Review";
-    style = "bg-amber-50 text-amber-800 border border-amber-200/50";
+    style = "bg-warning-soft text-warning border border-warning/20";
   } else if (rawStatus === "SUSPENDED") {
     label = "Suspended";
-    style = "bg-crimson/10 text-crimson";
+    style = "bg-danger-soft text-crimson";
   } else if (status === "Active" || rawStatus === "PUBLISHED" || rawStatus === "APPROVED") {
     label = "Active";
-    style = "bg-emerald-50 text-emerald-800";
+    style = "bg-success-soft text-success";
   } else if (status === "Completed" || rawStatus === "COMPLETED") {
     label = "Completed";
     style = "bg-navy/10 text-navy";
@@ -155,13 +155,13 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
           {notice && (
             <p
               role="status"
-              className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 flex items-center justify-between"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-success/20 bg-success-soft p-3 text-sm text-success"
             >
               <span>{notice}</span>
               <button
                 type="button"
                 onClick={() => setNotice("")}
-                className="text-xs text-emerald-700 underline hover:no-underline"
+                className="text-xs font-semibold underline hover:no-underline"
               >
                 Dismiss
               </button>
@@ -202,7 +202,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search by name, location, category or USSD code"
-                className="w-full rounded-xl border border-navy/15 bg-white py-3 pl-11 pr-4 text-sm text-navy placeholder:text-steel/75"
+                className="field py-3 pl-11 pr-4"
               />
             </div>
             <div className="w-full sm:w-52">
@@ -243,8 +243,8 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                   className={
                     "rounded-full px-4 py-2 text-sm transition-colors " +
                     (status === filter
-                      ? "bg-navy text-white"
-                      : "bg-white text-steel hover:bg-stone")
+                      ? "bg-navy text-white shadow-sm"
+                      : "border border-navy/10 bg-white text-steel hover:bg-stone hover:text-navy")
                   }
                 >
                   {filter} <span className="ml-2 opacity-75">{count}</span>
@@ -260,7 +260,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
       )}
 
       {/* Main Campaign List Content */}
-      <div className="overflow-hidden rounded-2xl border border-navy/10 bg-white shadow-sm">
+      <div className="surface-card overflow-hidden">
         {isLoading && campaigns.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-14 text-center text-steel">
             <Loader2 size={32} className="animate-spin text-navy" />
@@ -296,7 +296,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                 setQuery("");
                 setStatus("All");
               }}
-              className="mt-5 rounded-lg bg-navy px-4 py-2 text-sm text-white hover:bg-steel"
+              className="mt-5 btn-primary"
             >
               Clear filters
             </button>
@@ -343,7 +343,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                               title="Copy USSD Code"
                             >
                               {copiedId === campaign.id ? (
-                                <span className="text-emerald-700 flex items-center gap-0.5 font-semibold">
+                                <span className="flex items-center gap-0.5 font-semibold text-success">
                                   <Check size={12} /> Copied!
                                 </span>
                               ) : (

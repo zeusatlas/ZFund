@@ -59,7 +59,7 @@ export default function UserDetails({ userId }: { userId: string }) {
     <div className="w-full max-w-6xl space-y-6">
       {back}
 
-      <section className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
+      <section className="surface-card p-5 shadow-sm md:p-6">
         <div className="flex items-center gap-4">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy text-base font-medium text-white">{initials}</span>
           <div>
@@ -79,7 +79,7 @@ export default function UserDetails({ userId }: { userId: string }) {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <article className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
+        <article className="surface-card p-5 shadow-sm md:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold text-navy">Funds</h2>
@@ -111,7 +111,7 @@ export default function UserDetails({ userId }: { userId: string }) {
           )}
         </article>
 
-        <article className="self-start rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
+        <article className="self-start surface-card p-5 shadow-sm md:p-6">
           <h2 className="font-semibold text-navy">Account summary</h2>
           <dl className="mt-4 divide-y divide-navy/10 text-sm">
             <div className="flex items-center justify-between gap-4 py-3">

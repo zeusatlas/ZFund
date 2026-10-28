@@ -3,8 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { defaultHostSettings, hostSettingsSchema, type HostSettings } from "@/components/features/host/settings/settings";
 
-const STORAGE_KEY = "zfund-host-settings-v1";
-const CHANGE_EVENT = "zfund-host-settings-changed";
+const STORAGE_KEY = "raisefundz-host-settings-v1";
+const CHANGE_EVENT = "raisefundz-host-settings-changed";
 
 function subscribe(notify: () => void) {
   const onStorage = (event: StorageEvent) => {

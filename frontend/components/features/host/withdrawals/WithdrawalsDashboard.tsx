@@ -24,12 +24,12 @@ import {
 function Status({ status }: { status: Withdrawal["status"] }) {
   const colour =
     status === "Paid"
-      ? "bg-emerald-50 text-emerald-800"
+      ? "bg-success-soft text-success"
       : status === "Rejected"
         ? "bg-crimson/10 text-crimson"
         : status === "Processing"
-          ? "bg-violet-50 text-violet-800"
-          : "bg-amber-50 text-amber-900";
+          ? "bg-navy/10 text-navy"
+          : "bg-warning-soft text-warning";
   return (
     <span
       className={
@@ -135,7 +135,7 @@ function WithdrawalSheet({
               "mt-6 rounded-2xl p-5 " +
               (item.status === "Rejected"
                 ? "bg-crimson/10 text-crimson"
-                : "bg-teal-50 text-teal-900")
+                : "bg-stone text-steel")
             }
           >
             <h3 className="text-sm font-medium">Latest update</h3>
@@ -150,7 +150,7 @@ function WithdrawalSheet({
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-xl bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel"
+            className="btn-primary w-full"
           >
             Close details
           </button>
@@ -257,12 +257,12 @@ export default function WithdrawalsDashboard() {
           </article>
         ))}
       </section>
-      <div className="my-7 flex flex-col justify-between gap-5 rounded-2xl border border-navy/10 bg-white p-5 sm:flex-row sm:items-center">
+      <div className="my-7 flex flex-col justify-between gap-5 surface-card p-5 sm:flex-row sm:items-center">
         <div className="flex items-start gap-3">
           <ShieldCheck
             size={23}
             aria-hidden="true"
-            className="mt-1 shrink-0 text-teal-700"
+            className="mt-1 shrink-0 text-gold"
           />
           <div>
             <h2 className="font-medium text-navy">
@@ -305,7 +305,7 @@ export default function WithdrawalsDashboard() {
           <div>
             <h2
               id="withdrawal-history-title"
-              className="text-xl font-medium tracking-tight text-navy"
+              className="text-lg font-semibold tracking-tight text-navy"
             >
               Withdrawal history
             </h2>
@@ -333,7 +333,7 @@ export default function WithdrawalsDashboard() {
                 setPage(1);
               }}
               placeholder="Search by reference, campaign or recipient"
-              className="w-full rounded-xl border border-navy/15 bg-white py-3 pl-11 pr-4 text-sm text-navy"
+              className="field py-3 pl-11 pr-4"
             />
           </div>
           <div>
@@ -347,7 +347,7 @@ export default function WithdrawalsDashboard() {
                 setStatus(event.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-xl border border-navy/15 bg-white px-4 py-3 text-sm text-navy"
+              className="w-full field"
             >
               <option value="All">All statuses</option>
               {withdrawalStatuses.map((value) => (
@@ -360,7 +360,7 @@ export default function WithdrawalsDashboard() {
           Showing {filtered.length ? offset + 1 : 0}–
           {Math.min(offset + 7, filtered.length)} of {filtered.length} requests
         </p>
-        <div className="overflow-hidden rounded-2xl border border-navy/10 bg-white">
+        <div className="overflow-hidden surface-card">
           {!filtered.length ? (
             <div className="p-12 text-center">
               <h3 className="font-medium text-navy">No matching withdrawals</h3>
@@ -427,7 +427,7 @@ export default function WithdrawalsDashboard() {
                 type="button"
                 disabled={current === 1}
                 onClick={() => setPage(current - 1)}
-                className="rounded-xl border border-navy/15 bg-white px-4 py-2 text-sm text-navy disabled:opacity-40"
+                className="btn-secondary py-2 disabled:opacity-40"
               >
                 Previous
               </button>
@@ -435,7 +435,7 @@ export default function WithdrawalsDashboard() {
                 type="button"
                 disabled={current === pages}
                 onClick={() => setPage(current + 1)}
-                className="rounded-xl border border-navy/15 bg-white px-4 py-2 text-sm text-navy disabled:opacity-40"
+                className="btn-secondary py-2 disabled:opacity-40"
               >
                 Next
               </button>

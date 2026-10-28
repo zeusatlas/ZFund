@@ -8,27 +8,32 @@ import type { HostStatus } from "./types";
 import { useHostAccounts } from "./use-admin-dashboard";
 
 const statusStyle: Record<HostStatus, { label: string; className: string }> = {
-  ACTIVE: { label: "Active", className: "bg-[#e9f4ef] text-[#287754]" },
-  PENDING_VERIFICATION: { label: "Pending", className: "bg-[#fff4dc] text-[#a26c12]" },
-  SUSPENDED: { label: "Suspended", className: "bg-[#fbeaea] text-[#a13d3d]" },
+  ACTIVE: { label: "Active", className: "bg-success-soft text-success" },
+  PENDING_VERIFICATION: { label: "Pending", className: "bg-warning-soft text-warning" },
+  SUSPENDED: { label: "Suspended", className: "bg-danger-soft text-crimson" },
 };
 
 function StatusPill({ status }: { status: HostStatus }) {
   const { label, className } = statusStyle[status];
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${className}`}>{label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${className}`}>
+      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
+      {label}
+    </span>
+  );
 }
 
 export function HostAccounts() {
   const { data, isPending, isError, error, refetch } = useHostAccounts(2);
 
   return (
-    <article className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-navy/10 p-5 md:p-6">
+    <article className="surface-card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy/10 p-5 md:p-6">
         <div>
-          <h2 className="font-semibold text-navy">Host accounts</h2>
+          <h2 className="text-base font-semibold tracking-tight text-navy">Host accounts</h2>
           <p className="mt-1 text-sm text-steel">Manage the people authorized to generate funds.</p>
         </div>
-        <Link href="/admin/users" className="inline-flex items-center gap-1 text-xs font-medium text-gold hover:text-navy">
+        <Link href="/admin/users" className="inline-flex items-center gap-1 text-xs font-semibold text-gold transition-colors hover:text-navy">
           View all hosts <ChevronRight size={14} />
         </Link>
       </div>
@@ -42,12 +47,12 @@ export function HostAccounts() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-left">
-            <thead className="bg-stone-light text-xs uppercase tracking-wide text-steel">
+            <thead className="border-b border-navy/10 bg-stone-light text-[10px] uppercase tracking-[0.1em] text-steel">
               <tr>
-                <th className="px-5 py-3 font-medium">Host</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Funds issued</th>
-                <th className="px-4 py-3 font-medium">Last active</th>
+                <th className="px-5 py-3 font-semibold">Host</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Funds issued</th>
+                <th className="px-4 py-3 font-semibold">Last active</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>

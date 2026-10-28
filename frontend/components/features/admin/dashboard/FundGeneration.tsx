@@ -19,17 +19,17 @@ export function FundGeneration() {
   const max = data ? Math.max(...data.buckets.map((b) => Number(b.amount)), 0) : 0;
 
   return (
-    <article className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm md:p-6">
-      <div className="flex items-start justify-between gap-4">
+    <article className="surface-card p-5 md:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-navy">Fund generation</h2>
+          <h2 className="text-base font-semibold tracking-tight text-navy">Fund generation</h2>
           <p className="mt-1 text-sm text-steel">Activity across all host accounts</p>
         </div>
         <select
           aria-label="Fund generation period"
           value={period}
           onChange={(e) => setPeriod(e.target.value as TrendPeriod)}
-          className="rounded-lg border border-navy/10 bg-white px-2.5 py-2 text-xs text-steel outline-none"
+          className="field w-auto py-2 text-xs"
         >
           <option value="12m">Last 12 months</option>
           <option value="30d">Last 30 days</option>
@@ -49,7 +49,7 @@ export function FundGeneration() {
               const showLabel = data.period === "12m" || index % 5 === 0;
               return (
                 <div key={bucket.key} className="group flex h-full min-w-0 flex-1 flex-col justify-end">
-                  <div className="relative w-full rounded-t-md bg-[#dce9e5] transition-colors group-hover:bg-gold" style={{ height: `${height}%` }}>
+                  <div className="relative w-full rounded-t-md bg-navy/10 transition-colors group-hover:bg-gold" style={{ height: `${height}%` }}>
                     <span className="absolute -top-7 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-midnight px-1.5 py-1 text-[10px] text-white group-hover:block">
                       {formatMoney(bucket.amount)}
                     </span>
@@ -67,7 +67,7 @@ export function FundGeneration() {
             </div>
             <div className="text-right">
               <p className="text-xs text-steel">{copy[data.period].current}</p>
-              <p className="mt-1 text-lg font-semibold text-[#287754]">{formatMoney(data.current)}</p>
+              <p className="mt-1 text-lg font-semibold text-success">{formatMoney(data.current)}</p>
             </div>
           </div>
         </>

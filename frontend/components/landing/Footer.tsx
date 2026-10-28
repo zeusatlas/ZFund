@@ -26,7 +26,7 @@ export default async function Footer() {
   return (
     <footer className="relative overflow-hidden bg-off-ink text-parchment">
       {/* Decorative gradient top border */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime/40 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-px bg-lime/40" />
 
       {/* Decorative glow */}
       <div className="pointer-events-none absolute -top-32 right-0 h-[400px] w-[400px] rounded-full bg-lime/5 blur-[80px]" />
@@ -36,11 +36,11 @@ export default async function Footer() {
         <div className="grid grid-cols-2 gap-12 md:grid-cols-4 md:gap-16">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="group inline-flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-lime to-[#c48a1e] text-[15px] font-bold text-off-ink shadow-md">
-                Z
+            <Link href="/home" className="group inline-flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lime text-[15px] font-bold text-off-ink shadow-md">
+                R
               </span>
-              <span className="text-[19px] font-bold text-white">ZFund</span>
+              <span className="text-[19px] font-bold text-white">RaiseFundz</span>
             </Link>
             <p className="mt-5 max-w-[220px] text-[14px] leading-relaxed text-parchment/45">
               Bringing Ghana&apos;s communities together through transparent fundraising.
@@ -63,7 +63,7 @@ export default async function Footer() {
                 {links.map((link) => (
                   <li key={link.label}>
                     <Link
-                      href={link.href.startsWith("#") ? `/${link.href}` : link.href}
+                      href={link.href.startsWith("#") ? `/home${link.href}` : link.href}
                       className="text-[14px] text-parchment/55 transition-colors hover:text-white"
                     >
                       {link.label}
@@ -80,15 +80,12 @@ export default async function Footer() {
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-50" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
               </span>
               <p className="text-[12px] text-parchment/35">
-                Platform operational · Donations processing in real time
               </p>
             </div>
             <p className="text-[12px] text-parchment/30">
-              © {new Date().getFullYear()} ZFund. All rights reserved.
+              © {new Date().getFullYear()} RaiseFundz. All rights reserved.
             </p>
           </div>
         </div>

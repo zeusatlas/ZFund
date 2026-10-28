@@ -59,7 +59,7 @@ export default function RowMenu({ label, items }: { label: string; items: RowMen
         aria-haspopup="menu"
         aria-expanded={position !== null}
         onClick={toggle}
-        className="rounded-md p-1.5 text-steel hover:bg-stone"
+        className="rounded-lg p-1.5 text-steel transition-colors hover:bg-stone hover:text-navy"
       >
         <MoreHorizontal size={17} />
       </button>
@@ -69,7 +69,7 @@ export default function RowMenu({ label, items }: { label: string; items: RowMen
             ref={menu}
             role="menu"
             style={{ top: position.top, left: position.left, width: MENU_WIDTH }}
-            className="fixed z-50 rounded-lg border border-navy/10 bg-white py-1 text-left shadow-lg"
+            className="animate-drawer-in fixed z-50 surface-card p-1 text-left shadow-lg"
           >
             {items.map((item) => (
               <button
@@ -80,7 +80,7 @@ export default function RowMenu({ label, items }: { label: string; items: RowMen
                   setPosition(null);
                   item.onSelect();
                 }}
-                className={`block w-full px-3 py-2 text-left text-xs hover:bg-stone ${item.danger ? "text-crimson" : "text-ink"}`}
+                className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-stone ${item.danger ? "text-crimson hover:bg-crimson/5" : "text-ink"}`}
               >
                 {item.label}
               </button>

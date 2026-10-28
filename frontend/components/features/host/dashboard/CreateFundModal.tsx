@@ -64,14 +64,14 @@ export default function CreateFundModal({
         <form onSubmit={submit} className="mt-6 space-y-4">
           <label className="block text-sm font-medium text-ink">
             Fund purpose
-            <input value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="e.g. Partner settlement" className="mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold" />
+            <input value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="e.g. Partner settlement" className="field mt-1.5" />
           </label>
           <label className="block text-sm font-medium text-ink">
             Amount (GHS)
-            <input required type="number" min="1" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" className="mt-1.5 w-full rounded-lg border border-navy/15 px-3 py-2.5 text-sm outline-none focus:border-gold" />
+            <input required type="number" min="1" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" className="field mt-1.5" />
           </label>
           {error && <p className="text-sm text-crimson">{error}</p>}
-          <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={onClose} className="rounded-lg px-4 py-2.5 text-sm font-medium text-steel hover:bg-stone">Cancel</button><button type="submit" className="rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-steel">Submit request</button></div>
+          <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={onClose} className="rounded-lg px-4 py-2.5 text-sm font-medium text-steel hover:bg-stone">Cancel</button><button type="submit" className="btn-primary">Submit request</button></div>
         </form>
       </div>
     </div>

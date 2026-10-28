@@ -2,11 +2,10 @@ import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 
 /**
- * Shared layout for all public-facing marketing pages
- * (e.g. /about, /pricing, /blog, /contact).
+ * Shared layout for all public-facing marketing pages.
  *
- * The main landing page (/) lives in app/page.tsx and
- * composes Navbar + Footer directly to avoid a route conflict.
+ * The landing page lives at /home, so the navbar and footer are
+ * rendered once here for every public route.
  */
 export default function PublicLayout({
   children,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { ArrowRight, Menu, X, Zap } from "lucide-react";
 import HostCtaLink from "@/components/landing/HostCtaLink";
 
@@ -13,10 +13,29 @@ const navLinks = [
   { href: "#security", label: "Security" },
 ];
 
+const HOME = "/home";
+
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const onHome = pathname === HOME;
+
+  function goToSection(event: ReactMouseEvent<HTMLAnchorElement>, hash: string) {
+    if (!onHome) {
+      setMobileOpen(false);
+      return; // let Next.js navigate to /home#...
+    }
+    const target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    event.preventDefault();
+    setMobileOpen(false);
+    // Let the drawer's scroll lock clear before scrolling to the section.
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.history.replaceState(null, "", hash);
+    }, 100);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -56,14 +75,14 @@ export default function Navbar() {
 
         {/* Wordmark */}
         <Link
-          href="/"
+          href={HOME}
           className="flex items-center gap-2.5 group"
         >
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-lime to-[#c48a1e] text-sm font-bold text-off-ink shadow-md transition-transform group-hover:scale-105">
-            Z
-            <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-lime text-sm font-bold text-off-ink shadow-md transition-transform group-hover:scale-105">
+            R
+            <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
           </span>
-          <span className="text-[18px] font-bold tracking-tight text-off-ink">ZFund</span>
+          <span className="text-[18px] font-bold tracking-tight text-off-ink">RaiseFundz</span>
         </Link>
 
         {/* Desktop Nav */}
@@ -71,7 +90,8 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={pathname === "/" ? link.href : `/${link.href}`}
+              href={onHome ? link.href : `${HOME}${link.href}`}
+              onClick={(event) => goToSection(event, link.href)}
               className="rounded-full px-4 py-2 text-[13px] font-medium text-graphite transition-all duration-200 hover:bg-parchment hover:text-off-ink hover:shadow-sm"
             >
               {link.label}
@@ -122,9 +142,9 @@ export default function Navbar() {
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                href={pathname === "/" ? link.href : `/${link.href}`}
+                href={onHome ? link.href : `${HOME}${link.href}`}
                 className="flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-medium text-graphite transition-colors hover:bg-white/70 hover:text-off-ink"
-                onClick={() => setMobileOpen(false)}
+                onClick={(event) => goToSection(event, link.href)}
               >
                 {link.label}
                 <ArrowRight size={16} className="text-smoke" />

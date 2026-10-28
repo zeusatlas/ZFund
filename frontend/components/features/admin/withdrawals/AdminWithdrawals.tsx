@@ -40,7 +40,7 @@ export default function AdminWithdrawals() {
   return (
     <div className="w-full space-y-6">
       <section>
-        <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Withdrawal requests</h1>
+        <h1 className="page-title">Withdrawal requests</h1>
         <p className="mt-2 text-sm text-steel">Review payout requests from hosts and move them along as you attend to them.</p>
       </section>
 
@@ -51,7 +51,7 @@ export default function AdminWithdrawals() {
         <MetricCard label="Paid out" value={counts ? formatMoney(counts.paidOut) : dash} icon={CheckCircle2} accent="green" />
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
+      <section className="overflow-hidden surface-card">
         <ListToolbar
           search={search}
           onSearch={(value) => { setSearch(value); setPage(1); }}
@@ -77,7 +77,7 @@ export default function AdminWithdrawals() {
         ) : (
           <div className={`overflow-x-auto transition-opacity ${isPlaceholderData ? "opacity-60" : ""}`}>
             <table className="w-full min-w-[720px] text-left">
-              <thead className="bg-stone-light text-xs uppercase tracking-wide text-steel">
+              <thead className="border-b border-navy/10 bg-stone-light text-[10px] font-semibold uppercase tracking-[0.1em] text-steel">
                 <tr>
                   <th className="px-5 py-3 font-medium">Request</th>
                   <th className="px-4 py-3 font-medium">Host</th>

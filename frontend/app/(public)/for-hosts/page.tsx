@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FAQ, PageCTA, PageIntro, PageSection } from "@/components/landing/PublicPage";
 
-export const metadata: Metadata = { title: "For hosts | ZFund", description: "Plan a Ghanaian fundraiser with clear goals, contribution records, and community updates." };
+export const metadata: Metadata = { title: "For hosts | RaiseFundz", description: "Plan a Ghanaian fundraiser with clear goals, contribution records, and community updates." };
 
 export default function ForHostsPage() {
   return <>
@@ -35,7 +35,7 @@ export default function ForHostsPage() {
     </PageSection></div>
     <PageSection title="Planning your fundraiser"><FAQ items={[
       { question: "What should I prepare?", answer: "A campaign name, a clear description, your target in GH₵, a deadline, and a cost breakdown. Get permission before sharing someone else’s personal story or photographs." },
-      { question: "Can an association organise a campaign?", answer: "Yes, associations are one of the audiences ZFund is being designed for. Agree on the campaign organiser, who reviews spending, and how members will receive updates." },
+      { question: "Can an association organise a campaign?", answer: "Yes, associations are one of the audiences RaiseFundz is being designed for. Agree on the campaign organiser, who reviews spending, and how members will receive updates." },
     ]} /></PageSection>
     <PageCTA title="Know every step before you begin." href="/how-it-works" label="See how it works" />
   </>;

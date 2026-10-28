@@ -50,13 +50,13 @@ export default function AdminUsers() {
     <div className="w-full space-y-6">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Host accounts</h1>
+          <h1 className="page-title">Host accounts</h1>
           <p className="mt-2 text-sm text-steel">Manage the users who are allowed to generate funds.</p>
         </div>
         <button
           type="button"
           onClick={() => setShowAddHost(true)}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white transition hover:bg-steel"
+          className="btn-primary w-fit"
         >
           <UserPlus size={17} />
           Add host
@@ -65,7 +65,7 @@ export default function AdminUsers() {
 
       <UserStats counts={data?.meta.counts} />
 
-      <section className="overflow-hidden rounded-xl border border-navy/10 bg-white shadow-sm">
+      <section className="overflow-hidden surface-card">
         <div className="flex flex-col gap-3 border-b border-navy/10 p-4 sm:flex-row sm:items-center sm:justify-between md:p-5">
           <div className="relative w-full sm:max-w-xs">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-steel" />
@@ -77,7 +77,7 @@ export default function AdminUsers() {
               }}
               placeholder="Search hosts"
               aria-label="Search host accounts"
-              className="w-full rounded-lg border border-navy/15 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-gold"
+              className="field pl-9"
             />
           </div>
           <select
@@ -87,7 +87,7 @@ export default function AdminUsers() {
               setPage(1);
             }}
             aria-label="Filter by status"
-            className="rounded-lg border border-navy/15 bg-white px-3 py-2.5 text-sm text-steel outline-none focus:border-gold"
+            className="field w-auto"
           >
             <option value="">All statuses</option>
             <option value="ACTIVE">Active</option>
@@ -105,7 +105,7 @@ export default function AdminUsers() {
         ) : (
           <div className={`overflow-x-auto transition-opacity ${isPlaceholderData ? "opacity-60" : ""}`}>
             <table className="w-full min-w-[680px] text-left">
-              <thead className="bg-stone-light text-xs uppercase tracking-wide text-steel">
+              <thead className="border-b border-navy/10 bg-stone-light text-[10px] font-semibold uppercase tracking-[0.1em] text-steel">
                 <tr>
                   <th className="px-5 py-3 font-medium">Host</th>
                   <th className="px-4 py-3 font-medium">Status</th>

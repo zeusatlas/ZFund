@@ -9,7 +9,7 @@ function EventStatus({ status }: { status: UserEvent["status"] }) {
   return (
     <span
       className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${
-        complete ? "bg-[#e9f4ef] text-[#287754]" : "bg-[#fff4dc] text-[#a26c12]"
+        complete ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
       }`}
     >
       {complete ? <CheckCircle2 size={14} /> : <Clock3 size={14} />}
@@ -38,13 +38,13 @@ export default function EventDetails({
         Back to {user.name}
       </Link>
 
-      <section className="rounded-xl border border-navy/10 bg-white shadow-sm">
+      <section className="surface-card">
         <div className="flex flex-col gap-5 border-b border-navy/10 p-5 md:flex-row md:items-start md:justify-between md:p-7">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold">
               Fund event
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-navy md:text-3xl">
+            <h1 className="mt-2 page-title">
               {event.title}
             </h1>
             <p className="mt-2 text-sm text-steel">{event.description}</p>
@@ -93,7 +93,7 @@ export default function EventDetails({
               </div>
               <div className="ml-4 h-5 border-l border-navy/15" />
               <div className="flex items-start gap-3">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${complete ? "bg-stone text-navy" : "bg-[#fff4dc] text-[#a26c12]"}`}>
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${complete ? "bg-stone text-navy" : "bg-warning-soft text-warning"}`}>
                   {complete ? <CheckCircle2 size={16} /> : <Clock3 size={16} />}
                 </span>
                 <div>
