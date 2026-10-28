@@ -136,36 +136,28 @@
 .marketing .section-mist .feature-highlight :is(p, .kicker) { color: var(--color-smoke); }
 .marketing .section-mist .feature-highlight > svg { color: var(--color-gold); }
 .marketing .section-mist .mini-ledger { border-color: var(--color-steel); }
-.marketing .section-navy { background: var(--color-navy); color: var(--color-parchment); }
-.marketing .section-navy .step { border-color: var(--color-steel); }
-.marketing .section-navy .step p { color: var(--color-smoke); }
-.marketing .section-navy .step-number {
-  background: var(--color-gold);
-  border-color: var(--color-gold);
-  color: var(--color-off-ink);
+.marketing .section-brown { background: var(--color-off-ink); color: var(--color-parchment); }
+.marketing .section-brown .step { border-color: rgba(255, 255, 255, 0.15); }
+.marketing .section-brown .step p { color: rgba(255, 248, 237, 0.7); }
+.marketing .section-brown .step-number {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
-.marketing .section-navy .section-link { color: var(--color-parchment); }
-.marketing .section-gold-wash {
-  background: color-mix(in srgb, var(--color-gold) 18%, var(--color-parchment));
-}
-.marketing .section-gold-wash :is(.community-list, .community-list a, .pill) {
-  border-color: color-mix(in srgb, var(--color-gold) 45%, var(--color-ash));
-}
+.marketing .section-brown .section-link { color: var(--color-parchment); }
 .marketing .security-section { padding-top: 64px; }
 .marketing .page-intro {
-  background: var(--color-ash);
+  background: var(--color-parchment);
   margin-top: 24px;
   border-bottom: 0;
 }
-.marketing main > .bg-parchment { background: var(--color-ash); }
-.marketing main > .bg-parchment .page-section article { background: var(--color-parchment); }
 .marketing .site-footer {
-  background: var(--color-navy);
+  background: var(--color-off-ink);
   color: var(--color-parchment);
-  border-color: var(--color-steel);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 .marketing .site-footer :is(.kicker, .footer-grid p, .footer-bottom) { color: var(--color-smoke); }
-.marketing .site-footer .footer-bottom { border-color: var(--color-steel); }
+.marketing .site-footer .footer-bottom { border-color: rgba(255, 255, 255, 0.1); }
 @media (max-width: 1023px) {
   .marketing .feature-grid { grid-template-columns: 1fr 1fr; }
   .marketing .feature-highlight { grid-column: 1 / -1; }

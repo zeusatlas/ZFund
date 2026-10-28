@@ -7,8 +7,8 @@ import {
 /* ── Section Label ── */
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-ash bg-white px-3.5 py-1.5">
-      <span className="h-1.5 w-1.5 rounded-full bg-lime" />
+    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-ash bg-white px-3.5 py-1.5 shadow-2xs">
+      <span className="h-1.5 w-1.5 rounded-full bg-off-ink" />
       <span className="text-eyebrow text-graphite">{children}</span>
     </div>
   );
@@ -23,11 +23,11 @@ function SocialProofTicker() {
   ];
 
   return (
-    <div className="overflow-hidden border-y border-ash/60 bg-white py-3">
+    <div className="overflow-hidden border-y border-ash/60 bg-white py-3.5">
       <div className="flex min-w-max animate-marquee items-center gap-10 px-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-graphite">
         {[...items, ...items].map((item, index) => (
           <span key={`${item}-${index}`} className="inline-flex items-center gap-3">
-            <span className="h-1.5 w-1.5 rounded-full bg-lime" />
+            <span className="h-1.5 w-1.5 rounded-full bg-off-ink/40" />
             {item}
           </span>
         ))}
@@ -45,19 +45,18 @@ function StatsBar() {
   ];
 
   return (
-    <section className="border-b border-ash/60 bg-white py-8">
+    <div className="border-b border-ash/60 bg-white py-10">
       <div className="mx-auto grid max-w-[1200px] gap-6 px-6 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label} className="text-center sm:text-left">
-            <p className="text-[25px] font-bold tracking-[-0.8px] text-off-ink">{stat.value}</p>
-            <p className="mt-1 text-[12px] text-graphite">{stat.label}</p>
+            <p className="text-[26px] font-bold tracking-[-0.8px] text-off-ink">{stat.value}</p>
+            <p className="mt-1 text-[13px] text-graphite">{stat.label}</p>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
-
 
 /* ── Feature card ── */
 function FeatureCard({
@@ -69,22 +68,22 @@ function FeatureCard({
   highlight?: boolean;
 }) {
   return (
-    <div className={`card-hover group rounded-[28px] p-7 ${
+    <div className={`card-hover group rounded-[28px] p-7 transition-all ${
       highlight
-        ? "bg-off-ink text-parchment"
-        : "border border-ash/70 bg-white"
+        ? "bg-off-ink text-parchment shadow-md"
+        : "border border-ash/70 bg-parchment"
     }`}>
       <div className={`mb-5 flex h-11 w-11 items-center justify-center rounded-[18px] transition-colors ${
         highlight
-          ? "bg-lime/15 group-hover:bg-lime/25"
-          : "bg-parchment group-hover:bg-lime/20"
+          ? "bg-white/10 group-hover:bg-white/20"
+          : "bg-white group-hover:bg-ash/50 border border-ash/40"
       }`}>
-        <Icon size={20} className={highlight ? "text-lime" : "text-off-ink"} />
+        <Icon size={20} className={highlight ? "text-white" : "text-off-ink"} />
       </div>
       <h3 className={`mb-3 text-[17px] font-bold tracking-[-0.3px] ${highlight ? "text-white" : "text-off-ink"}`}>
         {title}
       </h3>
-      <p className={`text-[14px] leading-relaxed ${highlight ? "text-parchment/65" : "text-graphite"}`}>
+      <p className={`text-[14px] leading-relaxed ${highlight ? "text-parchment/70" : "text-graphite"}`}>
         {description}
       </p>
     </div>
@@ -100,9 +99,9 @@ function OrgCard({
   description: string;
 }) {
   return (
-    <div className="card-hover group rounded-[28px] bg-parchment p-7 hover:bg-white">
-      <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-[18px] bg-off-ink transition-colors group-hover:bg-lime">
-        <Icon size={19} className="text-lime transition-colors group-hover:text-off-ink" />
+    <div className="card-hover group rounded-[28px] bg-white border border-ash/70 p-7 transition-all hover:border-off-ink/30 shadow-2xs">
+      <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-[18px] bg-off-ink transition-colors group-hover:bg-charcoal">
+        <Icon size={19} className="text-parchment" />
       </div>
       <h3 className="mb-2.5 text-[17px] font-bold text-off-ink">{title}</h3>
       <p className="text-[14px] leading-relaxed text-graphite">{description}</p>
@@ -110,25 +109,28 @@ function OrgCard({
   );
 }
 
-/* ── Step card ── */
-function StepCard({
-  number, title, description, isLast,
-}: {
-  number: string; title: string; description: string; isLast: boolean;
-}) {
-  return (
-    <div className="relative">
-      <div className="mb-6 flex items-center gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-lime text-[13px] font-bold text-off-ink shadow-md">
-          {number}
-        </span>
-        {!isLast && <div className="hidden h-px flex-1 bg-lime/40 md:block" />}
-      </div>
-      <h3 className="mb-3 text-[20px] font-bold tracking-[-0.3px] text-off-ink">{title}</h3>
-      <p className="text-[15px] leading-relaxed text-graphite">{description}</p>
-    </div>
-  );
-}
+const JOURNEY_STEPS = [
+  {
+    title: "Give your community a clear goal",
+    body: "Start with the purpose, a target in Ghana cedis (GH₵), and a closing date. Explain who will benefit and how the money will be used.",
+    example: "Example: GH₵ 50,000 for a community borehole in the Eastern Region.",
+  },
+  {
+    title: "Prepare your campaign for review",
+    body: "Provide the organiser's details and a clear campaign description. The review process gives an administrator a chance to check a campaign before it opens for contributions.",
+    example: "Have your project budget, beneficiary details, and organiser contact ready.",
+  },
+  {
+    title: "Share the campaign with your people",
+    body: "The donation journey uses USSD so supporters can contribute from a basic phone. Share the approved campaign instructions through WhatsApp groups, community meetings, and announcements.",
+    example: "A school's alumni association can share the same campaign shortcode across Ghana.",
+  },
+  {
+    title: "Track contributions and request a payout",
+    body: "The host dashboard brings campaign totals, contribution records, and withdrawal requests together. When ready, request a payout directly to mobile money or bank.",
+    example: "Keep your community updated on what has been collected and what the funds support.",
+  },
+];
 
 /* ── Main component ── */
 export default function LandingOverview() {
@@ -141,12 +143,6 @@ export default function LandingOverview() {
     { icon: BadgeCheck, title: "Campaign verification", description: "Your campaigns carry a verified badge that builds donor trust. Admins review campaigns before they go live to the USSD network.", highlight: false },
   ];
 
-  const steps = [
-    { number: "01", title: "Create your campaign", description: "Sign up as a host and set up your fundraiser in minutes — add a name, goal, description, and duration. Submit for admin review." },
-    { number: "02", title: "Share the USSD code", description: "Once live, your campaign gets a unique shortcode. Share it on WhatsApp, posters, or church bulletins. Anyone with a phone can donate instantly." },
-    { number: "03", title: "Track and withdraw", description: "Every donation appears in your dashboard in real time. When ready, request a withdrawal to your mobile money or bank account." },
-  ];
-
   const orgTypes = [
     { icon: HeartHandshake, title: "Community Groups", description: "Hometown associations, neighbourhood funds, and welfare groups can unite around a shared goal — with full transparency for every contributor." },
     { icon: Building2, title: "NGOs & Nonprofits", description: "Run multiple concurrent campaigns with admin oversight, donor reporting, and exportable records for grant compliance and accountability." },
@@ -156,33 +152,51 @@ export default function LandingOverview() {
 
   return (
     <>
-      {/* Social proof ticker */}
+      {/* Section 2: Social proof ticker & Stats (White) */}
       <SocialProofTicker />
-
-      {/* Stats bar */}
       <StatsBar />
 
-      {/* How it works */}
+      {/* Section 3: How it works / From an idea to a funded project (Light Beige) */}
       <section id="how-it-works" className="scroll-mt-20 bg-parchment py-24">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-16">
             <SectionLabel>How it works</SectionLabel>
             <h2 className="mt-2 text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-off-ink">
-              From campaign to payout
-              <br />
-              <span className="text-graphite font-medium">in three simple steps.</span>
+              From an idea to a funded project
             </h2>
+            <p className="mt-3 text-[16px] text-graphite max-w-xl leading-relaxed">
+              Four simple steps from creating your fundraiser to receiving your community&apos;s contributions.
+            </p>
           </div>
-          <div className="grid gap-12 md:grid-cols-3">
-            {steps.map((step, i) => (
-              <StepCard key={step.number} {...step} isLast={i === steps.length - 1} />
+
+          <ol className="space-y-0">
+            {JOURNEY_STEPS.map((step, index) => (
+              <li
+                key={step.title}
+                className="grid gap-6 border-t border-ash/70 py-10 md:grid-cols-[72px_1fr_1.1fr] md:gap-10"
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-off-ink text-parchment text-base font-bold shadow-sm">
+                  0{index + 1}
+                </span>
+                <div>
+                  <h3 className="mb-3 text-[22px] font-bold tracking-tight text-off-ink">
+                    {step.title}
+                  </h3>
+                  <p className="text-[15px] leading-relaxed text-graphite">{step.body}</p>
+                </div>
+                <div className="self-start rounded-[24px] bg-white border border-ash/70 p-6 shadow-2xs">
+                  <p className="text-[14px] leading-relaxed text-off-ink font-medium">
+                    {step.example}
+                  </p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
-      {/* For hosts */}
-      <section id="for-hosts" className="scroll-mt-20 bg-white py-24">
+      {/* Section 4: For hosts (White) */}
+      <section id="for-hosts" className="scroll-mt-20 bg-white py-24 border-t border-ash/60">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-4">
             <SectionLabel>For hosts</SectionLabel>
@@ -204,8 +218,8 @@ export default function LandingOverview() {
         </div>
       </section>
 
-      {/* For organisations */}
-      <section id="for-organizations" className="scroll-mt-20 bg-stone py-24">
+      {/* Section 5: For organisations (Light Beige) */}
+      <section id="for-organizations" className="scroll-mt-20 bg-parchment py-24 border-t border-ash/60">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-4">
             <SectionLabel>For organisations</SectionLabel>
@@ -221,15 +235,15 @@ export default function LandingOverview() {
                 Whether you&apos;re a community group of 30 or a national NGO running dozens of campaigns,
                 RaiseFundz scales with you — admin controls that match your governance needs.
               </p>
-              <div className="mt-6 flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 text-[13px] text-graphite">
-                  <CheckCircle2 size={14} className="text-lime" /> Free to start
+              <div className="mt-6 flex items-center gap-4">
+                <span className="inline-flex items-center gap-1.5 text-[13px] text-graphite font-medium">
+                  <CheckCircle2 size={15} className="text-off-ink" /> Free to start
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[13px] text-graphite">
-                  <CheckCircle2 size={14} className="text-lime" /> No setup fees
+                <span className="inline-flex items-center gap-1.5 text-[13px] text-graphite font-medium">
+                  <CheckCircle2 size={15} className="text-off-ink" /> No setup fees
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[13px] text-graphite">
-                  <CheckCircle2 size={14} className="text-lime" /> Cancel anytime
+                <span className="inline-flex items-center gap-1.5 text-[13px] text-graphite font-medium">
+                  <CheckCircle2 size={15} className="text-off-ink" /> Cancel anytime
                 </span>
               </div>
             </div>

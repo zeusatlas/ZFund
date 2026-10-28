@@ -38,9 +38,9 @@ function Counter({ target, prefix = "", suffix = "" }: { target: number; prefix?
 /* ── Activity item in the mockup ── */
 function ActivityItem({ name, amount, time }: { name: string; amount: string; time: string }) {
   return (
-    <div className="flex items-center justify-between rounded-[14px] bg-white/80 px-4 py-2.5">
+    <div className="flex items-center justify-between rounded-[14px] bg-white px-4 py-2.5 border border-ash/40">
       <div className="flex items-center gap-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime/25 text-[11px] font-bold text-off-ink">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-off-ink text-[11px] font-bold text-parchment">
           {name[0]}
         </span>
         <div>
@@ -48,7 +48,7 @@ function ActivityItem({ name, amount, time }: { name: string; amount: string; ti
           <p className="text-[11px] text-graphite">{time}</p>
         </div>
       </div>
-      <span className="rounded-full bg-parchment px-2.5 py-1 text-[12px] font-bold text-off-ink">{amount}</span>
+      <span className="rounded-full bg-parchment px-2.5 py-1 text-[12px] font-bold text-off-ink border border-ash/60">{amount}</span>
     </div>
   );
 }
@@ -71,8 +71,8 @@ function DashboardMockup() {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-graphite">Live campaign</p>
           <p className="mt-1 text-[15px] font-semibold leading-snug text-off-ink">Aburi Community Water Project</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-semibold text-green-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+        <span className="inline-flex items-center gap-1.5 shrink-0 rounded-full bg-stone px-2.5 py-1 text-[10px] font-semibold text-off-ink border border-ash">
+          <span className="h-1.5 w-1.5 rounded-full bg-off-ink" />
           Active
         </span>
       </div>
@@ -85,7 +85,7 @@ function DashboardMockup() {
       <div>
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-ash">
           <div
-            className="h-full rounded-full bg-lime"
+            className="h-full rounded-full bg-off-ink"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -98,7 +98,7 @@ function DashboardMockup() {
           { label: "Avg gift", value: "GH₵ 34" },
           { label: "Days left", value: "12" },
         ].map((s) => (
-          <div key={s.label} className="rounded-[14px] bg-white/80 px-3 py-3 text-center">
+          <div key={s.label} className="rounded-[14px] bg-white px-3 py-3 text-center border border-ash/40">
             <p className="text-[16px] font-bold text-off-ink">{s.value}</p>
             <p className="text-[10px] text-graphite">{s.label}</p>
           </div>
@@ -115,13 +115,12 @@ function DashboardMockup() {
   );
 }
 
-/* ── Hero ── */
+/* ── Hero: Section 1 (Light Beige) ── */
 export default function LandingHero() {
   return (
     <section className="relative overflow-hidden bg-parchment text-off-ink">
-      {/* Background glows */}
-      <div className="pointer-events-none absolute -right-40 -top-40 h-[600px] w-[600px] rounded-full bg-lime/15 blur-[80px]" />
-      <div className="pointer-events-none absolute -bottom-32 left-0 h-[400px] w-[400px] rounded-full bg-crimson/10 blur-[70px]" />
+      {/* Subtle neutral background glow */}
+      <div className="pointer-events-none absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-white/40 blur-[100px]" />
 
       <div className="relative mx-auto max-w-[1240px] px-5 py-16 sm:px-6 md:py-24 lg:py-28">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
@@ -131,7 +130,7 @@ export default function LandingHero() {
             <h1 className="mb-6 text-[clamp(48px,6vw,80px)] font-bold leading-[0.93] tracking-[-3.5px] text-off-ink">
               Raise funds.
               <br />
-              <span className="text-lime-dark">Any phone.</span>
+              <span className="text-off-ink">Any phone.</span>
               <br />
               <span className="text-graphite font-medium">Any network.</span>
             </h1>
@@ -142,13 +141,13 @@ export default function LandingHero() {
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
-              <HostCtaLink className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-7 py-4 text-[15px] font-bold text-parchment shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl">
+              <HostCtaLink className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-7 py-4 text-[15px] font-bold text-parchment shadow-md transition-all hover:bg-charcoal hover:-translate-y-0.5">
                 Start for free
                 <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
               </HostCtaLink>
               <Link
                 href="#how-it-works"
-                className="inline-flex items-center gap-2 rounded-full border border-ash/80 bg-white/60 px-7 py-4 text-[15px] font-semibold text-graphite backdrop-blur transition-all hover:border-ash hover:bg-white hover:text-off-ink"
+                className="inline-flex items-center gap-2 rounded-full border border-ash bg-white px-7 py-4 text-[15px] font-semibold text-graphite transition-all hover:border-off-ink/40 hover:text-off-ink"
               >
                 See how it works
               </Link>
@@ -162,7 +161,7 @@ export default function LandingHero() {
           {/* Right: Mockup */}
           <div className="animate-slide-up-delay-2 relative">
             {/* Floating "raised today" badge */}
-            <div className="absolute -left-4 top-8 z-10 hidden rounded-2xl border border-ash/60 bg-white px-4 py-3 shadow-xl sm:block"
+            <div className="absolute -left-4 top-8 z-10 hidden rounded-2xl border border-ash bg-white px-4 py-3 shadow-md sm:block"
               style={{ animation: "float 6s 0.5s ease-in-out infinite" }}>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-graphite">Raised today</p>
               <p className="mt-0.5 text-lg font-bold text-off-ink">
@@ -171,18 +170,18 @@ export default function LandingHero() {
             </div>
 
             {/* Main mockup */}
-            <div className="animate-float rounded-[36px] border border-ash/50 bg-white/50 p-3 shadow-2xl sm:p-4">
-              <div className="rounded-[28px] bg-parchment p-5 shadow-xl sm:p-6">
+            <div className="animate-float rounded-[36px] border border-ash/60 bg-white/70 p-3 shadow-lg sm:p-4">
+              <div className="rounded-[28px] bg-parchment p-5 border border-ash/40 sm:p-6">
                 <DashboardMockup />
               </div>
             </div>
 
             {/* USSD code badge */}
             <div
-              className="absolute -bottom-4 -right-2 z-10 hidden rounded-2xl bg-crimson px-4 py-3 shadow-xl sm:block"
+              className="absolute -bottom-4 -right-2 z-10 hidden rounded-2xl bg-off-ink px-4 py-3 text-parchment shadow-md sm:block"
               style={{ animation: "float 7s 1.2s ease-in-out infinite" }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Give via USSD</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-parchment/60">Give via USSD</p>
               <p className="mt-0.5 font-bold text-white">*920*969#</p>
             </div>
           </div>

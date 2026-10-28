@@ -8,17 +8,21 @@ import OtpInput from "@/components/auth/OtpInput";
 import { adminRoles, useRequestOtp, useVerifyOtp } from "@/lib/auth/auth";
 import type { ApiError } from "@/lib/api/client";
 
-const inputClass =
-  "auth-input";
-const buttonClass =
-  "auth-submit";
+const inputClass = "auth-input";
+const buttonClass = "auth-submit";
 const CODE_LENGTH = 6;
 const CODE_SECONDS = 120; // matches how long the code stays valid
 const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-const messageOf = (err: unknown) => (err as ApiError).errors
-  ? Object.values((err as ApiError).errors!)[0][0]
-  : (err as ApiError).message;
+const messageOf = (err: unknown) => {
+  const apiError = err as ApiError;
+  if (apiError?.errors) {
+    const firstVal = Object.values(apiError.errors)[0];
+    if (Array.isArray(firstVal) && firstVal.length > 0) return firstVal[0];
+    if (typeof firstVal === "string") return firstVal;
+  }
+  return apiError?.message || "Invalid or expired verification code. Please try again.";
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -75,34 +79,77 @@ export default function LoginPage() {
     <AuthShell>
       {identity ? (
         <>
-          <div className="auth-step"><span className="auth-step-icon"><Smartphone size={20} aria-hidden="true" /></span><span>Step 02 / Verify your number</span></div>
+          <div className="auth-step">
+            <span className="auth-step-icon">
+              <Smartphone size={20} aria-hidden="true" />
+            </span>
+            <span>Step 02 / Verify your number</span>
+          </div>
           <h1>Check your phone</h1>
           <p className="auth-description">
-            We sent a {CODE_LENGTH}-digit code to <span className="font-medium text-navy">{identity.phone}</span>.
+            We sent a {CODE_LENGTH}-digit code to{" "}
+            <span className="font-semibold text-navy">{identity.phone}</span>.
           </p>
 
           <form onSubmit={submitCode} className="mt-8 space-y-5">
-            <OtpInput value={code} onChange={setCode} disabled={locked || cooldown === 0} />
-            {error && <p role="alert" className="auth-error">{error}</p>}
-            <button type="submit" disabled={verifyOtp.isPending || locked || cooldown === 0 || code.length < CODE_LENGTH} className={buttonClass}>
-              {verifyOtp.isPending ? "Verifying…" : <>Verify and sign in <ArrowRight size={16} aria-hidden="true" /></>}
+            <OtpInput
+              value={code}
+              onChange={(val) => {
+                setCode(val);
+                if (error) setError("");
+              }}
+              disabled={locked || cooldown === 0}
+            />
+            {error && (
+              <p role="alert" className="auth-error text-center font-medium">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={verifyOtp.isPending || locked || cooldown === 0 || code.length < CODE_LENGTH}
+              className={buttonClass}
+            >
+              {verifyOtp.isPending ? (
+                "Verifying…"
+              ) : (
+                <>
+                  Verify and sign in <ArrowRight size={16} aria-hidden="true" />
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-steel">
+          <div className="mt-6 flex flex-col items-center gap-3 text-sm text-steel">
             <button
               type="button"
               disabled={cooldown > 0 || requestOtp.isPending}
               onClick={() => sendCode(identity)}
-              className="font-semibold text-navy underline decoration-gold decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50"
+              className="font-semibold text-navy underline decoration-gold decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50 hover:text-gold transition-colors"
             >
               {cooldown > 0 ? `Resend code in ${formatTime(cooldown)}` : "Resend code"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIdentity(null);
+                setCode("");
+                setError("");
+              }}
+              className="text-xs text-steel hover:text-navy transition-colors underline underline-offset-4"
+            >
+              ← Use a different phone number
             </button>
           </div>
         </>
       ) : (
         <>
-          <div className="auth-step"><span className="auth-step-icon"><KeyRound size={20} aria-hidden="true" /></span><span>Step 01 / Your account</span></div>
+          <div className="auth-step">
+            <span className="auth-step-icon">
+              <KeyRound size={20} aria-hidden="true" />
+            </span>
+            <span>Step 01 / Your account</span>
+          </div>
           <h1>Welcome back.</h1>
           <p className="auth-description">
             Enter the email and phone number your administrator registered. We&apos;ll text you a code.
@@ -111,20 +158,44 @@ export default function LoginPage() {
           <form onSubmit={submitIdentity} className="mt-8 space-y-5">
             <label className="block text-sm font-semibold text-ink">
               Email
-              <input required type="email" name="email" autoComplete="email" placeholder="you@example.com" className={inputClass} />
+              <input
+                required
+                type="email"
+                name="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                className={inputClass}
+              />
             </label>
             <label className="block text-sm font-semibold text-ink">
               Phone number
-              <input required type="tel" name="phone" autoComplete="tel" placeholder="0541234567" className={inputClass} />
+              <input
+                required
+                type="tel"
+                name="phone"
+                autoComplete="tel"
+                placeholder="0541234567"
+                className={inputClass}
+              />
             </label>
-            {error && <p role="alert" className="auth-error">{error}</p>}
+            {error && (
+              <p role="alert" className="auth-error text-center font-medium">
+                {error}
+              </p>
+            )}
             <button type="submit" disabled={requestOtp.isPending} className={buttonClass}>
-              {requestOtp.isPending ? "Sending code…" : <>Send sign-in code <ArrowRight size={16} aria-hidden="true" /></>}
+              {requestOtp.isPending ? (
+                "Sending code…"
+              ) : (
+                <>
+                  Send sign-in code <ArrowRight size={16} aria-hidden="true" />
+                </>
+              )}
             </button>
           </form>
 
-          <p className="auth-access-note">
-            Accounts are created by your RaiseFundz administrator. Need access? Contact them to be added.
+          <p className="auth-access-note text-center">
+            Accounts are created by your RaiseFundz administrator. Need access? Contact us on 0303981602 / 0203430792
           </p>
         </>
       )}

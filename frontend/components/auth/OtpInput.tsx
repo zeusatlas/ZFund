@@ -27,7 +27,7 @@ export default function OtpInput({
   }
 
   return (
-    <div role="group" aria-label="Verification code" className="flex gap-2 sm:gap-3">
+    <div role="group" aria-label="Verification code" className="flex justify-center gap-2 sm:gap-3">
       {Array.from({ length }, (_, i) => (
         <input
           key={i}

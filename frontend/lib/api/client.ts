@@ -66,19 +66,39 @@ async function refreshAccessToken(): Promise<string> {
   return access;
 }
 
-type ErrorBody = { message?: string; errors?: { field: string; message: string }[] };
+type ErrorBody = { message?: string; errors?: { field: string; message: string }[] | Record<string, string[]> };
 
 function toApiError(error: AxiosError<ErrorBody>): ApiError {
   if (!error.response) {
-    return { status: 0, message: error.code === "ECONNABORTED" ? "The request timed out." : "Network error. Check your connection." };
+    return {
+      status: 0,
+      message: error.code === "ECONNABORTED" ? "The request timed out." : "Network error. Check your connection.",
+    };
   }
   const { status, data } = error.response;
-  // Backend sends validation errors as [{ field, message }]; group them by field.
-  const errors = data?.errors?.reduce<Record<string, string[]>>((acc, { field, message }) => {
-    (acc[field] ??= []).push(message);
-    return acc;
-  }, {});
-  return { status, message: data?.message ?? error.message, errors };
+  let errors: Record<string, string[]> | undefined;
+
+  if (Array.isArray(data?.errors)) {
+    errors = data.errors.reduce<Record<string, string[]>>((acc, item) => {
+      if (item && typeof item === "object" && "field" in item && "message" in item) {
+        (acc[item.field] ??= []).push(item.message);
+      }
+      return acc;
+    }, {});
+  } else if (data?.errors && typeof data.errors === "object") {
+    errors = data.errors as Record<string, string[]>;
+  }
+
+  let message = data?.message;
+  if (!message || message === "Unauthorized") {
+    if (status === 401) {
+      message = "Invalid or expired verification code. Please try again.";
+    } else {
+      message = error.message || "An unexpected error occurred.";
+    }
+  }
+
+  return { status, message, errors };
 }
 
 api.interceptors.request.use(async (config) => {
@@ -100,8 +120,21 @@ api.interceptors.response.use(
   async (error: AxiosError<ErrorBody>) => {
     const original = error.config as RetriableConfig | undefined;
     const isRefreshCall = original?.url?.includes(REFRESH_PATH);
+    const isAuthEndpoint =
+      original?.url?.includes("/auth/verify-otp") ||
+      original?.url?.includes("/auth/request-otp") ||
+      original?.url?.includes("/auth/login");
+    const hasRefreshToken = Boolean(tokenStorage.getRefresh());
 
-    if (error.response?.status === 401 && original && !original._retry && !isRefreshCall) {
+    // Only attempt refresh on authenticated requests with an active refresh token
+    if (
+      error.response?.status === 401 &&
+      original &&
+      !original._retry &&
+      !isRefreshCall &&
+      !isAuthEndpoint &&
+      hasRefreshToken
+    ) {
       original._retry = true;
       try {
         refreshing ??= refreshAccessToken().finally(() => {
@@ -112,7 +145,9 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         tokenStorage.clear();
-        if (typeof window !== "undefined") window.location.replace(LOGIN_PATH);
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith(LOGIN_PATH)) {
+          window.location.replace(LOGIN_PATH);
+        }
       }
     }
 

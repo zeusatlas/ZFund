@@ -63,7 +63,7 @@ export default function Navbar() {
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "border-b border-ash/60 bg-parchment/90 shadow-sm backdrop-blur-xl"
+          ? "border-b border-ash/60 bg-parchment/95 backdrop-blur-md"
           : "border-b border-transparent bg-parchment"
       }`}
     >
@@ -74,21 +74,20 @@ export default function Navbar() {
           href="/"
           className="flex items-center gap-2.5 group"
         >
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-lime to-[#c48a1e] text-sm font-bold text-off-ink shadow-md transition-transform group-hover:scale-105">
+          <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-off-ink text-sm font-bold text-parchment transition-transform group-hover:scale-105">
             R
-            <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
           </span>
           <span className="text-[18px] font-bold tracking-tight text-off-ink">RaiseFundz</span>
         </Link>
 
-        {/* Desktop Nav */}
-        <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-full border border-ash/70 bg-white/60 p-1 lg:flex">
+        {/* Desktop Nav - Clean text links, no background color and no shadow */}
+        <nav aria-label="Main navigation" className="hidden items-center gap-8 lg:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={pathname === "/" ? link.href : `/${link.href}`}
               onClick={(event) => goToSection(event, link.href)}
-              className="rounded-full px-4 py-2 text-[13px] font-medium text-graphite transition-all duration-200 hover:bg-parchment hover:text-off-ink hover:shadow-sm"
+              className="text-[14px] font-medium text-graphite transition-colors hover:text-off-ink"
             >
               {link.label}
             </Link>
@@ -96,14 +95,14 @@ export default function Navbar() {
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden items-center gap-4 lg:flex">
+        <div className="hidden items-center gap-5 lg:flex">
           <Link
             href="/login"
             className="text-[14px] font-medium text-graphite transition-colors hover:text-off-ink"
           >
             Sign in
           </Link>
-          <HostCtaLink className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-5 py-2.5 text-[14px] font-semibold text-parchment shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg">
+          <HostCtaLink className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-5 py-2.5 text-[14px] font-semibold text-parchment transition-all hover:bg-charcoal hover:-translate-y-0.5">
             Host a campaign
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
           </HostCtaLink>
@@ -115,7 +114,7 @@ export default function Navbar() {
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           aria-controls="mobile-navigation"
-          className="rounded-xl border border-ash bg-white/60 p-2 text-off-ink transition-colors hover:bg-parchment lg:hidden"
+          className="rounded-xl border border-ash/80 bg-white p-2 text-off-ink transition-colors hover:bg-parchment lg:hidden"
           onClick={() => setMobileOpen((o) => !o)}
         >
           {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -129,8 +128,8 @@ export default function Navbar() {
           className="animate-drawer-in absolute inset-x-0 top-[68px] max-h-[calc(100dvh-68px)] overflow-y-auto border-t border-ash/60 bg-parchment/98 px-5 pb-10 pt-6 backdrop-blur-xl lg:hidden"
         >
           {/* Live indicator mobile */}
-          <div className="mb-6 flex items-center gap-2 rounded-2xl bg-white/70 px-4 py-3">
-            <Zap size={14} className="text-lime" fill="currentColor" />
+          <div className="mb-6 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 border border-ash/60">
+            <Zap size={14} className="text-off-ink" fill="currentColor" />
             <span className="text-[13px] font-medium text-graphite">Donations happening right now across Ghana</span>
           </div>
 
@@ -139,7 +138,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={pathname === "/" ? link.href : `/${link.href}`}
-                className="flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-medium text-graphite transition-colors hover:bg-white/70 hover:text-off-ink"
+                className="flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-medium text-graphite transition-colors hover:bg-white hover:text-off-ink"
                 onClick={(event) => goToSection(event, link.href)}
               >
                 {link.label}
@@ -148,19 +147,20 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <div className="mt-8 flex flex-col gap-3 border-t border-ash pt-6">
+          <div className="mt-8 flex flex-col gap-3 border-t border-ash/60 pt-6">
             <Link
               href="/login"
+              className="flex w-full items-center justify-center rounded-2xl border border-ash/80 bg-white py-3.5 text-[15px] font-semibold text-off-ink"
               onClick={() => setMobileOpen(false)}
-              className="rounded-2xl border border-ash bg-white/60 px-5 py-3.5 text-center text-[15px] font-medium text-off-ink transition-colors hover:bg-white"
             >
               Sign in
             </Link>
             <HostCtaLink
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-off-ink py-3.5 text-[15px] font-semibold text-parchment"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-off-ink px-5 py-3.5 text-center text-[15px] font-semibold text-parchment shadow-md"
             >
-              Host a campaign <ArrowRight size={15} />
+              Host a campaign
+              <ArrowRight size={15} />
             </HostCtaLink>
           </div>
         </div>
