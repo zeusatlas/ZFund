@@ -400,8 +400,8 @@ export default function TransactionsDashboard() {
               (verificationNotice.type === "success"
                 ? "border-emerald-300 bg-emerald-50 text-emerald-950"
                 : verificationNotice.type === "error"
-                ? "border-crimson/30 bg-crimson/10 text-crimson"
-                : "border-amber-300 bg-amber-50 text-amber-950")
+                  ? "border-crimson/30 bg-crimson/10 text-crimson"
+                  : "border-amber-300 bg-amber-50 text-amber-950")
             }
           >
             <div className="flex items-start gap-2.5">
@@ -660,10 +660,10 @@ export default function TransactionsDashboard() {
                               event.stopPropagation();
                               setSelected(item);
                             }}
-                            aria-label={"View transaction " + item.phone}
+                            aria-label={"View transaction " + item.reference}
                             className="rounded text-left font-medium text-navy underline decoration-navy/30 underline-offset-4"
                           >
-                            {item.id}
+                            {item.phone}
                           </button>
                           <span className="mt-1 block text-xs text-steel">{item.reference}</span>
                         </td>

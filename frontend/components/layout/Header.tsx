@@ -24,7 +24,7 @@ export default function Header() {
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-navy/10 bg-white/85 px-3 backdrop-blur-md sm:h-16 sm:px-5 lg:px-8">
       <div className="flex min-w-0 items-center gap-2.5">
         <MobileNav />
-        <button
+        {/* <button
           type="button"
           onClick={toggleCollapse}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -32,7 +32,7 @@ export default function Header() {
           className="hidden rounded-lg p-2 text-steel transition-colors hover:bg-stone hover:text-navy md:inline-flex"
         >
           {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
+        </button> */}
         <div className="min-w-0">
           <p className="hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-steel sm:block">
             {role === "admin" ? "Admin console" : "Host workspace"}

@@ -102,7 +102,7 @@ export default function TransactionDetails({
       ref={dialog}
       onClose={onClose}
       aria-labelledby="transaction-details-title"
-      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-none border border-navy/15 bg-white p-0 text-navy shadow-xl backdrop:bg-midnight/60"
+      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-none border border-navy/15 bg-white p-0 text-navy shadow-xl backdrop:bg-midnight/60"
     >
       <div className="flex items-start justify-between gap-4 border-b border-navy/10 p-6">
         <div>
@@ -186,8 +186,8 @@ export default function TransactionDetails({
                 (verifyFeedback.type === "success"
                   ? "border border-emerald-300 bg-emerald-50 text-emerald-900"
                   : verifyFeedback.type === "error"
-                  ? "border border-crimson/30 bg-crimson/10 text-crimson"
-                  : "border border-amber-300 bg-amber-50 text-amber-900")
+                    ? "border border-crimson/30 bg-crimson/10 text-crimson"
+                    : "border border-amber-300 bg-amber-50 text-amber-900")
               }
             >
               {verifyFeedback.type === "success" ? (

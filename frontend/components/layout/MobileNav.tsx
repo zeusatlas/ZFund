@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -62,9 +63,19 @@ export default function MobileNav() {
               <div className="flex h-16 shrink-0 items-center justify-between border-b border-steel/40 px-5">
                 <Link
                   href="/"
-                  className="text-lg font-semibold tracking-tight text-white hover:text-stone/90"
+                  className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-white hover:text-stone/90"
                 >
-                  RaiseFundz
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white p-1 shadow-xs">
+                    <Image
+                      src="/images/logo.png"
+                      alt="RaiseFundz logo"
+                      width={24}
+                      height={24}
+                      priority
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <span>RaiseFundz</span>
                 </Link>
                 <button
                   type="button"
