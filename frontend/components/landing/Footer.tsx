@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import CurrentYear from "@/components/landing/CurrentYear";
 import { HOST_FEATURES } from "@/components/landing/landing-data";
 
 const columns = {
@@ -9,7 +10,7 @@ const columns = {
     { href: "#for-organizations", label: "For organisations" },
     { href: "#security", label: "Security" },
   ],
-  Features: HOST_FEATURES.map(({ title }) => ({ href: "#for-hosts", label: title })),
+  Features: HOST_FEATURES.map(({ title }) => ({ href: undefined, label: title })),
   Legal: [
     { href: "/privacy", label: "Privacy Policy" },
     { href: "/terms", label: "Terms of Service" },
@@ -18,8 +19,7 @@ const columns = {
   ],
 };
 
-export default async function Footer() {
-  "use cache";
+export default function Footer() {
   return (
     <footer className="relative overflow-hidden bg-off-ink text-parchment">
       {/* Decorative gradient top border */}
@@ -53,12 +53,16 @@ export default async function Footer() {
               <ul className="space-y-3.5">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <Link
-                      href={link.href.startsWith("#") ? `/${link.href}` : link.href}
-                      className="text-[14px] text-parchment/55 transition-colors hover:text-white"
-                    >
-                      {link.label}
-                    </Link>
+                    {link.href ? (
+                      <Link
+                        href={link.href.startsWith("#") ? `/${link.href}` : link.href}
+                        className="text-[14px] text-parchment/55 transition-colors hover:text-white"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <span className="text-[14px] text-parchment/55">{link.label}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -79,7 +83,7 @@ export default async function Footer() {
               </p>
             </div>
             <p className="text-[12px] text-parchment/30">
-              © {new Date().getFullYear()} RaiseFundz. All rights reserved.
+              © <CurrentYear /> RaiseFundz. All rights reserved.
             </p>
           </div>
         </div>

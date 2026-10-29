@@ -146,7 +146,7 @@ export default function LandingTrust() {
       <section className="relative overflow-hidden bg-white py-28 text-off-ink">
         <div className="relative mx-auto max-w-300 px-6 text-center">
          
-          <h2 className="mb-6 text-[clamp(42px,5vw,72px)] font-bold leading-[0.93] tracking-[-2.5px] text-off-ink">
+          <h2 className="mb-6 text-[34px] sm:text-[clamp(42px,5vw,72px)] font-bold leading-[0.93] tracking-[-1.5px] sm:tracking-[-2.5px] text-off-ink">
             Launch your fundraiser.
             <br />
             Start collecting today.

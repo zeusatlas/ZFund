@@ -17,7 +17,7 @@ export default function ContactPage() {
   return (
     <LegalPage
       wide
-      heroImage="/images/hero.png"
+      heroImage="/images/hero.jpg"
       eyebrow="Get in touch"
       title="Contact us"
       intro="Questions about hosting a campaign, a withdrawal, or something that isn't working? Reach the team the way that suits you."
