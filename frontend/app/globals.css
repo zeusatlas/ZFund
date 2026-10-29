@@ -11,16 +11,16 @@
   --color-midnight: #10192b;
   --color-ink: #1c1f26;
 
-  /* ── Landing Pages: warm community palette ── */
-  --color-lime: #e5aa45;
+  /* ── Landing Pages: blue-black, navy and deep-gold palette ── */
+  --color-lime: #d99a1e;
   --color-lime-light: #f5d98a;
   --color-lime-dark: #c48a1e;
-  --color-parchment: #fff8ed;
-  --color-ash: #eadfce;
-  --color-graphite: #75695d;
-  --color-charcoal: #3b2b22;
-  --color-off-ink: #271c16;
-  --color-smoke: #b8a89b;
+  --color-parchment: #f3f6fb;
+  --color-ash: #d7dfeb;
+  --color-graphite: #51627b;
+  --color-charcoal: #0b2545;
+  --color-off-ink: #0a1424;
+  --color-smoke: #9fb0c8;
 
   /* ── Semantic status tints (derived from the RaiseFundz palette) ── */
   --color-success: #256b4a;

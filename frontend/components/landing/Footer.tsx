@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { HOST_FEATURES } from "@/components/landing/landing-data";
 
 const columns = {
   Platform: [
@@ -8,16 +9,12 @@ const columns = {
     { href: "#for-organizations", label: "For organisations" },
     { href: "#security", label: "Security" },
   ],
-  Account: [
-    { href: "/login", label: "Host dashboard" },
-    { href: "/login", label: "Admin console" },
-    { href: "/login", label: "Sign in" },
-  ],
+  Features: HOST_FEATURES.map(({ title }) => ({ href: "#for-hosts", label: title })),
   Legal: [
-    { href: "#", label: "Privacy Policy" },
-    { href: "#", label: "Terms of Service" },
+    { href: "/privacy", label: "Privacy Policy" },
+    { href: "/terms", label: "Terms of Service" },
     { href: "#security", label: "Security details" },
-    { href: "#", label: "Contact us" },
+    { href: "/contact", label: "Contact us" },
   ],
 };
 
@@ -37,8 +34,8 @@ export default async function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="group inline-flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-lime to-[#c48a1e] text-[15px] font-bold text-off-ink shadow-md">
-                R
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white p-1.5 shadow-md">
+                <Image src="/images/logo.png" alt="" width={36} height={36} className="h-full w-full" />
               </span>
               <span className="text-[19px] font-bold text-white">RaiseFundz</span>
             </Link>
@@ -46,13 +43,7 @@ export default async function Footer() {
               Bringing Ghana&apos;s communities together through transparent fundraising.
               Shared goals. Contributions in cedis. A purpose everyone can follow.
             </p>
-            {/* Mini CTA */}
-            <Link
-              href="/login"
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[13px] font-medium text-parchment/70 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
-            >
-              Start fundraising <ArrowRight size={13} />
-            </Link>
+           
           </div>
 
           {/* Link columns */}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -9,14 +10,16 @@ import HostCtaLink from "@/components/landing/HostCtaLink";
 const navLinks = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#for-hosts", label: "For hosts" },
-  { href: "#for-organizations", label: "For organisations" },
   { href: "#security", label: "Security" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const linkHref = (href: string) => (href.startsWith("/") || pathname === "/" ? href : `/${href}`);
 
   function goToSection(event: ReactMouseEvent<HTMLAnchorElement>, hash: string) {
     if (pathname !== "/") {
@@ -74,9 +77,14 @@ export default function Navbar() {
           href="/"
           className="flex items-center gap-2.5 group"
         >
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-off-ink text-sm font-bold text-parchment transition-transform group-hover:scale-105">
-            R
-          </span>
+          <Image
+            src="/images/logo.png"
+            alt=""
+            width={32}
+            height={32}
+            priority
+            className="h-8 w-8 transition-transform group-hover:scale-105"
+          />
           <span className="text-[18px] font-bold tracking-tight text-off-ink">RaiseFundz</span>
         </Link>
 
@@ -85,8 +93,8 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={pathname === "/" ? link.href : `/${link.href}`}
-              onClick={(event) => goToSection(event, link.href)}
+              href={linkHref(link.href)}
+              onClick={(event) => (link.href.startsWith("#") ? goToSection(event, link.href) : setMobileOpen(false))}
               className="text-[14px] font-medium text-graphite transition-colors hover:text-off-ink"
             >
               {link.label}
@@ -137,9 +145,9 @@ export default function Navbar() {
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                href={pathname === "/" ? link.href : `/${link.href}`}
+                href={linkHref(link.href)}
                 className="flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-medium text-graphite transition-colors hover:bg-white hover:text-off-ink"
-                onClick={(event) => goToSection(event, link.href)}
+                onClick={(event) => (link.href.startsWith("#") ? goToSection(event, link.href) : setMobileOpen(false))}
               >
                 {link.label}
                 <ArrowRight size={16} className="text-smoke" />
