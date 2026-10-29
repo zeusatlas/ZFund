@@ -8,7 +8,7 @@ const swaggerOptions: swaggerJSDoc.Options = {
       title: 'RaiseFunds Backend API',
       version: '1.0.0',
       description:
-        'RaiseFunds API - Contribution Management Platform with Database-Driven USSD Engine, Paystack Payments, and Multi-Provider SMS Notifications',
+        'RaiseFunds API - Contribution Management Platform with Database-Driven USSD Engine, RobsPay Payments, and Multi-Provider SMS Notifications',
       contact: {
         name: 'RaiseFunds Engineering Team',
         email: 'engineering@raisefundz.com',

@@ -8,6 +8,7 @@ import swaggerUi from 'swagger-ui-express';
 import { correlationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { errorHandler } from './common/middleware/error-handler.middleware';
 import { globalRateLimiter } from './common/middleware/rate-limiter.middleware';
+import { webhookController } from './controllers/webhook.controller';
 import { env } from './config/env';
 import { logger } from './config/logger';
 import { swaggerSpec } from './config/swagger';
@@ -72,6 +73,9 @@ export function createApp(): Application {
           'Authorization',
           'x-correlation-id',
           'x-paystack-signature',
+          'x-robspay-signature',
+          'x-timestamp',
+          'X-TIMESTAMP',
           'x-nalo-token',
         ],
         maxAge: 86400,
@@ -131,6 +135,11 @@ export function createApp(): Application {
 
   // Direct USSD Gateway Webhook alias (supports /ussd and /ussd/nalo without api prefix)
   app.use(['/ussd', '/ussd/nalo'], ussdRuntimeRoutes);
+
+  // Direct RobsPay Callback aliases (supports /trial-callback at root level)
+  app.post('/trial-callback', (req, res, next) => {
+    webhookController.handleRobspayWebhook(req, res, next);
+  });
 
   // Base API routes
   app.use(env.API_PREFIX, apiRoutes);

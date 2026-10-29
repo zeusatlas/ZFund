@@ -19,7 +19,7 @@ export class ProviderTransaction {
   @Index('idx_provider_tx_attempt_id')
   paymentAttemptId: string;
 
-  @Column({ default: 'PAYSTACK' })
+  @Column({ default: 'ROBSPAY' })
   provider: string;
 
   @Column({ nullable: true })
@@ -48,7 +48,7 @@ export class ProviderTransaction {
   @Column({ type: 'jsonb', nullable: true, default: {} })
   rawPayload?: Record<string, unknown>;
 
-  @ManyToOne(() => PaymentAttempt, (attempt) => attempt.transactions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => PaymentAttempt, (pa) => pa.transactions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'paymentAttemptId' })
   paymentAttempt: PaymentAttempt;
 

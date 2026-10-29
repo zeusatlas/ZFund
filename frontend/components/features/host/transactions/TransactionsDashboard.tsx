@@ -145,17 +145,17 @@ export default function TransactionsDashboard() {
       if (isConfirmed) {
         setVerificationNotice({
           type: "success",
-          text: `Payment ${item.id} verified and confirmed as Successful by Paystack! Included in your total received.`,
+          text: `Payment ${item.id} verified and confirmed as Successful by payment provider! Included in your total received.`,
         });
         if (selected?.id === item.id) {
           setSelected((prev) =>
-            prev ? { ...prev, status: "Paid", rawStatus: "CONFIRMED", note: "Payment confirmed with Paystack." } : null
+            prev ? { ...prev, status: "Paid", rawStatus: "CONFIRMED", note: "Payment confirmed with payment provider." } : null
           );
         }
       } else if (isFailed) {
         setVerificationNotice({
           type: "error",
-          text: `Payment ${item.id}: Paystack reported transaction as failed or cancelled by provider.`,
+          text: `Payment ${item.id}: Payment provider reported transaction as failed or cancelled by provider.`,
         });
         if (selected?.id === item.id) {
           setSelected((prev) =>
@@ -165,13 +165,13 @@ export default function TransactionsDashboard() {
       } else {
         setVerificationNotice({
           type: "info",
-          text: `Payment ${item.id}: Paystack reports this transaction is still awaiting donor authorization with their MoMo PIN on their handset.`,
+          text: `Payment ${item.id}: Payment provider reports this transaction is still awaiting donor authorization with their MoMo PIN on their handset.`,
         });
       }
     } catch (err: unknown) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Could not verify transaction with Paystack. Please try again.";
+        "Could not verify transaction with payment provider. Please try again.";
       setVerificationNotice({
         type: "error",
         text: `Error verifying ${item.id}: ${errorMsg}`,
@@ -207,12 +207,12 @@ export default function TransactionsDashboard() {
     if (confirmedCount > 0) {
       setVerificationNotice({
         type: "success",
-        text: `${confirmedCount} pending payment${confirmedCount > 1 ? "s were" : " was"} verified and confirmed as Successful with Paystack!`,
+        text: `${confirmedCount} pending payment${confirmedCount > 1 ? "s were" : " was"} verified and confirmed as Successful with payment provider!`,
       });
     } else {
       setVerificationNotice({
         type: "info",
-        text: "Paystack verification completed. All checked payments are still awaiting donor MoMo authorization.",
+        text: "Payment verification completed. All checked payments are still awaiting donor MoMo authorization.",
       });
     }
   }
@@ -344,7 +344,7 @@ export default function TransactionsDashboard() {
               Payment history
             </h2>
             <p className="mt-1 text-sm text-steel">
-              Select a transaction to view its payment details or sync pending payments with Paystack.
+              Select a transaction to view its payment details or sync pending payments with payment provider.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -688,7 +688,7 @@ export default function TransactionsDashboard() {
                                   handleVerify(item);
                                 }}
                                 disabled={verifyingId === item.id || verifyMutation.isPending}
-                                title="Check status directly with Paystack"
+                                title="Check status directly with payment provider"
                                 className="inline-flex items-center gap-1 rounded-none border border-navy/20 bg-stone/70 px-2 py-0.5 text-xs font-medium text-navy hover:bg-stone disabled:opacity-50"
                               >
                                 <RefreshCw

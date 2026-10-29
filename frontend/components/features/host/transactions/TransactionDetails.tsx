@@ -65,37 +65,37 @@ export default function TransactionDetails({
           ...currentTx,
           status: "Paid",
           rawStatus: "CONFIRMED",
-          note: "Payment confirmed with Paystack. Included in your total received.",
+          note: "Payment confirmed with Payment Provider. Included in your total received.",
         };
         setCurrentTx(updated);
         onTransactionUpdated?.(updated);
         setVerifyFeedback({
           type: "success",
-          text: "Payment successfully verified and confirmed by Paystack! The transaction is now marked as Successful.",
+          text: "Payment successfully verified and confirmed by Payment Provider! The transaction is now marked as Successful.",
         });
       } else if (isFailed) {
         const updated: Transaction = {
           ...currentTx,
           status: "Failed",
           rawStatus: "FAILED",
-          note: "Paystack reported this transaction as failed or cancelled by the mobile money provider.",
+          note: "Payment Provider reported this transaction as failed or cancelled by the mobile money provider.",
         };
         setCurrentTx(updated);
         onTransactionUpdated?.(updated);
         setVerifyFeedback({
           type: "error",
-          text: "Paystack reported that this transaction failed or was declined.",
+          text: "Payment Provider reported that this transaction failed or was declined.",
         });
       } else {
         setVerifyFeedback({
           type: "info",
-          text: "Paystack reports this payment is still awaiting donor authorization with their MoMo PIN on their handset.",
+          text: "Payment Provider reports this payment is still awaiting donor authorization with their MoMo PIN on their handset.",
         });
       }
     } catch (err: unknown) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Could not verify transaction with Paystack. Please ensure your network connection is active and try again.";
+        "Could not verify transaction with Payment Provider. Please ensure your network connection is active and try again.";
       setVerifyFeedback({
         type: "error",
         text: errorMsg,
@@ -162,7 +162,7 @@ export default function TransactionDetails({
                 <div>
                   <h3 className="text-sm font-semibold text-amber-950">Awaiting donor authorization</h3>
                   <p className="mt-1 text-xs text-amber-800 leading-relaxed">
-                    If the donor has already entered their MoMo PIN or if you want to sync the latest payment status directly with Paystack, click below.
+                    If the donor has already entered their MoMo PIN or if you want to sync the latest payment status directly with Payment Provider, click below.
                   </p>
                 </div>
               </div>
@@ -178,7 +178,7 @@ export default function TransactionDetails({
                   ) : (
                     <RefreshCw size={14} aria-hidden="true" />
                   )}
-                  {verifyMutation.isPending ? "Checking Paystack…" : "Check Paystack Status"}
+                  {verifyMutation.isPending ? "Checking Payment Provider…" : "Check Payment Status"}
                 </button>
               </div>
             </div>

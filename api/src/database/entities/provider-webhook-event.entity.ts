@@ -11,7 +11,7 @@ export class ProviderWebhookEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ default: 'PAYSTACK' })
+  @Column({ default: 'ROBSPAY' })
   provider: string;
 
   @Column()

@@ -322,7 +322,7 @@ export async function runSeeds(): Promise<void> {
       paymentMethodRepo.create({
         projectId: project1001.id,
         method: PaymentMethodType.MOBILE_MONEY,
-        provider: 'PAYSTACK',
+        provider: 'ROBSPAY',
         isEnabled: true,
       })
     );

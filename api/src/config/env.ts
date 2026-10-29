@@ -68,9 +68,25 @@ const envSchema = z.object({
   NALO_DEFAULT_CODE: z.string().default("*920*969#"),
   NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(160),
 
-  // Paystack
-  PAYSTACK_SECRET_KEY: z.string(),
-  PAYSTACK_PUBLIC_KEY: z.string(),
+  // Payment Provider Configuration
+  PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("robspay"),
+
+  // RobsPay
+  ROBSPAY_API_URL: z
+    .string()
+    .default("https://robspay.robsamtechnology.com/apis/v1/collect-payment"),
+  ROBSPAY_MERCHANT_ID: z.string().default("ZEU889626"),
+  ROBSPAY_MERCHANT_NAME: z.string().default("Zeus Atlas Ltd"),
+  ROBSPAY_API_KEY: z
+    .string()
+    .default(
+      "239d7edb7e27c718f0f662eb5779f26930c74cd909d95113b886349802b1579b"
+    ),
+  ROBSPAY_CALLBACK_URL: z.string().optional().default(""),
+
+  // Paystack (legacy / optional fallback)
+  PAYSTACK_SECRET_KEY: z.string().optional().default(""),
+  PAYSTACK_PUBLIC_KEY: z.string().optional().default(""),
   PAYSTACK_BASE_URL: z.string().default("https://api.paystack.co"),
 
   // SMS
@@ -124,7 +140,7 @@ function validateEnv(): EnvConfig {
     result.data.TYPEORM_SYNCHRONIZE
   ) {
     console.warn(
-      "WARNING: TYPEORM_SYNCHRONIZE is enabled in PRODUCTION environment. Ensure this is intentional and schema changes are audited.",
+      "WARNING: TYPEORM_SYNCHRONIZE is enabled in PRODUCTION environment. Ensure this is intentional and schema changes are audited."
     );
   }
 

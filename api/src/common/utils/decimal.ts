@@ -9,6 +9,17 @@ BigNumber.config({
 
 export class MoneyUtil {
   /**
+   * Safely formats an amount to 2 decimal places string
+   */
+  static format(amount: string | number): string {
+    return new BigNumber(amount).toFixed(2);
+  }
+
+  static formatAmount(amount: string | number): string {
+    return new BigNumber(amount).toFixed(2);
+  }
+
+  /**
    * Safely adds two monetary amounts
    */
   static add(a: string | number, b: string | number): string {
@@ -55,7 +66,6 @@ export class MoneyUtil {
 
   /**
    * Converts GHS or other major currency unit to minor unit (pesewas/kobo/cents).
-   * Paystack expects amounts in minor currency units (e.g. 10.50 GHS = 1050 pesewas).
    */
   static toMinorUnit(amount: string | number): number {
     return new BigNumber(amount).multipliedBy(100).integerValue().toNumber();

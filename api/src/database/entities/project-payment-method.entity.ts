@@ -31,7 +31,7 @@ export class ProjectPaymentMethod {
   })
   method: PaymentMethodType;
 
-  @Column({ default: 'PAYSTACK' })
+  @Column({ default: 'ROBSPAY' })
   provider: string;
 
   @Column({ default: true })

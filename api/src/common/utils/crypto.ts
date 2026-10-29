@@ -93,10 +93,52 @@ export class CryptoUtil {
   }
 
   /**
+   * Generates a secure random 12-character uppercase hex transaction ID for RobsPay
+   */
+  static generateRobspayOrderId(): string {
+    return crypto.randomBytes(6).toString('hex').toUpperCase();
+  }
+
+  /**
+   * Generates RobsPay HMAC-SHA256 signature from (payload + timestamp) using API key
+   */
+  static generateRobspaySignature(payload: string, timestamp: string, apiKey = env.ROBSPAY_API_KEY): string {
+    const signatureString = payload + timestamp;
+    return crypto
+      .createHmac('sha256', apiKey)
+      .update(signatureString)
+      .digest('hex');
+  }
+
+  /**
+   * Verifies RobsPay HMAC-SHA256 signature
+   */
+  static verifyRobspaySignature(
+    payload: string | Buffer,
+    signature: string,
+    timestamp = '',
+    apiKey = env.ROBSPAY_API_KEY
+  ): boolean {
+    if (!signature) return false;
+    const bodyStr = typeof payload === 'string' ? payload : payload.toString('utf8');
+    const computed = this.generateRobspaySignature(bodyStr, timestamp, apiKey);
+    const computedBuf = Buffer.from(computed);
+    const signatureBuf = Buffer.from(signature);
+    if (computedBuf.length !== signatureBuf.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(computedBuf, signatureBuf);
+  }
+
+  /**
    * Verifies Paystack HMAC SHA512 signature against raw request body
    */
-  static verifyPaystackSignature(rawBody: string | Buffer, signature: string, secretKey = env.PAYSTACK_SECRET_KEY): boolean {
-    if (!signature) return false;
+  static verifyPaystackSignature(
+    rawBody: string | Buffer,
+    signature: string,
+    secretKey = env.PAYSTACK_SECRET_KEY
+  ): boolean {
+    if (!signature || !secretKey) return false;
     const computed = crypto
       .createHmac('sha512', secretKey)
       .update(rawBody)

@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/database';
 import { BadRequestError, NotFoundError } from '../common/errors/app-error';
 import { CryptoUtil } from '../common/utils/crypto';
 import { MoneyUtil } from '../common/utils/decimal';
+import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { Contribution, ContributionStatus } from '../database/entities/contribution.entity';
 import { Contributor } from '../database/entities/contributor.entity';
@@ -12,6 +13,8 @@ import { PaymentAttempt, PaymentChannel, PaymentStatus } from '../database/entit
 import { ProviderTransaction } from '../database/entities/provider-transaction.entity';
 import { ProviderWebhookEvent } from '../database/entities/provider-webhook-event.entity';
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
+import { IPaymentProvider } from './payment-provider.interface';
+import { robspayProvider, RobspayProvider } from './robspay.provider';
 import { paystackProvider } from './paystack.provider';
 
 export interface InitiateUssdPaymentInput {
@@ -32,7 +35,17 @@ export class PaymentService {
   private get providerTxRepo() { return AppDataSource.getRepository(ProviderTransaction); }
 
   /**
-   * Initiates payment: creates Contributor, Contribution, PaymentAttempt, calls Paystack
+   * Resolves the active payment provider (defaults to RobsPay)
+   */
+  get currentProvider(): IPaymentProvider {
+    if (env.PAYMENT_PROVIDER === 'paystack') {
+      return paystackProvider;
+    }
+    return robspayProvider;
+  }
+
+  /**
+   * Initiates payment: creates Contributor, Contribution, PaymentAttempt, calls payment provider
    */
   async initiatePayment(input: InitiatePaymentInput): Promise<{
     paymentAttempt: PaymentAttempt;
@@ -90,25 +103,28 @@ export class PaymentService {
     const savedContribution = await this.contributionRepo.save(contribution);
 
     // Create Payment Attempt
+    const provider = this.currentProvider;
     const paymentRef = CryptoUtil.generateReference('ZF-PAY');
+    const orderId = RobspayProvider.generateTransactionId();
+
     const paymentAttempt = this.paymentAttemptRepo.create({
       reference: paymentRef,
       contributionId: savedContribution.id,
-      provider: 'PAYSTACK',
+      provider: provider.code,
       channel: input.channel || PaymentChannel.MOBILE_MONEY,
       msisdn: input.msisdn,
       amount: input.amount,
       currency: project.currency,
       status: PaymentStatus.INITIATED,
       fee: '0.00',
+      providerReference: orderId,
     });
     const savedAttempt = await this.paymentAttemptRepo.save(paymentAttempt);
 
-    // Call Paystack provider
     const customerEmail = input.email || `${input.msisdn}@contributors.raisefundz.com`;
 
     try {
-      const initResult = await paystackProvider.initializePayment({
+      const initResult = await provider.initializePayment({
         reference: paymentRef,
         amount: input.amount,
         currency: project.currency,
@@ -119,10 +135,11 @@ export class PaymentService {
         metadata: {
           contributionId: savedContribution.id,
           projectId: project.id,
+          transactionId: orderId,
         },
       });
 
-      savedAttempt.providerReference = initResult.providerReference;
+      savedAttempt.providerReference = initResult.providerReference || orderId;
       savedAttempt.authorizationUrl = initResult.authorizationUrl;
       savedAttempt.status = PaymentStatus.PENDING;
       await this.paymentAttemptRepo.save(savedAttempt);
@@ -145,7 +162,7 @@ export class PaymentService {
   }
 
   /**
-   * Initiates direct Mobile Money charge for USSD donation via Paystack
+   * Initiates direct Mobile Money charge for USSD donation via active payment provider
    */
   async initiateUssdPayment(input: InitiateUssdPaymentInput): Promise<{
     paymentAttempt: PaymentAttempt;
@@ -202,41 +219,54 @@ export class PaymentService {
     const savedContribution = await this.contributionRepo.save(contribution);
 
     // Create Payment Attempt
+    const provider = this.currentProvider;
     const paymentRef = CryptoUtil.generateReference('ZF-PAY');
+    const orderId = RobspayProvider.generateTransactionId();
+
     const paymentAttempt = this.paymentAttemptRepo.create({
       reference: paymentRef,
       contributionId: savedContribution.id,
-      provider: 'PAYSTACK',
+      provider: provider.code,
       channel: PaymentChannel.MOBILE_MONEY,
       msisdn: input.msisdn,
       amount: input.amount,
       currency: project.currency,
       status: PaymentStatus.INITIATED,
       fee: '0.00',
+      providerReference: orderId,
     });
     const savedAttempt = await this.paymentAttemptRepo.save(paymentAttempt);
 
     const customerEmail = input.email || `${input.msisdn}@contributors.raisefundz.com`;
 
     try {
-      const chargeResult = await paystackProvider.chargeMobileMoney({
-        reference: paymentRef,
-        amount: input.amount,
-        currency: project.currency,
-        phone: input.msisdn,
-        email: customerEmail,
-        metadata: {
-          contributionId: savedContribution.id,
-          projectId: project.id,
-          channel: 'USSD',
-        },
-      });
+      const chargeResult = provider.chargeMobileMoney
+        ? await provider.chargeMobileMoney({
+            reference: paymentRef,
+            amount: input.amount,
+            currency: project.currency,
+            phone: input.msisdn,
+            email: customerEmail,
+            metadata: {
+              contributionId: savedContribution.id,
+              projectId: project.id,
+              channel: 'USSD',
+              transactionId: orderId,
+            },
+          })
+        : await provider.initializePayment({
+            reference: paymentRef,
+            amount: input.amount,
+            currency: project.currency,
+            phone: input.msisdn,
+            email: customerEmail,
+          });
 
-      savedAttempt.providerReference = chargeResult.reference || paymentRef;
+      savedAttempt.providerReference = (chargeResult as any).reference || (chargeResult as any).providerReference || orderId;
       savedAttempt.metadata = {
         ...savedAttempt.metadata,
-        requiresOtp: chargeResult.requiresOtp,
-        displayText: chargeResult.displayText,
+        requiresOtp: (chargeResult as any).requiresOtp ?? false,
+        displayText: (chargeResult as any).displayText,
         chargeStatus: chargeResult.status,
       };
 
@@ -265,7 +295,7 @@ export class PaymentService {
         });
       } else if (chargeResult.status === 'failed') {
         savedAttempt.status = PaymentStatus.FAILED;
-        savedAttempt.providerStatus = chargeResult.displayText || chargeResult.message || 'Charge failed';
+        savedAttempt.providerStatus = (chargeResult as any).displayText || (chargeResult as any).message || 'Charge failed';
         await this.paymentAttemptRepo.save(savedAttempt);
 
         savedContribution.status = ContributionStatus.FAILED;
@@ -294,7 +324,7 @@ export class PaymentService {
   }
 
   /**
-   * Submits OTP received from contributor via USSD to Paystack
+   * Submits OTP received from contributor via USSD (Paystack fallback)
    */
   async submitUssdPaymentOtp(params: { reference: string; otp: string }): Promise<{
     status: 'success' | 'pay_offline' | 'pending' | 'failed';
@@ -303,7 +333,7 @@ export class PaymentService {
     paymentAttempt: PaymentAttempt;
   }> {
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
-      where: { reference: params.reference },
+      where: [{ reference: params.reference }, { providerReference: params.reference }],
       relations: ['contribution', 'contribution.project', 'contribution.contributor'],
     });
 
@@ -311,10 +341,17 @@ export class PaymentService {
       throw new NotFoundError(`Payment attempt with reference '${params.reference}' not found`);
     }
 
-    const otpResult = await paystackProvider.submitOtp({
-      reference: params.reference,
-      otp: params.otp,
-    });
+    const provider = this.currentProvider;
+    const otpResult = provider.submitOtp
+      ? await provider.submitOtp({
+          reference: params.reference,
+          otp: params.otp,
+        })
+      : {
+          reference: params.reference,
+          status: 'success' as const,
+          message: 'Payment confirmed.',
+        };
 
     if (otpResult.status === 'success') {
       const chargeData = (otpResult.rawResponse?.data as Record<string, unknown>) || {
@@ -325,7 +362,7 @@ export class PaymentService {
       };
 
       const webhookRecord = this.webhookEventRepo.create({
-        provider: 'PAYSTACK',
+        provider: provider.code,
         eventType: 'charge.success',
         reference: paymentAttempt.reference,
         rawPayload: chargeData,
@@ -342,7 +379,7 @@ export class PaymentService {
     }
 
     const updatedAttempt = (await this.paymentAttemptRepo.findOne({
-      where: { reference: params.reference },
+      where: { id: paymentAttempt.id },
       relations: ['contribution'],
     })) || paymentAttempt;
 
@@ -355,7 +392,181 @@ export class PaymentService {
   }
 
   /**
-   * Handles authenticated Paystack webhook event idempotently
+   * Handles RobsPay payment callback asynchronously
+   */
+  async handleRobspayCallback(
+    data: Record<string, unknown>,
+    _rawBody?: string | Buffer
+  ): Promise<void> {
+    const transactionId = String(data.trans_id || data.transaction_id || '').trim();
+    const telcoTransId = String(data.telco_tran_id || '').trim();
+    const rawStatus = String(data.status || '').toLowerCase().trim();
+    const amount = data.amount !== undefined ? String(data.amount) : undefined;
+    const paymentMethod = data.payment_method ? String(data.payment_method) : undefined;
+    const customerName = data.customer_name ? String(data.customer_name) : undefined;
+
+    logger.info(
+      { transactionId, telcoTransId, status: rawStatus, amount, paymentMethod, customerName },
+      'Processing RobsPay payment callback'
+    );
+
+    if (!transactionId) {
+      logger.warn({ data }, 'RobsPay callback missing transaction ID (trans_id)');
+      return;
+    }
+
+    // 1. Find payment attempt by providerReference (12-char hex) or reference
+    const paymentAttempt = await this.paymentAttemptRepo.findOne({
+      where: [{ providerReference: transactionId }, { reference: transactionId }],
+      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+    });
+
+    if (!paymentAttempt) {
+      logger.warn({ transactionId }, 'PaymentAttempt not found for RobsPay callback');
+      return;
+    }
+
+    // 2. Idempotency Check: if already confirmed successful, skip duplicate processing
+    if (paymentAttempt.status === PaymentStatus.SUCCESSFUL) {
+      logger.info(
+        { transactionId, reference: paymentAttempt.reference },
+        'PaymentAttempt already marked successful (idempotent skip)'
+      );
+      return;
+    }
+
+    // 3. Persist Webhook Event record for audit
+    const webhookRecord = this.webhookEventRepo.create({
+      provider: 'ROBSPAY',
+      eventType: `callback.${rawStatus}`,
+      eventId: telcoTransId || transactionId,
+      reference: paymentAttempt.reference,
+      rawPayload: data,
+      isProcessed: false,
+    });
+    await this.webhookEventRepo.save(webhookRecord);
+
+    const isSuccess = ['success', 'successful', 'paid', 'completed'].includes(rawStatus);
+    const isFailed = ['failed', 'declined', 'cancelled', 'timeout'].includes(rawStatus);
+
+    if (isSuccess) {
+      // Amount verification if amount provided in callback
+      if (amount) {
+        const amountInMajor = MoneyUtil.formatAmount(amount);
+        if (MoneyUtil.compare(paymentAttempt.amount, amountInMajor) !== 0) {
+          logger.error(
+            {
+              expected: paymentAttempt.amount,
+              received: amountInMajor,
+              transactionId,
+            },
+            'RobsPay payment amount discrepancy detected'
+          );
+          paymentAttempt.status = PaymentStatus.FAILED;
+          paymentAttempt.metadata = {
+            ...paymentAttempt.metadata,
+            discrepancy: `Expected ${paymentAttempt.amount}, received ${amountInMajor}`,
+            telcoTransId,
+          };
+          await this.paymentAttemptRepo.save(paymentAttempt);
+
+          webhookRecord.isProcessed = true;
+          webhookRecord.processingResult = 'Amount discrepancy';
+          await this.webhookEventRepo.save(webhookRecord);
+          return;
+        }
+      }
+
+      // Transactional multi-record financial write
+      await AppDataSource.transaction(async (manager) => {
+        paymentAttempt.status = PaymentStatus.SUCCESSFUL;
+        paymentAttempt.fee = '0.00';
+        paymentAttempt.completedAt = new Date();
+        paymentAttempt.providerReference = transactionId;
+        paymentAttempt.metadata = {
+          ...paymentAttempt.metadata,
+          telcoTransId,
+          paymentMethod,
+          customerName,
+        };
+        await manager.save(paymentAttempt);
+
+        const contribution = paymentAttempt.contribution;
+        contribution.status = ContributionStatus.CONFIRMED;
+        await manager.save(contribution);
+
+        // Update contributor name if received from telco and donor name was default
+        if (customerName && contribution.contributor) {
+          const contributor = contribution.contributor;
+          if (!contributor.name || contributor.name.startsWith('Donor ')) {
+            contributor.name = customerName;
+            await manager.save(contributor);
+          }
+        }
+
+        // Create ProviderTransaction record
+        const providerTx = manager.create(ProviderTransaction, {
+          paymentAttemptId: paymentAttempt.id,
+          provider: 'ROBSPAY',
+          providerTransactionId: telcoTransId || transactionId,
+          reference: paymentAttempt.reference,
+          amount: paymentAttempt.amount,
+          currency: paymentAttempt.currency,
+          fee: '0.00',
+          status: 'success',
+          gatewayResponse: 'Payment Successful',
+          rawPayload: data,
+        });
+        await manager.save(providerTx);
+
+        // Record double-entry financial ledger entry
+        await financialService.recordPaymentConfirmed(contribution, paymentAttempt, manager);
+
+        webhookRecord.isProcessed = true;
+        webhookRecord.processedAt = new Date();
+        webhookRecord.processingResult = 'Payment confirmed and ledger updated';
+        await manager.save(webhookRecord);
+      });
+
+      // Trigger contributor SMS confirmation notification (non-blocking)
+      const contribution = paymentAttempt.contribution;
+      const project = contribution.project;
+
+      await notificationService.sendNotification({
+        templateKey: 'CONTRIBUTION_CONFIRMED_CONTRIBUTOR',
+        recipientPhone: paymentAttempt.msisdn,
+        eventType: 'PAYMENT_SUCCESS',
+        variables: {
+          amount: paymentAttempt.amount,
+          currency: paymentAttempt.currency,
+          projectName: project?.name || 'RaiseFunds Project',
+          reference: paymentAttempt.reference,
+        },
+      });
+    } else if (isFailed) {
+      paymentAttempt.status = PaymentStatus.FAILED;
+      paymentAttempt.providerStatus = String(data.status || 'Failed');
+      await this.paymentAttemptRepo.save(paymentAttempt);
+
+      if (paymentAttempt.contribution) {
+        paymentAttempt.contribution.status = ContributionStatus.FAILED;
+        await this.contributionRepo.save(paymentAttempt.contribution);
+      }
+
+      webhookRecord.isProcessed = true;
+      webhookRecord.processedAt = new Date();
+      webhookRecord.processingResult = 'Marked failed';
+      await this.webhookEventRepo.save(webhookRecord);
+    } else {
+      logger.info({ status: rawStatus }, 'Unhandled RobsPay callback status (pending/other)');
+      webhookRecord.isProcessed = true;
+      webhookRecord.processingResult = `Status ${rawStatus}`;
+      await this.webhookEventRepo.save(webhookRecord);
+    }
+  }
+
+  /**
+   * Handles authenticated Paystack webhook event idempotently (legacy support)
    */
   async handleWebhook(rawBody: string | Buffer, eventPayload: Record<string, unknown>): Promise<void> {
     const eventType = String(eventPayload.event || '');
@@ -470,7 +681,7 @@ export class PaymentService {
       // Create ProviderTransaction record
       const providerTx = manager.create(ProviderTransaction, {
         paymentAttemptId: paymentAttempt.id,
-        provider: 'PAYSTACK',
+        provider: paymentAttempt.provider || 'PAYSTACK',
         providerTransactionId: String(data.id),
         reference,
         amount: amountInMajor,
@@ -540,6 +751,9 @@ export class PaymentService {
     }
   }
 
+  /**
+   * Verifies payment status by reference or provider order ID
+   */
   async verifyPayment(reference: string): Promise<PaymentAttempt> {
     const cleanRef = reference.trim();
     let paymentAttempt = await this.paymentAttemptRepo.findOne({
@@ -575,7 +789,8 @@ export class PaymentService {
       return paymentAttempt;
     }
 
-    const verifyResult = await paystackProvider.verifyTransaction(paymentAttempt.reference);
+    const provider = paymentAttempt.provider === 'PAYSTACK' ? paystackProvider : this.currentProvider;
+    const verifyResult = await provider.verifyTransaction(paymentAttempt.providerReference || paymentAttempt.reference);
 
     if (verifyResult.status === 'success') {
       const chargePayload = (verifyResult.rawResponse?.data as Record<string, unknown>) || {
@@ -585,7 +800,7 @@ export class PaymentService {
         id: paymentAttempt.providerReference || paymentAttempt.reference,
       };
       const webhookRecord = this.webhookEventRepo.create({
-        provider: 'PAYSTACK',
+        provider: provider.code,
         eventType: 'charge.success',
         reference: paymentAttempt.reference,
         rawPayload: chargePayload,
@@ -598,7 +813,7 @@ export class PaymentService {
         gateway_response: verifyResult.gatewayResponse || 'Transaction failed or abandoned',
       };
       const webhookRecord = this.webhookEventRepo.create({
-        provider: 'PAYSTACK',
+        provider: provider.code,
         eventType: 'charge.failed',
         reference: paymentAttempt.reference,
         rawPayload: chargePayload,

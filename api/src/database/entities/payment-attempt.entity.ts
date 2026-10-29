@@ -42,7 +42,7 @@ export class PaymentAttempt {
   @Index('idx_payment_attempt_contribution_id')
   contributionId: string;
 
-  @Column({ default: 'PAYSTACK' })
+  @Column({ default: 'ROBSPAY' })
   provider: string;
 
   @Column({
@@ -69,7 +69,7 @@ export class PaymentAttempt {
   status: PaymentStatus;
 
   /**
-   * External reference or transaction ID returned by provider (e.g. Paystack reference)
+   * External reference or transaction ID returned by provider (e.g. RobsPay 12-char trans_id)
    */
   @Column({ nullable: true })
   @Index('idx_payment_provider_ref')

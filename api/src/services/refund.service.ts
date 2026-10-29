@@ -8,6 +8,7 @@ import { financialService } from './financial.service';
 import { notificationService } from './notification.service';
 import { PaymentAttempt, PaymentStatus } from '../database/entities/payment-attempt.entity';
 import { paystackProvider } from './paystack.provider';
+import { robspayProvider } from './robspay.provider';
 import { Refund, RefundStatus } from '../database/entities/refund.entity';
 import { CreateRefundInput, ReviewRefundInput } from '../schemas/refund.schemas';
 
@@ -156,8 +157,9 @@ export class RefundService {
       throw new BadRequestError('Associated payment attempt missing for refund');
     }
 
-    // Call Paystack refund API
-    const providerResult = await paystackProvider.initiateRefund({
+    // Call payment provider refund API
+    const provider = refund.paymentAttempt.provider === 'PAYSTACK' ? paystackProvider : robspayProvider;
+    const providerResult = await provider.initiateRefund({
       transactionReference: refund.paymentAttempt.reference,
       amount: refund.amount,
       currency: refund.currency,

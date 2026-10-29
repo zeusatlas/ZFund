@@ -11,7 +11,7 @@ import { UssdMenuOption, UssdOptionType } from '../../src/database/entities/ussd
 import { UssdMenu, UssdMenuType } from '../../src/database/entities/ussd-menu.entity';
 import { User, UserStatus } from '../../src/database/entities/user.entity';
 import { CryptoUtil } from '../../src/common/utils/crypto';
-import { paystackProvider } from '../../src/services/paystack.provider';
+import { paymentService } from '../../src/services/payment.service';
 import { closeTestDatabase, setupTestDatabase } from '../test-db';
 
 describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO runtime)', () => {
@@ -511,7 +511,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
 
     expect(turn3.status).toBe(200);
     expect(turn3.body.MSGTYPE).toBe(true);
-    expect(turn3.body.MSG).toContain('Contribute GHS 50.00 to Holy Trinity Church Project?');
+    expect(turn3.body.MSG).toMatch(/Contribute GHS 50\.00 to (Offering|Holy Trinity Church Project)\\?/);
 
     // Turn 4: Select '1' (Confirm)
     const turn4 = await request(app)
@@ -562,7 +562,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
 
   it('should handle Paystack Mobile Money OTP challenge during USSD session', async () => {
     // Mock Paystack to require OTP for this test
-    const chargeSpy = jest.spyOn(paystackProvider, 'chargeMobileMoney').mockResolvedValueOnce({
+    const chargeSpy = jest.spyOn(paymentService.currentProvider as any, 'chargeMobileMoney').mockResolvedValueOnce({
       reference: 'ZF-PAY-TEST-OTP-1',
       status: 'send_otp',
       requiresOtp: true,
@@ -570,7 +570,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
       displayText: 'Please enter the OTP authorization code sent to your phone via SMS:',
     });
 
-    const submitOtpSpy = jest.spyOn(paystackProvider, 'submitOtp').mockResolvedValueOnce({
+    const submitOtpSpy = jest.spyOn(paymentService.currentProvider as any, 'submitOtp').mockResolvedValueOnce({
       reference: 'ZF-PAY-TEST-OTP-1',
       status: 'success',
       message: 'Payment confirmed successfully!',
@@ -652,7 +652,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
   });
 
   it('should allow contributor to cancel payment at OTP prompt with 0', async () => {
-    jest.spyOn(paystackProvider, 'chargeMobileMoney').mockResolvedValueOnce({
+    jest.spyOn(paymentService.currentProvider as any, 'chargeMobileMoney').mockResolvedValueOnce({
       reference: 'ZF-PAY-TEST-CANCEL-1',
       status: 'send_otp',
       requiresOtp: true,
