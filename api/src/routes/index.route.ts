@@ -2,6 +2,7 @@ import { Router } from 'express';
 import adminRoutes from './admin.routes';
 import auditRoutes from './audit.routes';
 import authRoutes from './auth.routes';
+import contactRoutes from './contact.routes';
 import contributionRoutes from './contribution.routes';
 import documentRoutes from './document.routes';
 import financialRoutes from './financial.routes';
@@ -65,6 +66,9 @@ router.use('/withdrawals', withdrawalRoutes);
 
 // Admin Dashboard
 router.use('/admin', adminRoutes);
+
+// Public website contact form
+router.use('/contact', contactRoutes);
 
 // Audit Logging
 router.use('/audit', auditRoutes);

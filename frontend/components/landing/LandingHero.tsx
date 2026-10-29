@@ -3,9 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import HostCtaLink from "@/components/landing/HostCtaLink";
 import { useEffect, useRef, useState } from "react";
-import { HERO_RAISED_TODAY, HERO_USSD_CODE } from "@/components/landing/landing-data";
+import { HERO_RAISED_TODAY, HERO_USSD_CODE, TELECOMS } from "@/components/landing/landing-data";
 
 /* ── Animated stat counter ── */
 function Counter({ target, prefix = "", suffix = "" }: { target: number; prefix?: string; suffix?: string }) {
@@ -49,17 +48,17 @@ export default function LandingHero() {
 
           {/* Left: Copy */}
           <div className="animate-slide-up">
-            <h1 className="mb-6 text-[clamp(48px,6vw,80px)] font-bold leading-[0.93] tracking-[-3.5px] text-off-ink">
-              Raise funds.
+            <h1 className="mb-6 text-[40px] sm:text-[clamp(48px,6vw,80px)] font-bold leading-[0.93] tracking-[-2px] sm:tracking-[-3.5px] text-off-ink">
+              Raise funds
               <br />
-              <span className="text-off-ink">Any phone.</span>
+              <span className="text-off-ink">easily with</span>
               <br />
-              <span className="text-graphite font-medium">Any network.</span>
+              <span className="text-graphite font-medium">RaiseFundz.</span>
             </h1>
 
             <p className="mb-10 max-w-[440px] text-[18px] leading-[1.6] text-graphite">
-              RaiseFundz lets your community donate via USSD shortcode — no app, no internet needed.
-              Launch a campaign, share a code, collect in real time.
+              Create a campaign, share a USSD code, and collect contributions in cedis from any phone
+              on any network. No app and no internet needed.
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -75,9 +74,17 @@ export default function LandingHero() {
               </Link>
             </div>
 
-            <p className="mt-8 text-[13px] text-smoke">
-              Free to start · No credit card needed · Withdraw anytime
-            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="text-[13px] text-graphite">Works on</span>
+              {TELECOMS.map((name) => (
+                <span
+                  key={name}
+                  className="rounded-full border border-ash bg-white px-3 py-1 text-[12px] font-semibold text-off-ink"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Right: Mockup */}
@@ -94,7 +101,7 @@ export default function LandingHero() {
             {/* Hero photo */}
             <div className="animate-float overflow-hidden rounded-[36px] border border-ash/60 shadow-lg">
               <Image
-                src="/images/hero.png"
+                src="/images/her.png"
                 alt="A fundraiser celebrating a donation received on her phone"
                 width={1145}
                 height={1374}
