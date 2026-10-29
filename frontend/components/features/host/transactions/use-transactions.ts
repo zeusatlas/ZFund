@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getContributions,
   getContributionById,
   type BackendContribution,
+  verifyPayment,
   type GetContributionsParams,
+  type VerifyPaymentResponse,
 } from "@/lib/api/contributions";
 import type { Transaction, TransactionStatus } from "./transactions";
 
@@ -70,6 +72,7 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
     time,
     method,
     note,
+    paymentReference: firstAttempt?.reference || c.reference,
   };
 }
 
@@ -92,3 +95,13 @@ export function useTransaction(id: string) {
   });
 }
 
+export function useVerifyPaymentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reference: string) => verifyPayment(reference),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contributions"] });
+      queryClient.invalidateQueries({ queryKey: ["contribution"] });
+    },
+  });
+}

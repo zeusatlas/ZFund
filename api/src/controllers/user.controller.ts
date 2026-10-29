@@ -1,4 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
+import { ForbiddenError } from '../common/errors/app-error';
+import { SystemRole } from '../common/types/auth';
 import { ApiResponse } from '../common/utils/response';
 import { userService } from '../services/user.service';
 
@@ -40,6 +42,10 @@ export class UserController {
 
   async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const isStaff = ([SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN] as string[]).includes(req.user!.role);
+      if (req.params.id !== req.user!.id && !isStaff) {
+        throw new ForbiddenError('You can only update your own profile');
+      }
       const user = await userService.updateUser(req.params.id, req.body, req.user?.id);
       ApiResponse.success(res, user, 'User updated successfully');
     } catch (err) {

@@ -4,12 +4,14 @@ import { requireRole } from '../common/middleware/rbac.middleware';
 import { validate } from '../common/middleware/validate.middleware';
 import { SystemRole } from '../common/types/auth';
 import { userController } from '../controllers/user.controller';
+import { settingsController } from '../controllers/settings.controller';
 import {
   createUserSchema,
   updateUserRoleSchema,
   updateUserSchema,
   updateUserStatusSchema,
 } from '../schemas/user.schemas';
+import { updateUserSettingsSchema } from '../schemas/settings.schemas';
 
 const router = Router();
 
@@ -19,6 +21,16 @@ router.get(
   '/',
   requireRole(SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN, SystemRole.AUDITOR),
   (req, res, next) => userController.getUsers(req, res, next)
+);
+
+router.get('/me/settings', (req, res, next) => settingsController.getSettings(req, res, next));
+router.put('/me/settings', validate({ body: updateUserSettingsSchema }), (req, res, next) =>
+  settingsController.updateSettings(req, res, next)
+);
+
+router.get('/:id/settings', (req, res, next) => settingsController.getSettings(req, res, next));
+router.put('/:id/settings', validate({ body: updateUserSettingsSchema }), (req, res, next) =>
+  settingsController.updateSettings(req, res, next)
 );
 
 router.get('/:id', (req, res, next) => userController.getUserById(req, res, next));

@@ -25,7 +25,12 @@ export const createWithdrawalSchema = z
     institution: z.string().trim().min(2, 'Enter the network or bank name').max(100),
     accountNumber: z.string().trim().min(1, 'Enter the destination number').optional(),
     account: z.string().trim().min(1, 'Enter the destination number').optional(),
-    purpose: z.string().trim().min(10, 'Describe how the funds will be used').max(500),
+    purpose: z
+      .string()
+      .trim()
+      .max(500)
+      .optional()
+      .transform((val) => (val && val.length > 0 ? val : 'Standard withdrawal request')),
   })
   .transform((data) => ({
     projectId: data.projectId || data.campaignId,

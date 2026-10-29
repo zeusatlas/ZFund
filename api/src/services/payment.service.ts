@@ -513,7 +513,7 @@ export class PaymentService {
 
   private async processFailedCharge(
     data: Record<string, unknown>,
-    webhookRecord: ProviderWebhookEvent
+    webhookRecord?: ProviderWebhookEvent
   ): Promise<void> {
     const reference = String(data.reference);
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
@@ -532,41 +532,85 @@ export class PaymentService {
       }
     }
 
-    webhookRecord.isProcessed = true;
-    webhookRecord.processedAt = new Date();
-    webhookRecord.processingResult = 'Marked failed';
-    await this.webhookEventRepo.save(webhookRecord);
+    if (webhookRecord) {
+      webhookRecord.isProcessed = true;
+      webhookRecord.processedAt = new Date();
+      webhookRecord.processingResult = 'Marked failed';
+      await this.webhookEventRepo.save(webhookRecord);
+    }
   }
 
   async verifyPayment(reference: string): Promise<PaymentAttempt> {
-    const paymentAttempt = await this.paymentAttemptRepo.findOne({
-      where: { reference },
-      relations: ['contribution', 'contribution.project'],
+    const cleanRef = reference.trim();
+    let paymentAttempt = await this.paymentAttemptRepo.findOne({
+      where: [{ reference: cleanRef }, { providerReference: cleanRef }],
+      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
-      throw new NotFoundError(`Payment with reference '${reference}' not found`);
+      // Check if reference is a contribution reference (ZF-CON-...) or contribution id
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const isUuid = UUID_REGEX.test(cleanRef);
+      const contribution = await this.contributionRepo.findOne({
+        where: isUuid ? [{ reference: cleanRef }, { id: cleanRef }] : { reference: cleanRef },
+        relations: ['paymentAttempts', 'project', 'contributor'],
+      });
+
+      if (contribution && contribution.paymentAttempts && contribution.paymentAttempts.length > 0) {
+        const sorted = [...contribution.paymentAttempts].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        paymentAttempt = await this.paymentAttemptRepo.findOne({
+          where: { id: sorted[0].id },
+          relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+        });
+      }
+    }
+
+    if (!paymentAttempt) {
+      throw new NotFoundError(`Payment with reference '${cleanRef}' not found`);
     }
 
     if (paymentAttempt.status === PaymentStatus.SUCCESSFUL) {
       return paymentAttempt;
     }
 
-    const verifyResult = await paystackProvider.verifyTransaction(reference);
+    const verifyResult = await paystackProvider.verifyTransaction(paymentAttempt.reference);
 
     if (verifyResult.status === 'success') {
-      const chargePayload = (verifyResult.rawResponse?.data as Record<string, unknown>) || {};
+      const chargePayload = (verifyResult.rawResponse?.data as Record<string, unknown>) || {
+        reference: paymentAttempt.reference,
+        amount: MoneyUtil.toMinorUnit(paymentAttempt.amount),
+        currency: paymentAttempt.currency,
+        id: paymentAttempt.providerReference || paymentAttempt.reference,
+      };
       const webhookRecord = this.webhookEventRepo.create({
         provider: 'PAYSTACK',
         eventType: 'charge.success',
-        reference,
+        reference: paymentAttempt.reference,
         rawPayload: chargePayload,
         isProcessed: false,
       });
       await this.processSuccessfulCharge(chargePayload, webhookRecord);
+    } else if (verifyResult.status === 'failed' || verifyResult.status === 'abandoned') {
+      const chargePayload = (verifyResult.rawResponse?.data as Record<string, unknown>) || {
+        reference: paymentAttempt.reference,
+        gateway_response: verifyResult.gatewayResponse || 'Transaction failed or abandoned',
+      };
+      const webhookRecord = this.webhookEventRepo.create({
+        provider: 'PAYSTACK',
+        eventType: 'charge.failed',
+        reference: paymentAttempt.reference,
+        rawPayload: chargePayload,
+        isProcessed: false,
+      });
+      await this.processFailedCharge(chargePayload, webhookRecord);
     }
 
-    return (await this.paymentAttemptRepo.findOne({ where: { reference } }))!;
+    return (await this.paymentAttemptRepo.findOne({
+      where: { id: paymentAttempt.id },
+      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+    }))!;
   }
 
   async getPayments(params: {

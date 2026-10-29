@@ -16,6 +16,7 @@ export type Transaction = {
   campaignName?: string;
   donorName?: string;
   rawStatus?: string;
+  paymentReference?: string;
 };
 // Illustrative payment metadata for the existing contributions.
 const times = ["14:32:00", "09:18:00", "16:05:00", "11:42:00", "08:26:00", "17:10:00", "13:54:00", "10:23:00", "15:37:00", "12:08:00", "09:46:00", "18:15:00"];
@@ -54,18 +55,37 @@ function csvCell(value: string) {
 }
 export function transactionsCsv(items: Transaction[], campaignNames: Record<string, string>) {
   const rows = [
-    ["Reference", "Donor phone (masked)", "Campaign", "Amount (GHS)", "Payment method", "Status", "Date (Ghana)", "Time (GMT)", "Details"],
-    ...items.map(item => [
-      item.reference,
-      "'" + item.phone,
-      campaignNames[item.campaignId] ?? item.campaignName ?? item.campaignId,
-      (item.amount / 100).toFixed(2),
-      item.method,
-      item.status === "Paid" ? "Successful" : item.status,
-      item.date,
-      item.time,
-      item.note,
-    ]),
+    [
+      "Reference",
+      "Donor phone (masked)",
+      "Campaign",
+      "Gross Amount (GHS)",
+      "Platform Fee 14% (GHS)",
+      "Net Proceeds 86% (GHS)",
+      "Payment method",
+      "Status",
+      "Date (Ghana)",
+      "Time (GMT)",
+      "Details",
+    ],
+    ...items.map(item => {
+      const gross = (item.amount / 100).toFixed(2);
+      const fee = (Math.round(item.amount * 0.14) / 100).toFixed(2);
+      const net = ((item.amount - Math.round(item.amount * 0.14)) / 100).toFixed(2);
+      return [
+        item.reference,
+        "'" + item.phone,
+        campaignNames[item.campaignId] ?? item.campaignName ?? item.campaignId,
+        gross,
+        fee,
+        net,
+        item.method,
+        item.status === "Paid" ? "Successful" : item.status,
+        item.date,
+        item.time,
+        item.note,
+      ];
+    }),
   ];
   return "\uFEFF" + rows.map(row => row.map(csvCell).join(",")).join("\r\n");
 }

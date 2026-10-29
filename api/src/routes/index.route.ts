@@ -11,6 +11,7 @@ import organizationRoutes from './organization.routes';
 import paymentRoutes from './payment.routes';
 import projectRoutes from './project.routes';
 import refundRoutes from './refund.routes';
+import settingsRoutes from './settings.routes';
 import userRoutes from './user.routes';
 import withdrawalRoutes from './withdrawal.routes';
 import ussdFlowRoutes from './ussd-flow.routes';
@@ -26,6 +27,9 @@ router.use('/auth', authRoutes);
 
 // Users Management
 router.use('/users', userRoutes);
+
+// Host & System Settings
+router.use('/settings', settingsRoutes);
 
 // Organizations & KYC
 router.use('/organizations', organizationRoutes);

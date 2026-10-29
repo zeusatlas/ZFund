@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { ApiResponse } from '../common/utils/response';
+import { BadRequestError } from '../common/errors/app-error';
 import { paymentService } from '../services/payment.service';
 
 export class PaymentController {
@@ -14,9 +15,19 @@ export class PaymentController {
 
   async verifyPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const reference = req.params.reference || req.query.reference as string;
+      const reference = (req.params.reference || (req.query.reference as string) || '').trim();
+      if (!reference) {
+        throw new BadRequestError('Payment reference is required');
+      }
       const payment = await paymentService.verifyPayment(reference);
-      ApiResponse.success(res, payment, 'Payment verification completed');
+      const isConfirmed = payment.status === 'SUCCESSFUL';
+      const isFailed = payment.status === 'FAILED';
+      const message = isConfirmed
+        ? 'Payment verified successfully and marked as confirmed.'
+        : isFailed
+        ? 'Payment verified with provider: Transaction failed or was not completed.'
+        : 'Payment is still awaiting donor authorization with their MoMo PIN.';
+      ApiResponse.success(res, payment, message);
     } catch (err) {
       next(err);
     }

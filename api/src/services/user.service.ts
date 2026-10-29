@@ -55,7 +55,8 @@ export class UserService {
     if (!user) {
       throw new NotFoundError('User not found');
     }
-    return user;
+    const orgName = user.memberships?.[0]?.organization?.name || null;
+    return Object.assign(user, { organisation: orgName });
   }
 
   async createUser(
@@ -130,6 +131,9 @@ export class UserService {
     if (input.phone !== undefined) {
       await this.assertPhoneAvailable(input.phone, id);
       user.phone = normalizePhone(input.phone);
+    }
+    if (input.settings !== undefined) {
+      user.settings = { ...(user.settings || {}), ...input.settings };
     }
 
     const saved = await this.userRepo.save(user);

@@ -404,7 +404,8 @@ export class AuthService {
       throw new NotFoundError('User not found');
     }
 
-    return user;
+    const orgName = user.memberships?.[0]?.organization?.name || null;
+    return Object.assign(user, { organisation: orgName });
   }
 
   private async recordAuthEvent(params: {

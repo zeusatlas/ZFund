@@ -325,4 +325,95 @@ describe('Paystack Webhook & Payment Confirmation Workflow', () => {
     });
     expect(ledgerEntries.length).toBe(0);
   });
+
+  describe('GET /api/v1/payments/verify/:reference', () => {
+    it('should verify pending payment by payment reference and mark contribution CONFIRMED', async () => {
+      const contributionRepo = AppDataSource.getRepository(Contribution);
+      const paymentAttemptRepo = AppDataSource.getRepository(PaymentAttempt);
+
+      const pendingContribution = await contributionRepo.save(
+        contributionRepo.create({
+          reference: 'ZF-CON-VERIFY-1',
+          projectId: testProject.id,
+          contributorId: testContributor.id,
+          amount: '50.00',
+          currency: 'GHS',
+          status: ContributionStatus.PENDING,
+        })
+      );
+
+      const pendingPaymentAttempt = await paymentAttemptRepo.save(
+        paymentAttemptRepo.create({
+          reference: 'ZF-PAY-VERIFY-1',
+          contributionId: pendingContribution.id,
+          provider: 'PAYSTACK',
+          channel: PaymentChannel.MOBILE_MONEY,
+          msisdn: '233240000001',
+          amount: '50.00',
+          currency: 'GHS',
+          status: PaymentStatus.PENDING,
+          fee: '0.00',
+        })
+      );
+
+      const res = await request(app).get('/api/v1/payments/verify/' + pendingPaymentAttempt.reference);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.status).toBe(PaymentStatus.SUCCESSFUL);
+
+      // Verify DB state
+      const updatedContribution = await contributionRepo.findOne({
+        where: { id: pendingContribution.id },
+      });
+      expect(updatedContribution?.status).toBe(ContributionStatus.CONFIRMED);
+    });
+
+    it('should verify payment using contribution reference (resolving latest attempt)', async () => {
+      const contributionRepo = AppDataSource.getRepository(Contribution);
+      const paymentAttemptRepo = AppDataSource.getRepository(PaymentAttempt);
+
+      const pendingContribution = await contributionRepo.save(
+        contributionRepo.create({
+          reference: 'ZF-CON-VERIFY-BY-CON',
+          projectId: testProject.id,
+          contributorId: testContributor.id,
+          amount: '50.00',
+          currency: 'GHS',
+          status: ContributionStatus.PENDING,
+        })
+      );
+
+      await paymentAttemptRepo.save(
+        paymentAttemptRepo.create({
+          reference: 'ZF-PAY-VERIFY-BY-CON',
+          contributionId: pendingContribution.id,
+          provider: 'PAYSTACK',
+          channel: PaymentChannel.MOBILE_MONEY,
+          msisdn: '233240000001',
+          amount: '50.00',
+          currency: 'GHS',
+          status: PaymentStatus.PENDING,
+          fee: '0.00',
+        })
+      );
+
+      const res = await request(app).get('/api/v1/payments/verify/' + pendingContribution.reference);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.status).toBe(PaymentStatus.SUCCESSFUL);
+
+      const updatedContribution = await contributionRepo.findOne({
+        where: { id: pendingContribution.id },
+      });
+      expect(updatedContribution?.status).toBe(ContributionStatus.CONFIRMED);
+    });
+
+    it('should return 404 for non-existent payment reference', async () => {
+      const res = await request(app).get('/api/v1/payments/verify/NON-EXISTENT-REF-999');
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+    });
+  });
 });

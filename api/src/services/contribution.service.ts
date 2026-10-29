@@ -30,7 +30,7 @@ export class ContributionService {
     };
   }> {
     const page = params.page || 1;
-    const limit = Math.min(params.limit || 20, 100);
+    const limit = Math.min(params.limit || 20, 1000);
     const skip = (page - 1) * limit;
 
     const query = this.contributionRepo
@@ -47,12 +47,14 @@ export class ContributionService {
     ].includes(params.userRole as SystemRole);
 
     if (!isPlatformStaff && params.userId) {
-      query.innerJoin(
-        'project_members',
-        'pm',
-        'pm.projectId = c.projectId AND pm.userId = :userId',
-        { userId: params.userId }
-      );
+      query
+        .leftJoin(
+          'project_members',
+          'pm',
+          'pm.projectId = c.projectId AND pm.userId = :userId',
+          { userId: params.userId }
+        )
+        .andWhere('(project.ownerId = :userId OR pm.id IS NOT NULL)', { userId: params.userId });
     }
 
     if (params.projectId && params.projectId !== 'All') {

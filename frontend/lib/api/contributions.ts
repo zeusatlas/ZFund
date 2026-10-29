@@ -104,3 +104,24 @@ export async function getContributionById(id: string): Promise<BackendContributi
   return data.data;
 }
 
+export interface VerifyPaymentResult {
+  id: string;
+  reference: string;
+  status: string;
+  amount: string;
+  currency: string;
+  fee: string;
+  providerReference?: string;
+  contribution?: BackendContribution;
+}
+
+export interface VerifyPaymentResponse {
+  success: boolean;
+  message: string;
+  data: VerifyPaymentResult;
+}
+
+export async function verifyPayment(reference: string): Promise<VerifyPaymentResponse> {
+  const { data } = await api.get<VerifyPaymentResponse>(`/payments/verify/${encodeURIComponent(reference)}`);
+  return data;
+}

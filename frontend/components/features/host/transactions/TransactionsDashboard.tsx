@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  AlertCircle,
   CheckCircle2,
   Clock3,
   Download,
@@ -25,6 +26,7 @@ import {
 import {
   contributionToTransaction,
   useTransactionsQuery,
+  useVerifyPaymentMutation,
 } from "@/components/features/host/transactions/use-transactions";
 import { getContributions } from "@/lib/api/contributions";
 
@@ -55,6 +57,15 @@ export default function TransactionsDashboard() {
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [exportMessage, setExportMessage] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [isVerifyingBatch, setIsVerifyingBatch] = useState(false);
+  const [verificationNotice, setVerificationNotice] = useState<{
+    type: "success" | "info" | "error";
+    text: string;
+  } | null>(null);
+
+  const verifyMutation = useVerifyPaymentMutation();
 
   const campaignNames = useMemo(
     () => Object.fromEntries(campaigns.map((c) => [c.id, c.name])),
@@ -110,12 +121,100 @@ export default function TransactionsDashboard() {
     setFilters((current) => ({ ...current, [key]: value }));
     setPage(1);
     setExportMessage("");
+    setVerificationNotice(null);
   }
 
   function clearFilters() {
     setFilters(emptyFilters);
     setPage(1);
     setExportMessage("");
+    setVerificationNotice(null);
+  }
+
+  async function handleVerify(item: Transaction) {
+    setVerifyingId(item.id);
+    setVerificationNotice(null);
+    try {
+      const targetRef = item.paymentReference || item.reference;
+      const res = await verifyMutation.mutateAsync(targetRef);
+
+      const status = res.data?.status;
+      const isConfirmed = status === "SUCCESSFUL" || res.data?.contribution?.status === "CONFIRMED";
+      const isFailed = status === "FAILED" || res.data?.contribution?.status === "FAILED";
+
+      if (isConfirmed) {
+        setVerificationNotice({
+          type: "success",
+          text: `Payment ${item.id} verified and confirmed as Successful by Paystack! Included in your total received.`,
+        });
+        if (selected?.id === item.id) {
+          setSelected((prev) =>
+            prev ? { ...prev, status: "Paid", rawStatus: "CONFIRMED", note: "Payment confirmed with Paystack." } : null
+          );
+        }
+      } else if (isFailed) {
+        setVerificationNotice({
+          type: "error",
+          text: `Payment ${item.id}: Paystack reported transaction as failed or cancelled by provider.`,
+        });
+        if (selected?.id === item.id) {
+          setSelected((prev) =>
+            prev ? { ...prev, status: "Failed", rawStatus: "FAILED" } : null
+          );
+        }
+      } else {
+        setVerificationNotice({
+          type: "info",
+          text: `Payment ${item.id}: Paystack reports this transaction is still awaiting donor authorization with their MoMo PIN on their handset.`,
+        });
+      }
+    } catch (err: unknown) {
+      const errorMsg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Could not verify transaction with Paystack. Please try again.";
+      setVerificationNotice({
+        type: "error",
+        text: `Error verifying ${item.id}: ${errorMsg}`,
+      });
+    } finally {
+      setVerifyingId(null);
+    }
+  }
+
+  async function handleVerifyAllPending() {
+    const pendingItems = pageTransactions.filter((t) => t.status === "Pending");
+    if (!pendingItems.length) return;
+
+    setIsVerifyingBatch(true);
+    setVerificationNotice(null);
+    let confirmedCount = 0;
+
+    for (const item of pendingItems) {
+      try {
+        const targetRef = item.paymentReference || item.reference;
+        const res = await verifyMutation.mutateAsync(targetRef);
+        if (res.data?.status === "SUCCESSFUL" || res.data?.contribution?.status === "CONFIRMED") {
+          confirmedCount++;
+        }
+      } catch {
+        // continue verifying remaining items
+      }
+    }
+
+    setIsVerifyingBatch(false);
+    refetch();
+
+    if (confirmedCount > 0) {
+      setVerificationNotice({
+        type: "success",
+        text: `${confirmedCount} pending payment${confirmedCount > 1 ? "s were" : " was"} verified and confirmed as Successful with Paystack!`,
+      });
+    } else {
+      setVerificationNotice({
+        type: "info",
+        text: "Paystack verification completed. All checked payments are still awaiting donor MoMo authorization.",
+      });
+    }
   }
 
   async function exportCsv() {
@@ -175,7 +274,7 @@ export default function TransactionsDashboard() {
     {
       label: "Platform fee (14%)",
       value: money(totalCommission),
-      detail: "14% platform & telecom fee",
+      detail: "14% commission fee",
       icon: Percent,
       accent: "gold" as const,
     },
@@ -209,28 +308,12 @@ export default function TransactionsDashboard() {
     },
   ];
 
-
   return (
     <div className="w-full space-y-7">
       <HostHeading
         title="Your transactions"
         description="Follow every donation, from the first payment request to a confirmed contribution."
       />
-
-      {/* Commission Transparency Notice */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-navy/10 bg-white p-4 text-xs text-navy shadow-xs">
-        <div className="flex items-start sm:items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-gold/15 text-gold font-bold text-sm">
-            %
-          </div>
-          <div>
-            <p className="font-semibold text-navy">14% Platform Commission Transparency</p>
-            <p className="text-steel mt-0.5">
-              A standard 14% commission applies to all received donations to support secure USSD channels and payment gateway operations. 86% of each donation is credited directly to your campaigns.
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Summary Stat Cards matching HostOverview styling */}
       <section
@@ -261,10 +344,25 @@ export default function TransactionsDashboard() {
               Payment history
             </h2>
             <p className="mt-1 text-sm text-steel">
-              Select a transaction to view its payment details.
+              Select a transaction to view its payment details or sync pending payments with Paystack.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {totals.pending > 0 && (
+              <button
+                type="button"
+                onClick={handleVerifyAllPending}
+                disabled={isVerifyingBatch || isFetching || verifyMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-none border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+              >
+                <RefreshCw
+                  size={13}
+                  aria-hidden="true"
+                  className={isVerifyingBatch ? "animate-spin text-amber-900" : ""}
+                />
+                {isVerifyingBatch ? "Checking pending…" : `Verify pending (${totals.pending})`}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => refetch()}
@@ -293,6 +391,36 @@ export default function TransactionsDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Verification Status Alert Banner */}
+        {verificationNotice && (
+          <div
+            className={
+              "mb-5 flex items-start justify-between gap-3 p-3.5 text-xs leading-relaxed rounded-none border " +
+              (verificationNotice.type === "success"
+                ? "border-emerald-300 bg-emerald-50 text-emerald-950"
+                : verificationNotice.type === "error"
+                ? "border-crimson/30 bg-crimson/10 text-crimson"
+                : "border-amber-300 bg-amber-50 text-amber-950")
+            }
+          >
+            <div className="flex items-start gap-2.5">
+              {verificationNotice.type === "success" ? (
+                <CheckCircle2 size={16} className="shrink-0 text-emerald-700 mt-0.5" />
+              ) : (
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              )}
+              <span className="font-medium">{verificationNotice.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setVerificationNotice(null)}
+              className="font-medium underline underline-offset-2 hover:opacity-80"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Filter Bar */}
         <div className="mb-6 rounded-2xl border border-navy/10 bg-white p-5">
@@ -464,7 +592,26 @@ export default function TransactionsDashboard() {
                       <span className="text-xs text-steel">
                         {campaignNames[item.campaignId] ?? item.campaignName ?? item.campaignId}
                       </span>
-                      <PaymentStatus status={item.status} />
+                      <div className="flex items-center gap-2">
+                        <PaymentStatus status={item.status} />
+                        {item.status === "Pending" && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleVerify(item);
+                            }}
+                            disabled={verifyingId === item.id || verifyMutation.isPending}
+                            className="inline-flex items-center gap-1.5 rounded-none border border-navy/20 bg-stone/70 px-2.5 py-1 text-xs font-medium text-navy hover:bg-stone disabled:opacity-50"
+                          >
+                            <RefreshCw
+                              size={12}
+                              className={verifyingId === item.id ? "animate-spin text-navy" : "text-navy"}
+                            />
+                            <span>{verifyingId === item.id ? "Checking…" : "Verify"}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="mt-3 text-xs text-steel">
                       {dateLabel(item.date)} · {item.time.slice(0, 5)} GMT · View details →
@@ -482,7 +629,7 @@ export default function TransactionsDashboard() {
                   <thead className="border-b border-navy/10 bg-stone/50 text-xs text-steel">
                     <tr>
                       {[
-                        "Reference / donor",
+                        "Reference/Donor",
                         "Campaign",
                         "Amount",
                         "Payment method",
@@ -513,12 +660,12 @@ export default function TransactionsDashboard() {
                               event.stopPropagation();
                               setSelected(item);
                             }}
-                            aria-label={"View transaction " + item.reference}
+                            aria-label={"View transaction " + item.phone}
                             className="rounded text-left font-medium text-navy underline decoration-navy/30 underline-offset-4"
                           >
                             {item.id}
                           </button>
-                          <span className="mt-1 block text-xs text-steel">{item.phone}</span>
+                          <span className="mt-1 block text-xs text-steel">{item.reference}</span>
                         </td>
                         <td className="max-w-56 px-5 py-4 text-steel">
                           {campaignNames[item.campaignId] ?? item.campaignName ?? item.campaignId}
@@ -531,7 +678,27 @@ export default function TransactionsDashboard() {
                         </td>
                         <td className="px-5 py-4 text-steel">{item.method}</td>
                         <td className="px-5 py-4">
-                          <PaymentStatus status={item.status} />
+                          <div className="flex items-center gap-2">
+                            <PaymentStatus status={item.status} />
+                            {item.status === "Pending" && (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleVerify(item);
+                                }}
+                                disabled={verifyingId === item.id || verifyMutation.isPending}
+                                title="Check status directly with Paystack"
+                                className="inline-flex items-center gap-1 rounded-none border border-navy/20 bg-stone/70 px-2 py-0.5 text-xs font-medium text-navy hover:bg-stone disabled:opacity-50"
+                              >
+                                <RefreshCw
+                                  size={11}
+                                  className={verifyingId === item.id ? "animate-spin text-navy" : "text-navy"}
+                                />
+                                <span>{verifyingId === item.id ? "Checking…" : "Verify"}</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="whitespace-nowrap px-5 py-4 text-steel">
                           {dateLabel(item.date)}
@@ -590,6 +757,7 @@ export default function TransactionsDashboard() {
             : ""
         }
         onClose={() => setSelected(null)}
+        onTransactionUpdated={(updated) => setSelected(updated)}
       />
     </div>
   );

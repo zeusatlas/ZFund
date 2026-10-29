@@ -107,14 +107,14 @@ function WithdrawalSheet({
             autoFocus
             onClick={onClose}
             aria-label="Close withdrawal details"
-            className="rounded-lg p-2 text-steel hover:bg-stone"
+            className="rounded-none p-2 text-steel hover:bg-stone"
           >
             <X size={20} aria-hidden="true" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-          <div className="flex items-center justify-between gap-4 rounded-2xl bg-stone p-5">
+          <div className="flex items-center justify-between gap-4 rounded-none bg-stone p-5">
             <div>
               <p className="text-xs text-steel">Requested amount</p>
               <p className="mt-1 text-3xl font-medium tabular-nums">{money(item.amount)}</p>
@@ -140,7 +140,7 @@ function WithdrawalSheet({
 
           <div
             className={
-              "mt-6 rounded-2xl p-5 " +
+              "mt-6 rounded-none p-5 " +
               (item.status === "Rejected"
                 ? "bg-crimson/10 text-crimson"
                 : "bg-stone text-steel")
@@ -161,7 +161,7 @@ function WithdrawalSheet({
               type="button"
               disabled={isCancelling}
               onClick={() => onCancel(item)}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-crimson/30 bg-crimson/10 px-5 py-3 text-sm font-medium text-crimson hover:bg-crimson/20 disabled:opacity-50"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-none border border-crimson/30 bg-crimson/10 px-5 py-3 text-sm font-medium text-crimson hover:bg-crimson/20 disabled:opacity-50"
             >
               {isCancelling ? (
                 <Loader2 size={16} className="animate-spin" aria-hidden="true" />
@@ -174,7 +174,7 @@ function WithdrawalSheet({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel"
+            className="flex-1 rounded-none bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel"
           >
             Close details
           </button>
@@ -318,7 +318,7 @@ export default function WithdrawalsDashboard() {
       </section>
 
       {/* Review Information Banner */}
-      <div className="my-7 flex flex-col justify-between gap-5 rounded-2xl border border-navy/10 bg-white p-5 sm:flex-row sm:items-center">
+      <div className="my-7 flex flex-col justify-between gap-5 rounded-none border border-navy/10 bg-white p-5 sm:flex-row sm:items-center">
         <div className="flex items-start gap-3">
           <ShieldCheck
             size={23}
@@ -328,7 +328,7 @@ export default function WithdrawalsDashboard() {
           <div>
             <h2 className="font-medium text-navy">Every request has a review step</h2>
             <p className="mt-1 max-w-xl text-sm leading-relaxed text-steel">
-              Requested funds are reserved until the request is paid or rejected. All withdrawals are disbursed from your 86% net campaign proceeds (after the 14% platform & telecom commission). Rejected or cancelled requests return funds to your available balance.
+              Requested funds are reserved until the request is paid or rejected. All withdrawals are disbursed from your 86% net campaign proceeds (after the 14% commission fee). Rejected or cancelled requests return funds to your available balance.
             </p>
           </div>
         </div>
@@ -364,7 +364,7 @@ export default function WithdrawalsDashboard() {
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-navy/15 bg-white px-3 py-2 text-xs font-medium text-navy hover:bg-stone disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-none border border-navy/15 bg-white px-3 py-2 text-xs font-medium text-navy hover:bg-stone disabled:opacity-50"
           >
             <RefreshCw
               size={13}
@@ -394,7 +394,7 @@ export default function WithdrawalsDashboard() {
                 setPage(1);
               }}
               placeholder="Search by reference, campaign, recipient or account"
-              className="w-full rounded-xl border border-navy/15 bg-white py-3 pl-11 pr-4 text-sm text-navy"
+              className="w-full rounded-none border border-navy/15 bg-white py-3 pl-11 pr-4 text-sm text-navy"
             />
           </div>
           <div>
@@ -425,7 +425,7 @@ export default function WithdrawalsDashboard() {
         </p>
 
         {/* Withdrawals List */}
-        <div className="overflow-hidden rounded-2xl border border-navy/10 bg-white">
+        <div className="overflow-hidden rounded-none border border-navy/10 bg-white">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Loader2 size={32} className="animate-spin text-navy/40" aria-hidden="true" />
@@ -508,7 +508,7 @@ export default function WithdrawalsDashboard() {
                 type="button"
                 disabled={current === 1 || isLoading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-xl border border-navy/15 bg-white px-4 py-2 text-sm text-navy disabled:opacity-40"
+                className="rounded-none border border-navy/15 bg-white px-4 py-2 text-sm text-navy disabled:opacity-40"
               >
                 Previous
               </button>
@@ -516,7 +516,7 @@ export default function WithdrawalsDashboard() {
                 type="button"
                 disabled={current === pages || isLoading}
                 onClick={() => setPage((p) => Math.min(pages, p + 1))}
-                className="rounded-xl border border-navy/15 bg-white px-4 py-2 text-sm text-navy disabled:opacity-40"
+                className="rounded-none border border-navy/15 bg-white px-4 py-2 text-sm text-navy disabled:opacity-40"
               >
                 Next
               </button>

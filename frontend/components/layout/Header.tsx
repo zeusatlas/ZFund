@@ -1,15 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useRole } from "@/components/auth/RoleProvider";
 import { menuByRole } from "@/lib/navigation";
 import MobileNav from "./MobileNav";
-import { SidebarContent } from "./Sidebar";
 import UserMenu from "./UserMenu";
+import { useSidebar } from "./SidebarContext";
 
 export default function Header() {
   const pathname = usePathname();
   const { role } = useRole();
+  const { isCollapsed, toggleCollapse } = useSidebar();
+
   const currentItem = menuByRole[role]
     .filter(
       (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
@@ -19,10 +22,17 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-navy/10 bg-white/85 px-3 backdrop-blur-md sm:h-16 sm:px-5 lg:px-8">
-      <div className="flex min-w-0 items-center gap-2">
-        <MobileNav>
-          <SidebarContent />
-        </MobileNav>
+      <div className="flex min-w-0 items-center gap-2.5">
+        <MobileNav />
+        <button
+          type="button"
+          onClick={toggleCollapse}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden rounded-lg p-2 text-steel transition-colors hover:bg-stone hover:text-navy md:inline-flex"
+        >
+          {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
         <div className="min-w-0">
           <p className="hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-steel sm:block">
             {role === "admin" ? "Admin console" : "Host workspace"}

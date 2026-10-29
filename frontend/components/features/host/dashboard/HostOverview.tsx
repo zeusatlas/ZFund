@@ -155,7 +155,7 @@ export default function HostOverview() {
       )}
 
       {/* Commission Transparency Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-navy/10 bg-white p-4 text-xs text-navy shadow-xs">
+      {/* <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-navy/10 bg-white p-4 text-xs text-navy shadow-xs">
         <div className="flex items-start sm:items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-gold/15 text-gold font-bold text-sm">
             %
@@ -173,7 +173,7 @@ export default function HostOverview() {
         >
           Payouts & balances <ArrowUpRight size={14} />
         </Link>
-      </div>
+      </div> */}
 
       {/* Real Statistics Metric Cards */}
       <section

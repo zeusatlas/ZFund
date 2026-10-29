@@ -67,6 +67,9 @@ export class User {
   @Column({ type: 'timestamp with time zone', nullable: true })
   lastLoginAt?: Date;
 
+  @Column({ type: 'jsonb', nullable: true, default: {} })
+  settings?: Record<string, unknown>;
+
   @OneToMany(() => OrganizationMember, (member) => member.user)
   memberships: OrganizationMember[];
 

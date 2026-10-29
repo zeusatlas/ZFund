@@ -13,6 +13,18 @@ export type AuthUser = {
   lastName: string;
   role: string;
   status: string;
+  organisation?: string | null;
+  createdAt?: string;
+  lastLoginAt?: string;
+  memberships?: Array<{
+    id: string;
+    role: string;
+    organization?: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+  }>;
 };
 
 export const adminRoles = ["SUPER_ADMIN", "PLATFORM_ADMIN"];
