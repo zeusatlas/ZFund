@@ -1,4 +1,8 @@
+import Image from "next/image";
 import { Plus } from "lucide-react";
+import {
+  FAQ_ITEMS,
+} from "@/components/landing/landing-data";
 
 /* ── Section Label ── */
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -25,48 +29,45 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-const FAQ_ITEMS = [
-  {
-    question: "Who is RaiseFundz for?",
-    answer:
-      "Community organisers, alumni groups, congregations, and nonprofits in Ghana who want to bring people together around a clear fundraising goal.",
-  },
-  {
-    question: "Can I collect donations right now?",
-    answer:
-      "This site previews the fundraising experience. Live USSD collections and payouts are active for registered hosts following admin review.",
-  },
-  {
-    question: "Will supporters need a smartphone?",
-    answer:
-      "The giving journey uses USSD, so supporters can contribute from a basic mobile phone on any network in Ghana without an internet connection.",
-  },
-  {
-    question: "What should I prepare for a campaign?",
-    answer:
-      "A clear purpose, a target in Ghana cedis, a budget, a closing date, and organiser contact information. The host dashboard walks you through each step.",
-  },
-];
 
 /* ── Section 6: FAQ (White) ── */
 export default function LandingStepsAndFAQ() {
   return (
-    <section className="bg-white py-24 border-t border-ash/60">
+    <section className="bg-parchment py-24">
       <div className="mx-auto max-w-[1200px] px-6">
-        <div className="mb-14">
-          <SectionLabel>Frequently asked questions</SectionLabel>
-          <h2 className="mt-2 text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-off-ink">
-            A few things
-            <br />
-            before you begin.
-          </h2>
-          <p className="mt-3 text-[15px] text-graphite">Get to know the platform and how fundraising works.</p>
-        </div>
+        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-16">
+          <div>
+            <div className="mb-14">
+              <SectionLabel>Frequently asked questions</SectionLabel>
+              <h2 className="mt-2 text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-off-ink">
+                A few things
+                <br />
+                before you begin.
+              </h2>
+              <p className="mt-3 text-[15px] text-graphite">Get to know the platform and how fundraising works.</p>
+            </div>
 
-        <div className="border-t border-ash/70">
-          {FAQ_ITEMS.map(({ question, answer }) => (
-            <FAQItem key={question} question={question} answer={answer} />
-          ))}
+            <div className="border-t border-ash/70">
+              {FAQ_ITEMS.map(({ question, answer }) => (
+                <FAQItem key={question} question={question} answer={answer} />
+              ))}
+            </div>
+          </div>
+
+          <div className="relative hidden overflow-hidden rounded-[36px] lg:sticky lg:top-28 lg:block">
+            <Image
+              src="/images/hero.png"
+              alt="A fundraiser celebrating a donation received on her phone"
+              width={1145}
+              height={1374}
+              sizes="400px"
+              className="h-[560px] w-full object-cover object-top"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/10 to-transparent" />
+            <p className="absolute inset-x-0 bottom-0 p-8 text-[16px] font-semibold leading-relaxed text-white">
+              Still curious? Every cedi raised is tracked, from the first USSD dial to payout.
+            </p>
+          </div>
         </div>
       </div>
     </section>

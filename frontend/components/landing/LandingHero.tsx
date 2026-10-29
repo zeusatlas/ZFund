@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import HostCtaLink from "@/components/landing/HostCtaLink";
 import { useEffect, useRef, useState } from "react";
+import { HERO_RAISED_TODAY, HERO_USSD_CODE } from "@/components/landing/landing-data";
 
 /* ── Animated stat counter ── */
 function Counter({ target, prefix = "", suffix = "" }: { target: number; prefix?: string; suffix?: string }) {
@@ -35,86 +37,6 @@ function Counter({ target, prefix = "", suffix = "" }: { target: number; prefix?
   return <span ref={ref} className="tabular-nums">{prefix}{count.toLocaleString()}{suffix}</span>;
 }
 
-/* ── Activity item in the mockup ── */
-function ActivityItem({ name, amount, time }: { name: string; amount: string; time: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-[14px] bg-white px-4 py-2.5 border border-ash/40">
-      <div className="flex items-center gap-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-off-ink text-[11px] font-bold text-parchment">
-          {name[0]}
-        </span>
-        <div>
-          <p className="text-[13px] font-semibold text-off-ink">{name}</p>
-          <p className="text-[11px] text-graphite">{time}</p>
-        </div>
-      </div>
-      <span className="rounded-full bg-parchment px-2.5 py-1 text-[12px] font-bold text-off-ink border border-ash/60">{amount}</span>
-    </div>
-  );
-}
-
-/* ── Dashboard Mockup ── */
-function DashboardMockup() {
-  const activities = [
-    { name: "Kwame A.", amount: "GH₵ 50", time: "just now" },
-    { name: "Abena M.", amount: "GH₵ 100", time: "2 min ago" },
-    { name: "Kofi O.", amount: "GH₵ 25", time: "8 min ago" },
-    { name: "Ama S.", amount: "GH₵ 200", time: "15 min ago" },
-  ];
-
-  const progress = 57;
-
-  return (
-    <div className="w-full space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-graphite">Live campaign</p>
-          <p className="mt-1 text-[15px] font-semibold leading-snug text-off-ink">Aburi Community Water Project</p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 shrink-0 rounded-full bg-stone px-2.5 py-1 text-[10px] font-semibold text-off-ink border border-ash">
-          <span className="h-1.5 w-1.5 rounded-full bg-off-ink" />
-          Active
-        </span>
-      </div>
-
-      <div>
-        <p className="text-[34px] font-bold leading-none tracking-[-1.5px] text-off-ink">GH₵ 28,475</p>
-        <p className="mt-1 text-[12px] text-graphite">raised of GH₵ 50,000 goal</p>
-      </div>
-
-      <div>
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-ash">
-          <div
-            className="h-full rounded-full bg-off-ink"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <p className="mt-1.5 text-right text-[11px] font-medium text-graphite">{progress}% funded</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Donors", value: "847" },
-          { label: "Avg gift", value: "GH₵ 34" },
-          { label: "Days left", value: "12" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-[14px] bg-white px-3 py-3 text-center border border-ash/40">
-            <p className="text-[16px] font-bold text-off-ink">{s.value}</p>
-            <p className="text-[10px] text-graphite">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-graphite mb-2.5">Recent via USSD</p>
-        <div className="space-y-2">
-          {activities.map((a) => <ActivityItem key={a.name} {...a} />)}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ── Hero: Section 1 (Light Beige) ── */
 export default function LandingHero() {
   return (
@@ -141,10 +63,10 @@ export default function LandingHero() {
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
-              <HostCtaLink className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-7 py-4 text-[15px] font-bold text-parchment shadow-md transition-all hover:bg-charcoal hover:-translate-y-0.5">
+              <Link href="/login" className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-7 py-4 text-[15px] font-bold text-parchment shadow-md transition-all hover:bg-charcoal hover:-translate-y-0.5">
                 Start for free
                 <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
-              </HostCtaLink>
+              </Link>
               <Link
                 href="#how-it-works"
                 className="inline-flex items-center gap-2 rounded-full border border-ash bg-white px-7 py-4 text-[15px] font-semibold text-graphite transition-all hover:border-off-ink/40 hover:text-off-ink"
@@ -165,15 +87,21 @@ export default function LandingHero() {
               style={{ animation: "float 6s 0.5s ease-in-out infinite" }}>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-graphite">Raised today</p>
               <p className="mt-0.5 text-lg font-bold text-off-ink">
-                <Counter prefix="GH₵ " target={156420} />
+                <Counter prefix="GH₵ " target={HERO_RAISED_TODAY} />
               </p>
             </div>
 
-            {/* Main mockup */}
-            <div className="animate-float rounded-[36px] border border-ash/60 bg-white/70 p-3 shadow-lg sm:p-4">
-              <div className="rounded-[28px] bg-parchment p-5 border border-ash/40 sm:p-6">
-                <DashboardMockup />
-              </div>
+            {/* Hero photo */}
+            <div className="animate-float overflow-hidden rounded-[36px] border border-ash/60 shadow-lg">
+              <Image
+                src="/images/hero.png"
+                alt="A fundraiser celebrating a donation received on her phone"
+                width={1145}
+                height={1374}
+                priority
+                sizes="(min-width: 1024px) 560px, 100vw"
+                className="h-[420px] w-full object-cover object-top sm:h-[520px] lg:h-[580px]"
+              />
             </div>
 
             {/* USSD code badge */}
@@ -182,7 +110,7 @@ export default function LandingHero() {
               style={{ animation: "float 7s 1.2s ease-in-out infinite" }}
             >
               <p className="text-[10px] font-semibold uppercase tracking-wider text-parchment/60">Give via USSD</p>
-              <p className="mt-0.5 font-bold text-white">*920*969#</p>
+              <p className="mt-0.5 font-bold text-white">{HERO_USSD_CODE}</p>
             </div>
           </div>
 
