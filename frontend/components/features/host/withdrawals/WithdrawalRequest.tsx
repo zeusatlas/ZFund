@@ -224,9 +224,36 @@ export function WithdrawalRequestDrawer({
                         </option>
                       ))}
                     </select>
-                    <p className="mt-2 text-xs text-steel">
-                      Available to request: <strong>{money(available)}</strong>
-                    </p>
+
+                    {/* Transparent Balance Calculation Card */}
+                    <div className="mt-3 border border-navy/10 bg-white p-3.5 text-xs">
+                      <p className="font-semibold text-navy mb-2 flex items-center justify-between">
+                        <span>Campaign Balance Breakdown</span>
+                        <span className="text-[11px] font-normal text-steel">14% platform commission</span>
+                      </p>
+                      <div className="space-y-1.5 text-steel">
+                        <div className="flex justify-between">
+                          <span>Gross donations raised:</span>
+                          <span className="font-medium text-navy">{money(selectedCampaign?.raised || 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-warning">
+                          <span>Platform commission (14%):</span>
+                          <span className="font-medium">- {money(Math.round((selectedCampaign?.raised || 0) * 0.14))}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-navy/10 pt-1 font-medium text-navy">
+                          <span>Net campaign proceeds (86%):</span>
+                          <span>{money((selectedCampaign?.raised || 0) - Math.round((selectedCampaign?.raised || 0) * 0.14))}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Already withdrawn / reserved:</span>
+                          <span>- {money(Math.max(0, ((selectedCampaign?.raised || 0) - Math.round((selectedCampaign?.raised || 0) * 0.14)) - available))}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-navy/15 pt-1.5 font-bold text-success text-sm">
+                          <span>Available to request now:</span>
+                          <span>{money(available)}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid gap-5 sm:grid-cols-2">

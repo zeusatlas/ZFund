@@ -27,6 +27,8 @@ export interface BackendWithdrawalView {
 
 export interface WithdrawalBalanceSummary {
   raised: string;
+  commission?: string;
+  netRaised?: string;
   reserved: string;
   paid: string;
   available: string;

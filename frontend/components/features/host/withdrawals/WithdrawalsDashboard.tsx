@@ -11,6 +11,8 @@ import {
   Trash2,
   Wallet,
   WalletCards,
+  Percent,
+  Info,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -273,7 +275,21 @@ export default function WithdrawalsDashboard() {
       value: money(balances.raised),
       detail: "Successful contributions only",
       icon: WalletCards,
-      accent: "purple" as const,
+      accent: "blue" as const,
+    },
+    {
+      label: "Platform fee (14%)",
+      value: money(balances.commission ?? Math.round(balances.raised * 0.14)),
+      detail: "14% platform & telecom commission",
+      icon: Percent,
+      accent: "gold" as const,
+    },
+    {
+      label: "Net raised (86%)",
+      value: money(balances.netRaised ?? Math.round(balances.raised * 0.86)),
+      detail: "Total net credited to host",
+      icon: CheckCircle2,
+      accent: "green" as const,
     },
   ];
 
@@ -287,7 +303,7 @@ export default function WithdrawalsDashboard() {
       {/* Summary Stat Cards matching HostOverview styling */}
       <section
         aria-label="Withdrawal balances"
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
       >
         {cards.map(({ label, value, detail, icon: Icon, accent }) => (
           <MetricCard
@@ -312,7 +328,7 @@ export default function WithdrawalsDashboard() {
           <div>
             <h2 className="font-medium text-navy">Every request has a review step</h2>
             <p className="mt-1 max-w-xl text-sm leading-relaxed text-steel">
-              Requested funds are reserved until the request is paid or rejected. Rejected or cancelled requests leave your available balance unchanged.
+              Requested funds are reserved until the request is paid or rejected. All withdrawals are disbursed from your 86% net campaign proceeds (after the 14% platform & telecom commission). Rejected or cancelled requests return funds to your available balance.
             </p>
           </div>
         </div>

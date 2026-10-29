@@ -114,7 +114,10 @@ describe('Withdrawal requests', () => {
     requestId = res.body.data.id;
 
     const mine = await request(app).get('/api/v1/withdrawals/mine').set('Authorization', `Bearer ${hostToken}`);
-    expect(mine.body.meta.balance.available).toBe('60.00');
+    expect(mine.body.meta.balance.raised).toBe('100.00');
+    expect(mine.body.meta.balance.commission).toBe('14.00');
+    expect(mine.body.meta.balance.netRaised).toBe('86.00');
+    expect(mine.body.meta.balance.available).toBe('46.00');
 
     // The reserved 40.00 cannot be requested again.
     const again = await request(app)
@@ -177,6 +180,9 @@ describe('Withdrawal requests', () => {
       .send({ status: 'REJECTED', note: 'Details did not match' });
 
     const mine = await request(app).get('/api/v1/withdrawals/mine').set('Authorization', `Bearer ${hostToken}`);
-    expect(mine.body.meta.balance.available).toBe('60.00');
+    expect(mine.body.meta.balance.raised).toBe('100.00');
+    expect(mine.body.meta.balance.commission).toBe('14.00');
+    expect(mine.body.meta.balance.netRaised).toBe('86.00');
+    expect(mine.body.meta.balance.available).toBe('46.00');
   });
 });

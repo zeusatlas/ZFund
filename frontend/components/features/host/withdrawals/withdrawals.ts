@@ -47,15 +47,19 @@ export function isReserved(item: Withdrawal) {
 }
 
 export function availableForCampaign(id: string, items: Withdrawal[], campaignRaised?: number) {
-  const raised = campaignRaised !== undefined ? campaignRaised : campaignTotals(id).raised;
+  const grossRaised = campaignRaised !== undefined ? campaignRaised : campaignTotals(id).raised;
+  const commission = Math.round(grossRaised * 0.14);
+  const netRaised = grossRaised - commission;
   const deducted = items
     .filter((item) => item.campaignId === id && (item.status === "Paid" || isReserved(item)))
     .reduce((sum, item) => sum + item.amount, 0);
-  return Math.max(0, raised - deducted);
+  return Math.max(0, netRaised - deducted);
 }
 
 export function withdrawalBalances(items: Withdrawal[], totalRaised?: number) {
   const raised = totalRaised !== undefined ? totalRaised : hostStats.raised;
+  const commission = Math.round(raised * 0.14);
+  const netRaised = raised - commission;
   const paid = items
     .filter((item) => item.status === "Paid")
     .reduce((sum, item) => sum + item.amount, 0);
@@ -64,8 +68,10 @@ export function withdrawalBalances(items: Withdrawal[], totalRaised?: number) {
     .reduce((sum, item) => sum + item.amount, 0);
   return {
     raised,
+    commission,
+    netRaised,
     paid,
     reserved,
-    available: Math.max(0, raised - paid - reserved),
+    available: Math.max(0, netRaised - paid - reserved),
   };
 }

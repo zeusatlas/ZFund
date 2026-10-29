@@ -19,11 +19,11 @@ const accents = {
 
 export default function MetricCard({ label, value, detail, icon: Icon, accent }: MetricCardProps) {
   return (
-    <article className="group surface-card p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <article className="group surface-card rounded-none p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <p className="text-xs font-semibold uppercase tracking-[0.1em] text-steel">{label}</p>
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105 ${accents[accent]}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-none transition-transform duration-200 group-hover:scale-105 ${accents[accent]}`}
         >
           <Icon size={18} aria-hidden="true" />
         </span>

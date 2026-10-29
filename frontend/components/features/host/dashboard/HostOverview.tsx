@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Wallet, FolderHeart, Users, Radio, AlertCircle, RotateCcw } from "lucide-react";
+import { ArrowUpRight, Wallet, FolderHeart, Users, Radio, AlertCircle, RotateCcw, Percent, CheckCircle2, Info } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import CampaignList from "@/components/features/host/campaigns/CampaignList";
 import CreateCampaignModal from "@/components/features/host/campaigns/CreateCampaignModal";
@@ -49,16 +49,41 @@ export default function HostOverview() {
   const contributorsPaid = statsData?.contributorsPaid ?? campaigns.reduce((sum, c) => sum + (c.contributors || 0), 0);
   const activeCampaigns = statsData?.activeCampaigns ?? campaigns.filter((c) => c.status === "Active").length;
 
+  const commission = Math.round(totalRaised * 0.14);
+  const netRaised = totalRaised - commission;
+
   const stats = [
     {
-      label: "Total money raised",
+      label: "Total gross raised",
       value: isInitialLoading ? (
         <span className="inline-block animate-pulse opacity-60">···</span>
       ) : (
         money(totalRaised)
       ),
-      detail: "All successful contributions",
+      detail: "Gross successful contributions",
       icon: Wallet,
+      accent: "green" as const,
+    },
+    {
+      label: "Platform fee (14%)",
+      value: isInitialLoading ? (
+        <span className="inline-block animate-pulse opacity-60">···</span>
+      ) : (
+        money(commission)
+      ),
+      detail: "14% platform & gateway commission",
+      icon: Percent,
+      accent: "gold" as const,
+    },
+    {
+      label: "Net credited (86%)",
+      value: isInitialLoading ? (
+        <span className="inline-block animate-pulse opacity-60">···</span>
+      ) : (
+        money(netRaised)
+      ),
+      detail: "86% net available for your projects",
+      icon: CheckCircle2,
       accent: "green" as const,
     },
     {
@@ -81,7 +106,7 @@ export default function HostOverview() {
       ),
       detail: "Unique contributors · Paid only",
       icon: Users,
-      accent: "gold" as const,
+      accent: "purple" as const,
     },
     {
       label: "Active campaigns",
@@ -90,9 +115,9 @@ export default function HostOverview() {
       ) : (
         activeCampaigns.toLocaleString()
       ),
-      detail: "Currently collecting contributions",
+      detail: "Currently accepting contributions",
       icon: Radio,
-      accent: "purple" as const,
+      accent: "blue" as const,
     },
   ];
 
@@ -100,7 +125,7 @@ export default function HostOverview() {
     <div className="w-full space-y-7">
       <HostHeading
         title="Your impact, at a glance."
-        description="Keep track of what your community has raised and the campaigns bringing people together."
+        description="Keep track of what your community has raised, transparent platform fees, and campaigns in motion."
       >
         <RefreshData onRefresh={handleRefresh} />
       </HostHeading>
@@ -109,7 +134,7 @@ export default function HostOverview() {
       {(isErrorStats || isErrorCampaigns) && (
         <div
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-crimson/20 bg-crimson/5 p-4 text-sm text-crimson"
+          className="flex flex-wrap items-center justify-between gap-3 border border-crimson/20 bg-crimson/5 p-4 text-sm text-crimson"
         >
           <div className="flex items-center gap-2.5">
             <AlertCircle size={18} className="shrink-0" />
@@ -129,10 +154,31 @@ export default function HostOverview() {
         </div>
       )}
 
+      {/* Commission Transparency Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-navy/10 bg-white p-4 text-xs text-navy shadow-xs">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-gold/15 text-gold font-bold text-sm">
+            %
+          </div>
+          <div>
+            <p className="font-semibold text-navy">14% Platform Fee Transparency</p>
+            <p className="text-steel mt-0.5">
+              A standard 14% platform commission is charged on all received donations to support secure USSD access, payment gateway integrations, and instant settlement infrastructure. 86% of every contribution goes directly to your campaign.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/host/withdrawals"
+          className="inline-flex shrink-0 items-center gap-1 font-semibold text-navy hover:text-gold transition-colors"
+        >
+          Payouts & balances <ArrowUpRight size={14} />
+        </Link>
+      </div>
+
       {/* Real Statistics Metric Cards */}
       <section
         aria-label="Fundraising statistics"
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
       >
         {stats.map(({ label, value, detail, icon: Icon, accent }) => (
           <MetricCard
@@ -178,7 +224,7 @@ export default function HostOverview() {
       </section>
 
       <p className="mt-6 text-xs leading-relaxed text-steel">
-        Total raised counts successful contributions before any withdrawals.
+        Total gross raised counts successful contributions before platform commission and withdrawals.
         Pending and failed payments are excluded.
       </p>
     </div>

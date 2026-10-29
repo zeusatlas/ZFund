@@ -68,6 +68,8 @@ export interface WithdrawalCounts {
 
 export interface WithdrawalBalanceSummary {
   raised: string;
+  commission: string;
+  netRaised: string;
   reserved: string;
   paid: string;
   available: string;
@@ -130,10 +132,14 @@ export class WithdrawalService {
     const reserved = reservedRequests.reduce((t, r) => MoneyUtil.add(t, r.amount), '0.00');
     const paid = paidRequests.reduce((t, r) => MoneyUtil.add(t, r.amount), '0.00');
     const totalDeducted = MoneyUtil.add(reserved, paid);
-    const left = MoneyUtil.subtract(raised, totalDeducted);
+
+    // 14% platform commission on collected contributions
+    const commission = MoneyUtil.multiply(raised, '0.14');
+    const netRaised = MoneyUtil.subtract(raised, commission);
+    const left = MoneyUtil.subtract(netRaised, totalDeducted);
     const available = MoneyUtil.isPositive(left) ? left : '0.00';
 
-    return { raised, reserved, paid, available };
+    return { raised, commission, netRaised, reserved, paid, available };
   }
 
   async create(hostId: string, input: CreateWithdrawalInput): Promise<WithdrawalRequest> {

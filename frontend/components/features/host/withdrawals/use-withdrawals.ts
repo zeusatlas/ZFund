@@ -73,6 +73,12 @@ export function useWithdrawalsQuery(params?: GetWithdrawalsParams) {
       const balance = b
         ? {
             raised: Math.round(parseFloat(b.raised || "0") * 100),
+            commission: b.commission !== undefined
+              ? Math.round(parseFloat(b.commission) * 100)
+              : Math.round(parseFloat(b.raised || "0") * 100 * 0.14),
+            netRaised: b.netRaised !== undefined
+              ? Math.round(parseFloat(b.netRaised) * 100)
+              : Math.round(parseFloat(b.raised || "0") * 100 * 0.86),
             reserved: Math.round(parseFloat(b.reserved || "0") * 100),
             paid: Math.round(parseFloat(b.paid || "0") * 100),
             available: Math.round(parseFloat(b.available || "0") * 100),

@@ -8,6 +8,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Percent,
   Wallet,
   XCircle,
 } from "lucide-react";
@@ -161,12 +162,28 @@ export default function TransactionsDashboard() {
   }
 
   // Stat cards matching HostOverview MetricCard design
+  const totalCommission = Math.round(totals.received * 0.14);
+  const totalNet = totals.received - totalCommission;
   const cards = [
     {
-      label: "Total received",
+      label: "Total gross received",
       value: money(totals.received),
-      detail: "Successful payments only",
+      detail: "Gross contributions collected",
       icon: Wallet,
+      accent: "blue" as const,
+    },
+    {
+      label: "Platform fee (14%)",
+      value: money(totalCommission),
+      detail: "14% platform & telecom fee",
+      icon: Percent,
+      accent: "gold" as const,
+    },
+    {
+      label: "Net credited (86%)",
+      value: money(totalNet),
+      detail: "86% net credited to host",
+      icon: CheckCircle2,
       accent: "green" as const,
     },
     {
@@ -192,6 +209,7 @@ export default function TransactionsDashboard() {
     },
   ];
 
+
   return (
     <div className="w-full space-y-7">
       <HostHeading
@@ -199,10 +217,25 @@ export default function TransactionsDashboard() {
         description="Follow every donation, from the first payment request to a confirmed contribution."
       />
 
+      {/* Commission Transparency Notice */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-navy/10 bg-white p-4 text-xs text-navy shadow-xs">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-gold/15 text-gold font-bold text-sm">
+            %
+          </div>
+          <div>
+            <p className="font-semibold text-navy">14% Platform Commission Transparency</p>
+            <p className="text-steel mt-0.5">
+              A standard 14% commission applies to all received donations to support secure USSD channels and payment gateway operations. 86% of each donation is credited directly to your campaigns.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Summary Stat Cards matching HostOverview styling */}
       <section
         aria-label="Transaction summary"
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
       >
         {cards.map(({ label, value, detail, icon: Icon, accent }) => (
           <MetricCard
@@ -418,9 +451,14 @@ export default function TransactionsDashboard() {
                         <span className="font-medium text-navy">{item.id}</span>
                         <span className="mt-1 block text-xs text-steel">{item.phone}</span>
                       </div>
-                      <span className="font-medium tabular-nums text-navy">
-                        {money(item.amount)}
-                      </span>
+                      <div className="text-right">
+                        <span className="font-medium tabular-nums text-navy block">
+                          {money(item.amount)}
+                        </span>
+                        <span className="text-[11px] font-normal text-success">
+                          Net: {money(Math.round(item.amount * 0.86))}
+                        </span>
+                      </div>
                     </div>
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                       <span className="text-xs text-steel">
@@ -486,7 +524,10 @@ export default function TransactionsDashboard() {
                           {campaignNames[item.campaignId] ?? item.campaignName ?? item.campaignId}
                         </td>
                         <td className="whitespace-nowrap px-5 py-4 text-right font-medium tabular-nums text-navy">
-                          {money(item.amount)}
+                          <div>{money(item.amount)}</div>
+                          <div className="text-[11px] font-normal text-success">
+                            Net: {money(Math.round(item.amount * 0.86))}
+                          </div>
                         </td>
                         <td className="px-5 py-4 text-steel">{item.method}</td>
                         <td className="px-5 py-4">

@@ -512,9 +512,15 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
 
                   {/* Financial Stats in Card */}
                   <div className="mt-5">
-                    <p className="text-2xl font-bold tracking-tight text-navy">
-                      {money(raised)}
-                    </p>
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-2xl font-bold tracking-tight text-navy">
+                        {money(raised)}
+                      </p>
+                      <span className="text-xs font-semibold text-success">
+                        Net: {money(Math.round(raised * 0.86))}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-steel">Gross raised · 86% net payout</p>
                     <div className="mt-2">
                       <progress
                         aria-label={campaign.name + " progress"}
@@ -613,9 +619,14 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                   {/* Progress & Raised */}
                   <div>
                     <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="text-sm font-medium tabular-nums text-navy">
-                        {money(raised)}
-                      </span>
+                      <div>
+                        <span className="text-sm font-semibold tabular-nums text-navy">
+                          {money(raised)}
+                        </span>
+                        <span className="ml-2 text-xs font-medium text-success">
+                          Net: {money(Math.round(raised * 0.86))}
+                        </span>
+                      </div>
                       {hasGoal && (
                         <span className="text-xs tabular-nums text-steel">{percent}%</span>
                       )}
@@ -719,13 +730,25 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
 
             {/* Financial Stat Cards */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-stone-light p-3 border border-navy/10">
-                <p className="text-xs text-steel">Total Raised</p>
+              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                <p className="text-xs text-steel">Gross Raised</p>
                 <p className="mt-1 text-lg font-semibold text-navy">
                   {money(viewingCampaign.raised ?? 0)}
                 </p>
               </div>
-              <div className="rounded-xl bg-stone-light p-3 border border-navy/10">
+              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                <p className="text-xs text-warning">Platform Fee (14%)</p>
+                <p className="mt-1 text-lg font-semibold text-warning">
+                  - {money(Math.round((viewingCampaign.raised ?? 0) * 0.14))}
+                </p>
+              </div>
+              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                <p className="text-xs text-success">Net Proceeds (86%)</p>
+                <p className="mt-1 text-lg font-semibold text-success">
+                  {money((viewingCampaign.raised ?? 0) - Math.round((viewingCampaign.raised ?? 0) * 0.14))}
+                </p>
+              </div>
+              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
                 <p className="text-xs text-steel">Target Goal</p>
                 <p className="mt-1 text-lg font-semibold text-navy">
                   {viewingCampaign.goal > 0
@@ -733,10 +756,15 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                     : "Open goal"}
                 </p>
               </div>
-              <div className="col-span-2 rounded-xl bg-stone-light p-3 border border-navy/10 sm:col-span-1">
+              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
                 <p className="text-xs text-steel">Contributors</p>
                 <p className="mt-1 text-lg font-semibold text-navy">
                   {viewingCampaign.contributors ?? 0}
+                </p>
+              </div>
+              <div className="rounded-none bg-stone-light p-3 border border-navy/10 flex items-center">
+                <p className="text-[11px] leading-relaxed text-steel">
+                  A 14% platform commission applies to all donations to maintain USSD routing.
                 </p>
               </div>
             </div>
