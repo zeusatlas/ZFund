@@ -7,6 +7,8 @@ import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { ArrowRight, Menu, X, Zap } from "lucide-react";
 import HostCtaLink from "@/components/landing/HostCtaLink";
 
+const SECTION_IDS = ["how-it-works", "for-hosts", "for-organizations", "security"];
+
 const navLinks = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#for-hosts", label: "For hosts" },
@@ -18,8 +20,12 @@ export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeHash, setActiveHash] = useState("");
 
   const linkHref = (href: string) => (href.startsWith("/") || pathname === "/" ? href : `/${href}`);
+
+  const isActive = (href: string) =>
+    href.startsWith("/") ? pathname === href : pathname === "/" && activeHash === href;
 
   function goToSection(event: ReactMouseEvent<HTMLAnchorElement>, hash: string) {
     if (pathname !== "/") {
@@ -41,6 +47,25 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Scroll-spy: highlight the nav link for the section currently in view on the home page.
+  useEffect(() => {
+    if (pathname !== "/") return;
+    const sections = SECTION_IDS.map((id) => document.getElementById(id)).filter(
+      (el): el is HTMLElement => el !== null,
+    );
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveHash(`#${entry.target.id}`);
+          else setActiveHash((current) => (current === `#${entry.target.id}` ? "" : current));
+        }
+      },
+      { rootMargin: "-35% 0px -60% 0px" },
+    );
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [pathname]);
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
@@ -95,7 +120,12 @@ export default function Navbar() {
               key={link.href}
               href={linkHref(link.href)}
               onClick={(event) => (link.href.startsWith("#") ? goToSection(event, link.href) : setMobileOpen(false))}
-              className="text-[14px] font-medium text-graphite transition-colors hover:text-off-ink"
+              aria-current={isActive(link.href) ? "page" : undefined}
+              className={`relative py-1 text-[14px] font-medium transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-lime after:transition-transform ${
+                isActive(link.href)
+                  ? "text-off-ink after:scale-x-100"
+                  : "text-graphite after:scale-x-0 hover:text-off-ink"
+              }`}
             >
               {link.label}
             </Link>
@@ -146,7 +176,10 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={linkHref(link.href)}
-                className="flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-medium text-graphite transition-colors hover:bg-white hover:text-off-ink"
+                aria-current={isActive(link.href) ? "page" : undefined}
+                className={`flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-medium transition-colors hover:bg-white hover:text-off-ink ${
+                  isActive(link.href) ? "bg-white text-off-ink shadow-2xs" : "text-graphite"
+                }`}
                 onClick={(event) => (link.href.startsWith("#") ? goToSection(event, link.href) : setMobileOpen(false))}
               >
                 {link.label}

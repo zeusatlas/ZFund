@@ -65,6 +65,7 @@ import { ProjectPaymentMethod } from './entities/project-payment-method.entity';
 import { ProjectSetting } from './entities/project-setting.entity';
 import { Project } from './entities/project.entity';
 import { Refund } from './entities/refund.entity';
+import { ContactMessage } from './entities/contact-message.entity';
 import { SystemSetting } from './entities/system-setting.entity';
 import { UssdFlowVersion } from './entities/ussd-flow-version.entity';
 import { UssdFlow } from './entities/ussd-flow.entity';
@@ -145,4 +146,5 @@ export const allEntities = [
   // Operations & System
   AuditLog,
   SystemSetting,
+  ContactMessage,
 ];

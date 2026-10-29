@@ -23,6 +23,17 @@ export const authRateLimiter = rateLimit({
   },
 });
 
+export const contactRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'You have sent several messages recently. Please try again later or email us directly.',
+  },
+});
+
 export const ussdRateLimiter = rateLimit({
   windowMs: 10 * 1000, // 10 seconds
   max: 30, // USSD interactive session burst tolerance

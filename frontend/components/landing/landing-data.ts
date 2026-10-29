@@ -14,6 +14,9 @@ import {
 export const HERO_RAISED_TODAY = 156420;
 export const HERO_USSD_CODE = "*920*969#";
 
+/** Mobile networks supported for USSD giving (shown under the hero buttons). */
+export const TELECOMS = ["MTN", "Telecel (Vodafone)", "AirtelTigo"];
+
 /* ══════════════════════════════════════════════════════════════
  * SECTION 2 — Social-proof ticker (LandingOverview.tsx): dark scrolling strip under the hero
  * ══════════════════════════════════════════════════════════════ */
@@ -77,7 +80,7 @@ export const FAQ_ITEMS = [
   {
     question: "Who is RaiseFundz for?",
     answer:
-      "Community organisers, alumni groups, congregations, and nonprofits in Ghana who want to bring people together around a clear fundraising goal.",
+      "Community organisers, alumni groups, congregations, nonprofits and individuals in Ghana who want to bring people together around a clear fundraising goal.",
   },
   {
     question: "Can I collect donations right now?",
