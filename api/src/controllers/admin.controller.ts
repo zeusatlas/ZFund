@@ -134,9 +134,11 @@ export class AdminController {
       const status = req.body.status as ProjectStatus;
       const notes = req.body.notes as string | undefined;
 
+      const commissionPercentage = req.body.commissionPercentage !== undefined ? Number(req.body.commissionPercentage) : undefined;
+
       const updated = await projectService.updateProjectStatus(
         fundId,
-        { status, notes },
+        { status, notes, commissionPercentage },
         req.user!.id,
         req.user!.role
       );

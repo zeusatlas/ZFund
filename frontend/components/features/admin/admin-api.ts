@@ -33,6 +33,7 @@ export type Fund = {
   hostName: string;
   raised: string;
   targetAmount?: string;
+  commissionPercentage?: string | number;
   transactions: number;
   createdAt: string;
 };
@@ -251,14 +252,17 @@ export function useUpdateCampaignStatus() {
       id,
       status,
       notes,
+      commissionPercentage,
     }: {
       id: string;
       status: "PUBLISHED" | "APPROVED" | "DRAFT" | "SUSPENDED" | "REJECTED" | "SCHEDULED";
       notes?: string;
+      commissionPercentage?: number | string;
     }) => {
       const { data } = await api.patch<ApiEnvelope<Fund>>(`/admin/funds/${id}/status`, {
         status,
         notes: notes || undefined,
+        commissionPercentage: commissionPercentage !== undefined ? Number(commissionPercentage) : undefined,
       });
       return data.data;
     },

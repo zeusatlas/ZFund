@@ -489,6 +489,9 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                         <PhoneCall size={12} className="text-gold" />
                         *920*969*{campaign.eventCode}#
                       </span>
+                      <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
+                        {campaign.commissionPercentage ?? 14}% fee
+                      </span>
                       <button
                         type="button"
                         onClick={(e) =>
@@ -585,6 +588,9 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                           <span className="inline-flex items-center gap-1.5 rounded-lg bg-navy/5 px-2.5 py-1 text-xs font-mono font-medium text-navy border border-navy/10">
                             <PhoneCall size={12} className="text-gold" />
                             *920*969*{campaign.eventCode}#
+                          </span>
+                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
+                            {campaign.commissionPercentage ?? 14}% fee
                           </span>
                           <button
                             type="button"
@@ -736,37 +742,46 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                   {money(viewingCampaign.raised ?? 0)}
                 </p>
               </div>
-              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
-                <p className="text-xs text-warning">Platform Fee (14%)</p>
-                <p className="mt-1 text-lg font-semibold text-warning">
-                  - {money(Math.round((viewingCampaign.raised ?? 0) * 0.14))}
-                </p>
-              </div>
-              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
-                <p className="text-xs text-success">Net Proceeds (86%)</p>
-                <p className="mt-1 text-lg font-semibold text-success">
-                  {money((viewingCampaign.raised ?? 0) - Math.round((viewingCampaign.raised ?? 0) * 0.14))}
-                </p>
-              </div>
-              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
-                <p className="text-xs text-steel">Target Goal</p>
-                <p className="mt-1 text-lg font-semibold text-navy">
-                  {viewingCampaign.goal > 0
-                    ? money(viewingCampaign.goal)
-                    : "Open goal"}
-                </p>
-              </div>
-              <div className="rounded-none bg-stone-light p-3 border border-navy/10">
-                <p className="text-xs text-steel">Contributors</p>
-                <p className="mt-1 text-lg font-semibold text-navy">
-                  {viewingCampaign.contributors ?? 0}
-                </p>
-              </div>
-              <div className="rounded-none bg-stone-light p-3 border border-navy/10 flex items-center">
-                <p className="text-[11px] leading-relaxed text-steel">
-                  A 14% platform commission applies to all donations to maintain USSD routing.
-                </p>
-              </div>
+{(() => {
+                const commPercent = viewingCampaign.commissionPercentage ?? 14;
+                const commAmount = Math.round((viewingCampaign.raised ?? 0) * (commPercent / 100));
+                const netAmount = (viewingCampaign.raised ?? 0) - commAmount;
+                return (
+                  <>
+                    <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                      <p className="text-xs text-warning">Platform Fee ({commPercent}%)</p>
+                      <p className="mt-1 text-lg font-semibold text-warning">
+                        - {money(commAmount)}
+                      </p>
+                    </div>
+                    <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                      <p className="text-xs text-success">Net Proceeds ({Number((100 - commPercent).toFixed(2))}%)</p>
+                      <p className="mt-1 text-lg font-semibold text-success">
+                        {money(netAmount)}
+                      </p>
+                    </div>
+                    <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                      <p className="text-xs text-steel">Target Goal</p>
+                      <p className="mt-1 text-lg font-semibold text-navy">
+                        {viewingCampaign.goal > 0
+                          ? money(viewingCampaign.goal)
+                          : "Open goal"}
+                      </p>
+                    </div>
+                    <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                      <p className="text-xs text-steel">Contributors</p>
+                      <p className="mt-1 text-lg font-semibold text-navy">
+                        {viewingCampaign.contributors ?? 0}
+                      </p>
+                    </div>
+                    <div className="rounded-none bg-stone-light p-3 border border-navy/10 flex items-center">
+                      <p className="text-[11px] leading-relaxed text-steel">
+                        A {commPercent}% platform commission applies to this campaign to maintain USSD routing.
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Progress Bar */}

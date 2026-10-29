@@ -17,6 +17,7 @@ export type Campaign = {
   acceptsContributions?: boolean;
   raised?: number;
   contributors?: number;
+  commissionPercentage?: number;
 };
 // Illustrative data. All amounts are in pesewas.
 export const campaigns: Campaign[] = [

@@ -49,8 +49,18 @@ export default function HostOverview() {
   const contributorsPaid = statsData?.contributorsPaid ?? campaigns.reduce((sum, c) => sum + (c.contributors || 0), 0);
   const activeCampaigns = statsData?.activeCampaigns ?? campaigns.filter((c) => c.status === "Active").length;
 
-  const commission = Math.round(totalRaised * 0.14);
+  // Dynamically calculate total platform commission based on each campaign's individual commission percentage
+  const commission = campaigns.reduce((sum, c) => {
+    const rate = (c.commissionPercentage ?? 14) / 100;
+    return sum + Math.round((c.raised || 0) * rate);
+  }, 0);
   const netRaised = totalRaised - commission;
+
+  // Average or effective commission rate
+  const effectiveRate = totalRaised > 0
+    ? ((commission / totalRaised) * 100).toFixed(1)
+    : (campaigns.length > 0 ? (campaigns.reduce((sum, c) => sum + (c.commissionPercentage ?? 14), 0) / campaigns.length).toFixed(1) : "14.0");
+  const effectiveNetRate = (100 - parseFloat(effectiveRate)).toFixed(1);
 
   const stats = [
     {
@@ -65,24 +75,24 @@ export default function HostOverview() {
       accent: "green" as const,
     },
     {
-      label: "Platform fee (14%)",
+      label: `Platform fee (${effectiveRate}%)`,
       value: isInitialLoading ? (
         <span className="inline-block animate-pulse opacity-60">···</span>
       ) : (
         money(commission)
       ),
-      detail: "14% platform & gateway commission",
+      detail: "Dynamically calculated per campaign",
       icon: Percent,
       accent: "gold" as const,
     },
     {
-      label: "Net credited (86%)",
+      label: `Net credited (${effectiveNetRate}%)`,
       value: isInitialLoading ? (
         <span className="inline-block animate-pulse opacity-60">···</span>
       ) : (
         money(netRaised)
       ),
-      detail: "86% net available for your projects",
+      detail: "Net available for your projects",
       icon: CheckCircle2,
       accent: "green" as const,
     },

@@ -109,6 +109,10 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
   const [tab, setTab] = useState<Tab>("overview");
   const [rejecting, setRejecting] = useState(false);
   const [rejectNotes, setRejectNotes] = useState("");
+  const [approving, setApproving] = useState(false);
+  const [configureAfterApprove, setConfigureAfterApprove] = useState(false);
+  const [commissionRate, setCommissionRate] = useState<number | string>(14);
+  const [approveNotes, setApproveNotes] = useState("");
   const [configuringFlow, setConfiguringFlow] = useState(false);
 
   const back = (
@@ -145,6 +149,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
   const details: [string, string][] = [
     ["Host", campaign.hostName],
     ["Event code", campaign.eventCode],
+    ["Commission fee", `${campaign.commissionPercentage ?? "14.00"}%`],
     ["Created", format(new Date(campaign.createdAt), "MMM d, yyyy, HH:mm")],
     ...(campaign.startDate ? ([["Starts", format(new Date(campaign.startDate), "MMM d, yyyy")]] as [string, string][]) : []),
     ...(campaign.endDate ? ([["Ends", format(new Date(campaign.endDate), "MMM d, yyyy")]] as [string, string][]) : []),
@@ -172,13 +177,11 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={async () => {
-                  try {
-                    await updateStatusMutation.mutateAsync({ id: campaign.id, status: "PUBLISHED" });
-                    setConfiguringFlow(true);
-                  } catch {
-                    // Handled by toast
-                  }
+                onClick={() => {
+                  setConfigureAfterApprove(true);
+                  setCommissionRate(campaign.commissionPercentage ? Number(campaign.commissionPercentage) : 14);
+                  setApproveNotes("");
+                  setApproving(true);
                 }}
                 disabled={updateStatusMutation.isPending}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-50 px-3.5 py-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs disabled:opacity-50"
@@ -188,7 +191,12 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
               </button>
               <button
                 type="button"
-                onClick={() => updateStatusMutation.mutate({ id: campaign.id, status: "PUBLISHED" })}
+                onClick={() => {
+                  setConfigureAfterApprove(false);
+                  setCommissionRate(campaign.commissionPercentage ? Number(campaign.commissionPercentage) : 14);
+                  setApproveNotes("");
+                  setApproving(true);
+                }}
                 disabled={updateStatusMutation.isPending}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-800 transition-colors shadow-sm disabled:opacity-50"
               >
@@ -262,6 +270,115 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
         </section>
       ) : (
         <Contributions campaignId={campaignId} />
+      )}
+
+      {/* Approve Modal */}
+      {approving && (
+        <Modal
+          title="Approve Campaign"
+          onClose={() => setApproving(false)}
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setApproving(false)}
+                disabled={updateStatusMutation.isPending}
+                className="rounded-xl border border-navy/20 bg-white px-4 py-2 text-sm font-medium hover:bg-stone disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await updateStatusMutation.mutateAsync({
+                      id: campaign.id,
+                      status: "PUBLISHED",
+                      notes: approveNotes.trim() || undefined,
+                      commissionPercentage: Number(commissionRate),
+                    });
+                    setApproving(false);
+                    if (configureAfterApprove) {
+                      setConfiguringFlow(true);
+                    }
+                    refetch();
+                  } catch {
+                    // Handled by mutation toast
+                  }
+                }}
+                disabled={updateStatusMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {updateStatusMutation.isPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Check size={15} />
+                )}
+                Confirm Approval &amp; Go Live
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="rounded-xl bg-stone-light p-3.5 border border-navy/10 space-y-1.5 text-xs text-steel">
+              <p>
+                <strong className="text-navy">Campaign:</strong> {campaign.name}
+              </p>
+              <p>
+                <strong className="text-navy">Host:</strong> {campaign.hostName}
+              </p>
+              <p>
+                <strong className="text-navy">USSD Code:</strong> *920*969*{campaign.eventCode}#
+              </p>
+              {campaign.targetAmount && (
+                <p>
+                  <strong className="text-navy">Target:</strong> {formatMoney(campaign.targetAmount)}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="detail-commission" className="text-xs font-semibold text-navy flex items-center justify-between mb-1">
+                <span>Commission Percentage (%) *</span>
+                <span className="text-[11px] font-normal text-steel">Standard default: 14%</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="detail-commission"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(e.target.value)}
+                  placeholder="14"
+                  className="w-full rounded-xl border border-navy/20 bg-white px-3 py-2 pr-8 text-xs font-semibold text-navy focus:border-navy focus:outline-none"
+                  required
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-steel">
+                  %
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-steel">
+                Platform fee charged on contributions received for this campaign.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="detail-approve-notes" className="text-xs font-semibold text-navy block mb-1">
+                Admin Notes (Optional)
+              </label>
+              <textarea
+                id="detail-approve-notes"
+                rows={3}
+                placeholder="Optional approval note..."
+                value={approveNotes}
+                onChange={(e) => setApproveNotes(e.target.value)}
+                className="w-full rounded-xl border border-navy/20 bg-white px-3 py-2 text-xs text-navy focus:border-navy focus:outline-none"
+              />
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Reject Modal */}

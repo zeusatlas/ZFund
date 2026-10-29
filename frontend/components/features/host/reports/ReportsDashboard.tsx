@@ -93,8 +93,16 @@ export default function ReportsDashboard() {
   const best = report.performance.find((campaign) => campaign.raised > 0);
   const highest = Math.max(...report.performance.map((campaign) => campaign.raised), 1);
 
-  const commission = Math.round(report.raised * 0.14);
+  // Dynamically calculate commission per campaign
+  const commission = report.performance.reduce((sum, camp) => {
+    const rate = (camp.commissionPercentage ?? 14) / 100;
+    return sum + Math.round(camp.raised * rate);
+  }, 0);
   const netRaised = report.raised - commission;
+  const effectiveRate = report.raised > 0
+    ? ((commission / report.raised) * 100).toFixed(1)
+    : "14.0";
+  const effectiveNetRate = (100 - parseFloat(effectiveRate)).toFixed(1);
 
   const cards = [
     {
@@ -110,19 +118,19 @@ export default function ReportsDashboard() {
       tint: "#eef2f6",
     },
     {
-      label: "Commission (14%)",
+      label: `Commission (${effectiveRate}%)`,
       value: isInitialLoading ? (
         <span className="inline-block animate-pulse opacity-60">···</span>
       ) : (
         money(commission)
       ),
-      note: "14% Commission fee",
+      note: "Dynamically calculated per campaign",
       icon: Percent,
       colour: "#8a5a10",
       tint: "#fdf3e1",
     },
     {
-      label: "Net credited (86%)",
+      label: `Net credited (${effectiveNetRate}%)`,
       value: isInitialLoading ? (
         <span className="inline-block animate-pulse opacity-60">···</span>
       ) : (
@@ -406,12 +414,18 @@ export default function ReportsDashboard() {
           ) : (
             <ul className="space-y-6">
               {report.performance.map((campaign, index) => {
-                const campCommission = Math.round(campaign.raised * 0.14);
+                const commPct = campaign.commissionPercentage ?? 14;
+                const campCommission = Math.round(campaign.raised * (commPct / 100));
                 const campNet = campaign.raised - campCommission;
                 return (
                   <li key={campaign.id}>
                     <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                      <h3 className="text-sm font-medium text-navy">{campaign.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-medium text-navy">{campaign.name}</h3>
+                        <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
+                          {commPct}% fee
+                        </span>
+                      </div>
                       <div className="text-right">
                         <span className="text-sm font-medium tabular-nums text-navy">
                           {money(campaign.raised)}
@@ -436,7 +450,7 @@ export default function ReportsDashboard() {
                     </div>
                     <p className="mt-2 text-xs text-steel">
                       {campaign.gifts} successful {campaign.gifts === 1 ? "payment" : "payments"} ·{" "}
-                      {campaign.donors} paid {campaign.donors === 1 ? "contributor" : "contributors"} · 14% commission: {money(campCommission)}
+                      {campaign.donors} paid {campaign.donors === 1 ? "contributor" : "contributors"} · {commPct}% commission: {money(campCommission)}
                     </p>
                   </li>
                 );

@@ -39,6 +39,7 @@ export default function AdminCampaigns() {
   const [reviewingCampaign, setReviewingCampaign] = useState<Fund | null>(null);
   const [reviewAction, setReviewAction] = useState<"APPROVE" | "REJECT">("APPROVE");
   const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewCommission, setReviewCommission] = useState<number | string>(14);
   const [configuringCampaign, setConfiguringCampaign] = useState<Fund | null>(null);
 
   const debouncedSearch = useDebouncedValue(search);
@@ -60,6 +61,7 @@ export default function AdminCampaigns() {
     setReviewingCampaign(campaign);
     setReviewAction(action);
     setReviewNotes("");
+    setReviewCommission(campaign.commissionPercentage ? Number(campaign.commissionPercentage) : 14);
   }
 
   async function handleConfirmReview(configureAfterApprove = false) {
@@ -70,6 +72,7 @@ export default function AdminCampaigns() {
         id: targetCampaign.id,
         status: reviewAction === "APPROVE" ? "PUBLISHED" : "REJECTED",
         notes: reviewNotes.trim() || undefined,
+        commissionPercentage: reviewAction === "APPROVE" ? Number(reviewCommission) : undefined,
       });
       setReviewingCampaign(null);
       if (reviewAction === "APPROVE" && configureAfterApprove) {
@@ -246,9 +249,12 @@ export default function AdminCampaigns() {
                           >
                             {campaign.name}
                           </Link>
-                          <p className="mt-0.5 text-xs text-steel font-mono">
-                            *920*969*{campaign.eventCode}#
-                          </p>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <span className="text-xs text-steel font-mono">*920*969*{campaign.eventCode}#</span>
+                            <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
+                              {campaign.commissionPercentage ?? "14"}% fee
+                            </span>
+                          </div>
                         </td>
 
                         <td className="px-4 py-4 text-sm text-navy">
@@ -358,9 +364,12 @@ export default function AdminCampaigns() {
                         >
                           {campaign.name}
                         </Link>
-                        <p className="mt-0.5 text-xs text-steel font-mono">
-                          Code: *920*969*{campaign.eventCode}#
-                        </p>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <span className="text-xs text-steel font-mono">Code: *920*969*{campaign.eventCode}#</span>
+                          <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
+                            {campaign.commissionPercentage ?? "14"}% fee
+                          </span>
+                        </div>
                       </div>
                       <CampaignStatusBadge status={campaign.status} />
                     </div>
@@ -550,6 +559,12 @@ export default function AdminCampaigns() {
                   {formatMoney(reviewingCampaign.targetAmount)}
                 </p>
               )}
+              {reviewingCampaign.commissionPercentage && (
+                <p>
+                  <strong className="text-navy">Configured Commission:</strong>{" "}
+                  {reviewingCampaign.commissionPercentage}%
+                </p>
+              )}
             </div>
 
             {reviewAction === "APPROVE" ? (
@@ -568,6 +583,35 @@ export default function AdminCampaigns() {
                 <strong className="text-navy">Rejected</strong>. The host will be notified to
                 make necessary corrections before re-submitting.
               </p>
+            )}
+
+            {reviewAction === "APPROVE" && (
+              <div>
+                <label htmlFor="review-commission" className="text-xs font-semibold text-navy flex items-center justify-between mb-1">
+                  <span>Commission Percentage (%) *</span>
+                  <span className="text-[11px] font-normal text-steel">Standard default: 14%</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="review-commission"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={reviewCommission}
+                    onChange={(e) => setReviewCommission(e.target.value)}
+                    placeholder="14"
+                    className="w-full rounded-xl border border-navy/20 bg-white px-3 py-2 pr-8 text-xs font-semibold text-navy focus:border-navy focus:outline-none"
+                    required
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-steel">
+                    %
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-steel">
+                  Platform fee charged on contributions received for this campaign. Differing rates can be specified per campaign.
+                </p>
+              </div>
             )}
 
             <div>

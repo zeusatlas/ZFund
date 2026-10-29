@@ -71,6 +71,10 @@ export class Project {
   @Column({ type: 'numeric', precision: 14, scale: 2, default: '10000.00' })
   maxAmount: string;
 
+  /** Platform commission percentage charged on contributions (default 14.00%) */
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: '14.00' })
+  commissionPercentage: string;
+
   @Column({
     type: 'enum',
     enum: ProjectStatus,

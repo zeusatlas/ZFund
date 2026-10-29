@@ -107,6 +107,7 @@ export class ProjectService {
       startDate: input.startDate ? new Date(input.startDate) : undefined,
       endDate: input.endDate ? new Date(input.endDate) : undefined,
       acceptsContributions: input.acceptsContributions,
+      commissionPercentage: input.commissionPercentage || '14.00',
       status: input.status || ProjectStatus.PENDING_REVIEW,
     });
 
@@ -438,6 +439,12 @@ export class ProjectService {
       project.startDate = input.startDate ? new Date(input.startDate) : undefined;
     if (input.endDate !== undefined)
       project.endDate = input.endDate ? new Date(input.endDate) : undefined;
+    const isPlatformAdmin = [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(
+      userRole as SystemRole
+    );
+    if (input.commissionPercentage !== undefined && isPlatformAdmin) {
+      project.commissionPercentage = Number(input.commissionPercentage).toFixed(2);
+    }
 
     const saved = await this.projectRepo.save(project);
 
@@ -559,6 +566,10 @@ export class ProjectService {
       }
     }
 
+    if (input.commissionPercentage !== undefined && isPlatformAdmin) {
+      project.commissionPercentage = Number(input.commissionPercentage).toFixed(2);
+    }
+
     project.status = targetStatus;
     if (targetStatus === ProjectStatus.PUBLISHED) {
       project.acceptsContributions = true;
@@ -572,7 +583,7 @@ export class ProjectService {
       entityId: project.id,
       action: 'UPDATE_PROJECT_STATUS',
       oldValues: { status: currentStatus },
-      newValues: { status: targetStatus, notes: input.notes },
+      newValues: { status: targetStatus, notes: input.notes, commissionPercentage: project.commissionPercentage },
     });
 
     if (targetStatus === ProjectStatus.PENDING_REVIEW && currentStatus !== targetStatus) {

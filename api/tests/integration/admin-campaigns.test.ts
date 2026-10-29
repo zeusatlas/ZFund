@@ -117,4 +117,45 @@ describe('Admin campaigns', () => {
     const forbidden = await request(app).get(`/api/v1/admin/funds/${projectId}`).set('Authorization', `Bearer ${hostToken}`);
     expect(forbidden.status).toBe(403);
   });
+
+  it('allows an admin to approve a campaign with custom commission percentage', async () => {
+    const projects = AppDataSource.getRepository(Project);
+    const users = AppDataSource.getRepository(User);
+    const hostUser = await users.findOneByOrFail({ email: 'camp-host@zfund.org' });
+
+    const reviewProject = await projects.save(
+      projects.create({
+        name: 'Special Rate Appeal',
+        description: 'Awaiting approval with custom rate',
+        ownerId: hostUser.id,
+        eventCode: '8999',
+        currency: 'GHS',
+        targetAmount: '500.00',
+        minAmount: '1.00',
+        maxAmount: '1000.00',
+        status: ProjectStatus.PENDING_REVIEW,
+        acceptsContributions: false,
+      })
+    );
+
+    const approveRes = await request(app)
+      .patch(`/api/v1/admin/funds/${reviewProject.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        status: ProjectStatus.PUBLISHED,
+        commissionPercentage: 8.5,
+        notes: 'Approved with preferential partner rate of 8.5%',
+      });
+
+    expect(approveRes.status).toBe(200);
+    expect(approveRes.body.data.status).toBe(ProjectStatus.PUBLISHED);
+    expect(approveRes.body.data.commissionPercentage).toBe('8.50');
+
+    // Verify fund detail returns commissionPercentage
+    const detail = await request(app)
+      .get(`/api/v1/admin/funds/${reviewProject.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.data.commissionPercentage).toBe('8.50');
+  });
 });

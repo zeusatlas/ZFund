@@ -63,6 +63,7 @@ export interface FundSummary {
   status: ProjectStatus;
   hostId: string;
   hostName: string;
+  commissionPercentage?: string;
   raised: string;
   targetAmount?: string;
   transactions: number;
@@ -392,6 +393,7 @@ export class AdminDashboardService {
       status: p.status,
       hostId: p.ownerId,
       hostName: ownerNames.get(p.ownerId) ?? 'Unknown host',
+      commissionPercentage: p.commissionPercentage != null ? Number(p.commissionPercentage).toFixed(2) : '14.00',
       raised: raised.get(p.id)?.amount ?? '0.00',
       targetAmount: p.targetAmount == null ? undefined : Number(p.targetAmount).toFixed(2),
       transactions: raised.get(p.id)?.count ?? 0,

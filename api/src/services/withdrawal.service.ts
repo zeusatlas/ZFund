@@ -98,8 +98,9 @@ export class WithdrawalService {
           .andWhere('(p.ownerId = :hostId OR pm.id IS NOT NULL)', { hostId });
       }
     }
-    const projects = await projectsQuery.select(['p.id']).getMany();
+    const projects = await projectsQuery.select(['p.id', 'p.commissionPercentage']).getMany();
     let raised = '0.00';
+    let totalCommission = '0.00';
     if (projects.length > 0) {
       const contributions = await this.contributionRepo
         .createQueryBuilder('c')
@@ -107,6 +108,13 @@ export class WithdrawalService {
         .andWhere('c.status IN (:...statuses)', { statuses: COLLECTED })
         .getMany();
       raised = contributions.reduce((t, c) => MoneyUtil.add(t, c.amount), '0.00');
+      const projectCommMap = new Map(projects.map((p) => [p.id, p.commissionPercentage || '14.00']));
+      for (const c of contributions) {
+        const commPct = parseFloat(projectCommMap.get(c.projectId) || '14.00');
+        const commRate = (commPct / 100).toFixed(4);
+        const commAmount = MoneyUtil.multiply(c.amount, commRate);
+        totalCommission = MoneyUtil.add(totalCommission, commAmount);
+      }
     }
 
     const reqQuery = this.repo.createQueryBuilder('w');
@@ -133,8 +141,8 @@ export class WithdrawalService {
     const paid = paidRequests.reduce((t, r) => MoneyUtil.add(t, r.amount), '0.00');
     const totalDeducted = MoneyUtil.add(reserved, paid);
 
-    // 14% platform commission on collected contributions
-    const commission = MoneyUtil.multiply(raised, '0.14');
+    // Platform commission dynamically calculated per project on collected contributions
+    const commission = totalCommission;
     const netRaised = MoneyUtil.subtract(raised, commission);
     const left = MoneyUtil.subtract(netRaised, totalDeducted);
     const available = MoneyUtil.isPositive(left) ? left : '0.00';

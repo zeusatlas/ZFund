@@ -66,6 +66,7 @@ export function projectToCampaign(project: BackendProject): Campaign {
     goal: goalInPesewas,
     raised: raisedInPesewas,
     contributors,
+    commissionPercentage: project.commissionPercentage ? parseFloat(String(project.commissionPercentage)) : 14,
     status: resolvedStatus,
     rawStatus: project.status,
     created: project.createdAt ? project.createdAt.slice(0, 10) : "",

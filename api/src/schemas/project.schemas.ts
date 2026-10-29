@@ -21,6 +21,13 @@ export const createProjectSchema = z.object({
   startDate: z.string().datetime({ message: 'Valid start date is required' }),
   endDate: z.string().datetime().optional(),
   acceptsContributions: z.boolean().default(true),
+  commissionPercentage: z
+    .union([z.number(), z.string()])
+    .transform((val) => String(Number(val).toFixed(2)))
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, {
+      message: 'Commission percentage must be between 0 and 100',
+    })
+    .optional(),
   status: z.nativeEnum(ProjectStatus).default(ProjectStatus.PENDING_REVIEW),
 });
 
@@ -29,6 +36,13 @@ export const updateProjectSchema = createProjectSchema.partial().omit({ eventCod
 export const updateProjectStatusSchema = z.object({
   status: z.nativeEnum(ProjectStatus),
   notes: z.string().optional(),
+  commissionPercentage: z
+    .union([z.number(), z.string()])
+    .transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val >= 0 && val <= 100, {
+      message: 'Commission percentage must be between 0 and 100',
+    })
+    .optional(),
 });
 
 export const configurePurposesSchema = z.object({

@@ -4,6 +4,7 @@ import { X, Info, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-r
 import { dateLabel, money } from "@/components/features/host/shared/demo";
 import type { Transaction } from "@/components/features/host/transactions/transactions";
 import { useVerifyPaymentMutation } from "@/components/features/host/transactions/use-transactions";
+import { useCampaignsList } from "@/components/features/host/campaigns/use-campaigns";
 
 export default function TransactionDetails({
   transaction,
@@ -40,7 +41,12 @@ export default function TransactionDetails({
     };
   }, [transaction]);
 
-  const commission = currentTx ? Math.round(currentTx.amount * 0.14) : 0;
+  const { campaigns } = useCampaignsList();
+  const linkedCampaign = campaigns.find(
+    (c) => c.id === currentTx?.campaignId || c.name === campaignName
+  );
+  const commPercent = linkedCampaign?.commissionPercentage ?? 14;
+  const commission = currentTx ? Math.round(currentTx.amount * (commPercent / 100)) : 0;
   const netAmount = currentTx ? currentTx.amount - commission : 0;
 
   async function handleVerify() {
@@ -135,17 +141,17 @@ export default function TransactionDetails({
                 <span className="text-lg font-bold tabular-nums text-navy">{money(currentTx.amount)}</span>
               </div>
               <div className="flex items-baseline justify-between text-warning">
-                <span>Platform commission (14%):</span>
+                <span>Platform commission ({commPercent}%):</span>
                 <span className="font-semibold tabular-nums">- {money(commission)}</span>
               </div>
               <div className="flex items-baseline justify-between border-t border-navy/10 pt-2 text-success">
-                <span className="font-medium">Net proceeds to campaign (86%):</span>
+                <span className="font-medium">Net proceeds to campaign ({Number((100 - commPercent).toFixed(2))}%):</span>
                 <span className="text-lg font-bold tabular-nums">{money(netAmount)}</span>
               </div>
             </div>
             <div className="mt-3 flex items-start gap-1.5 text-[11px] text-steel">
               <Info size={13} className="shrink-0 mt-0.5" />
-              <span>The 14% platform commission covers USSD channel uptime and payment processing.</span>
+              <span>The {commPercent}% platform commission covers USSD channel uptime and payment processing.</span>
             </div>
           </div>
 

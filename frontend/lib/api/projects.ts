@@ -45,6 +45,7 @@ export interface BackendProject {
   targetAmount?: string | null;
   minAmount: string;
   maxAmount: string;
+  commissionPercentage?: string | number;
   status: ProjectStatus;
   acceptsContributions: boolean;
   welcomeMessage?: string | null;
@@ -74,6 +75,7 @@ export interface CreateProjectInput {
   acceptsContributions?: boolean;
   categoryId?: string;
   organizationId?: string;
+  commissionPercentage?: string | number;
   status?: ProjectStatus;
 }
 
