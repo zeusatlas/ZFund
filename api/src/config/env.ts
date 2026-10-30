@@ -74,7 +74,7 @@ const envSchema = z.object({
   // RobsPay
   ROBSPAY_API_URL: z
     .string()
-    .default("https://robspay.robsamtechnology.com/apis/v1/collect-payment"),
+    .default("https:// robspay.robsamtechnologies.com/apis/v1/collect-payment"),
   ROBSPAY_MERCHANT_ID: z.string().default("ZEU889626"),
   ROBSPAY_MERCHANT_NAME: z.string().default("Zeus Atlas Ltd"),
   ROBSPAY_API_KEY: z
