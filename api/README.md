@@ -9,9 +9,9 @@
 - **Mandatory 5-Tier Request Architecture:** `Routes → Middleware → Controllers → Services → Data Access / External Integrations`.
 - **Database-Driven USSD Engine:** USSD menus, prompts, options, and transitions are loaded dynamically from PostgreSQL. **No project menus are hardcoded in source code.**
 - **Telecom Integration (NALO Gateway):** Supports general dial (`*920*969#`) and direct project entry (`*920*969*<EVENT_CODE>#`) with 120-character telecom limit enforcement.
-- **Payment Processing (Paystack):** Mobile Money collections, HMAC SHA-512 webhook authentication, timing-safe signatures, and database-level idempotency.
+- **Payment Processing (RobsPay):** Mobile Money collections, HMAC SHA-256 webhook authentication, timing-safe signatures, and database-level idempotency.
 - **Double-Entry Financial Ledger:** Every confirmed payment automatically records balanced entries across Cash/Clearing, Contributions Payable, and Payment Gateway Fee accounts using exact decimal arithmetic (`BigNumber.js`).
-- **Refund Management:** Strict refund validation, approval workflows, Paystack refund API execution, and automatic ledger adjustments.
+- **Refund Management:** Strict refund validation, approval workflows, RobsPay refund API execution, and automatic ledger adjustments.
 - **Multi-Provider SMS Messaging:** Abstracted provider system with `MockSmsAdapter` and `ArkeselSmsAdapter`, database notification templates, and non-blocking delivery.
 - **Enterprise Security:** Argon2id password hashing, short-lived JWT access tokens, SHA-256 hashed refresh token session rotation in PostgreSQL, role-based access control (RBAC), and private document storage with authorized streaming.
 - **Database Synchronization:** Uses TypeORM `synchronize: true` across 39 registered entities with production safeguards. **Zero migration scripts or migration directories required.**
@@ -25,7 +25,7 @@
 - **Database:** PostgreSQL with TypeORM (`synchronize: true`)
 - **Caching & Locking:** Redis (with automatic in-memory fallback for offline test environments)
 - **Authentication:** Argon2id & JSON Web Tokens (Access + Rotating Refresh Tokens)
-- **Payment Gateway:** Paystack (Mobile Money, Card, Webhooks, Refunds)
+- **Payment Gateway:** RobsPay (Mobile Money Collections via RobsPay API, HMAC-SHA256 Webhooks)
 - **USSD Gateway:** NALO Solutions USSD Gateway
 - **SMS Gateway:** Arkesel & Mock Provider
 - **Validation:** Zod
@@ -60,8 +60,10 @@ TYPEORM_SYNCHRONIZE=true
 JWT_ACCESS_SECRET=your_super_secret_access_jwt_key_here
 JWT_REFRESH_SECRET=your_super_secret_refresh_jwt_key_here
 
-PAYSTACK_SECRET_KEY=sk_test_placeholder_key_for_zfund_integration
-PAYSTACK_WEBHOOK_SECRET=sk_test_placeholder_key_for_zfund_integration
+ROBSPAY_API_KEY=your_robspay_api_key
+ROBSPAY_MERCHANT_ID=ZEU889626
+ROBSPAY_BASE_URL=https://robspay.robsamtechnologies.com
+ROBSPAY_CALLBACK_URL=https://api.raisefundz.com/trial-callback
 
 SMS_PROVIDER=mock
 ```
@@ -111,7 +113,7 @@ http://localhost:5000/api/docs
 - **Projects:** `GET /api/v1/projects`, `POST /api/v1/projects`, `PATCH /api/v1/projects/:id/publish`
 - **USSD Menus:** `GET /api/v1/ussd/flows`, `POST /api/v1/ussd/flows`, `POST /api/v1/ussd/flows/:id/publish`
 - **USSD Runtime:** `POST /api/v1/ussd/nalo`
-- **Payments:** `POST /api/v1/payments/initiate`, `GET /api/v1/payments/verify/:reference`, `POST /api/v1/payments/webhook/paystack`
+- **Payments:** `POST /api/v1/payments/initiate`, `GET /api/v1/payments/verify/:reference`, `POST /trial-callback`, `POST /api/v1/payments/webhook/robspay`
 - **Refunds:** `POST /api/v1/refunds`, `PATCH /api/v1/refunds/:id/review`, `POST /api/v1/refunds/:id/process`
 - **Financial Ledger:** `GET /api/v1/financial/summary`, `GET /api/v1/financial/ledger`
 - **Notifications & SMS:** `GET /api/v1/notifications`, `POST /api/v1/notifications/test-sms`
@@ -127,7 +129,7 @@ For in-depth architectural and provider specifications, consult the documents in
 2. [Database Design & TypeORM Synchronize Guidelines](docs/DATABASE.md)
 3. [Database-Driven USSD Engine & Action Registry](docs/USSD-ENGINE.md)
 4. [NALO USSD Gateway Integration](docs/NALO-INTEGRATION.md)
-5. [Paystack Payment & Webhook Integration](docs/PAYSTACK-INTEGRATION.md)
+5. [RobsPay Payment & Webhook Integration](docs/ROBSPAY-INTEGRATION.md)
 6. [SMS Provider Architecture & Templates](docs/SMS-INTEGRATION.md)
 7. [Security Controls, Cryptography & RBAC](docs/SECURITY.md)
 8. [Implementation Status & Delivery Report](docs/IMPLEMENTATION-STATUS.md)

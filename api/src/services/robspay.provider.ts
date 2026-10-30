@@ -14,7 +14,7 @@ import {
   SubmitOtpResult,
   VerifyTransactionResult,
 } from './payment-provider.interface';
-import { normalizeGhanaPhone } from './paystack.provider';
+import { normalizeGhanaPhone } from '../common/utils/phone';
 
 export class RobspayProvider implements IPaymentProvider {
   readonly code = 'ROBSPAY';
@@ -204,11 +204,11 @@ export class RobspayProvider implements IPaymentProvider {
         };
       }
 
-      const promptMsg = `Payment of GHS ${params.amount} initiated for ${cleanPhone}. Please approve with your MoMo PIN on your phone.`;
+      const promptMsg = `Payment prompt of GHS ${params.amount} has been sent to your phone (${cleanPhone}). Please authorize with your Mobile Money PIN.`;
 
       return {
         reference: orderId,
-        status: isSuccess ? 'success' : 'pay_offline',
+        status: (collectResult.data?.queue_status === 'queued' || collectResult.data?.code === 201) ? 'pay_offline' : (isSuccess ? 'success' : 'pay_offline'),
         requiresOtp: false,
         message: promptMsg,
         displayText: promptMsg,

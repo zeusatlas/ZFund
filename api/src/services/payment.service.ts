@@ -15,7 +15,6 @@ import { ProviderWebhookEvent } from '../database/entities/provider-webhook-even
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
 import { IPaymentProvider } from './payment-provider.interface';
 import { robspayProvider, RobspayProvider } from './robspay.provider';
-import { paystackProvider } from './paystack.provider';
 
 export interface InitiateUssdPaymentInput {
   msisdn: string;
@@ -38,9 +37,6 @@ export class PaymentService {
    * Resolves the active payment provider (defaults to RobsPay)
    */
   get currentProvider(): IPaymentProvider {
-    if (env.PAYMENT_PROVIDER === 'paystack') {
-      return paystackProvider;
-    }
     return robspayProvider;
   }
 
@@ -324,7 +320,7 @@ export class PaymentService {
   }
 
   /**
-   * Submits OTP received from contributor via USSD (Paystack fallback)
+   * Submits OTP received from contributor via USSD
    */
   async submitUssdPaymentOtp(params: { reference: string; otp: string }): Promise<{
     status: 'success' | 'pay_offline' | 'pending' | 'failed';
@@ -566,7 +562,7 @@ export class PaymentService {
   }
 
   /**
-   * Handles authenticated Paystack webhook event idempotently (legacy support)
+   * Handles authenticated webhook event idempotently
    */
   async handleWebhook(rawBody: string | Buffer, eventPayload: Record<string, unknown>): Promise<void> {
     const eventType = String(eventPayload.event || '');
@@ -586,7 +582,7 @@ export class PaymentService {
 
     // Persist Webhook Event record
     const webhookRecord = this.webhookEventRepo.create({
-      provider: 'PAYSTACK',
+      provider: 'ROBSPAY',
       eventType,
       eventId,
       reference,
@@ -600,7 +596,7 @@ export class PaymentService {
     } else if (eventType === 'charge.failed') {
       await this.processFailedCharge(data, webhookRecord);
     } else {
-      logger.info({ eventType }, 'Unhandled Paystack webhook event type');
+      logger.info({ eventType }, 'Unhandled webhook event type');
       webhookRecord.isProcessed = true;
       webhookRecord.processingResult = 'Ignored event type';
       await this.webhookEventRepo.save(webhookRecord);
@@ -681,7 +677,7 @@ export class PaymentService {
       // Create ProviderTransaction record
       const providerTx = manager.create(ProviderTransaction, {
         paymentAttemptId: paymentAttempt.id,
-        provider: paymentAttempt.provider || 'PAYSTACK',
+        provider: paymentAttempt.provider || 'ROBSPAY',
         providerTransactionId: String(data.id),
         reference,
         amount: amountInMajor,
@@ -789,7 +785,7 @@ export class PaymentService {
       return paymentAttempt;
     }
 
-    const provider = paymentAttempt.provider === 'PAYSTACK' ? paystackProvider : this.currentProvider;
+    const provider = this.currentProvider;
     const verifyResult = await provider.verifyTransaction(paymentAttempt.providerReference || paymentAttempt.reference);
 
     if (verifyResult.status === 'success') {

@@ -54,9 +54,8 @@ const envSchema = z.object({
   COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
 
   // Public URL of the web app, used in SMS links
-  FRONTEND_URL: z.string().default("http://localhost:3000"),
+  FRONTEND_URL: z.string().default("http://localhost:2088"),
 
-  // Phone number for the seeded super admin (needed to sign in with an SMS code)
   SEED_ADMIN_PHONE: z.string().optional().default(""),
 
   // CORS
@@ -68,8 +67,8 @@ const envSchema = z.object({
   NALO_DEFAULT_CODE: z.string().default("*920*969#"),
   NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(160),
 
-  // Payment Provider Configuration
-  PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("robspay"),
+  // Payment Provider Configuration (RobsPay)
+  PAYMENT_PROVIDER: z.literal("robspay").default("robspay"),
 
   // RobsPay
   ROBSPAY_API_URL: z
@@ -83,11 +82,6 @@ const envSchema = z.object({
       "239d7edb7e27c718f0f662eb5779f26930c74cd909d95113b886349802b1579b"
     ),
   ROBSPAY_CALLBACK_URL: z.string().optional().default(""),
-
-  // Paystack (legacy / optional fallback)
-  PAYSTACK_SECRET_KEY: z.string().optional().default(""),
-  PAYSTACK_PUBLIC_KEY: z.string().optional().default(""),
-  PAYSTACK_BASE_URL: z.string().default("https://api.paystack.co"),
 
   // SMS
   SMS_PROVIDER: z

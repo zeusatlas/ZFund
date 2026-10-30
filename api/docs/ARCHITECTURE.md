@@ -24,7 +24,7 @@ The ZFund backend strictly adheres to a unidirectional 5-tier architecture:
 4. Services (Business logic, financial transactions, USSD state machine, workflow orchestration)
        │
        ▼
-5. Data Access & External Integrations (TypeORM entities, Repositories, Redis, Paystack, NALO, SMS)
+5. Data Access & External Integrations (TypeORM entities, Repositories, Redis, RobsPay, NALO, SMS)
        │
        ▼
 [ HTTP Response / Provider Response ]
@@ -38,7 +38,7 @@ The ZFund backend strictly adheres to a unidirectional 5-tier architecture:
 | **Middleware** | Cross-cutting concerns: correlation ID injection, security headers (Helmet), CORS, rate limiting, JWT extraction, role/permission verification, Zod schema validation, multipart file parsing. | **No direct database transactions or business decision-making.** |
 | **Controllers** | Thin request adaptors: read `req.params`, `req.query`, `req.body` (already validated), read `req.user`, call domain service methods, format standardized JSON via `ApiResponse.success` or `ApiResponse.paginated`. | **Never execute SQL/TypeORM queries, payment calculations, USSD state logic, or financial operations in controllers.** |
 | **Services** | Core business domain logic, financial consistency, state machine transitions, entity composition, orchestration of external providers. | **Services must never touch Express `req` or `res` objects.** |
-| **Data Access & Integrations** | TypeORM entities and repositories, Redis cache/locking, Paystack API client, NALO USSD adapter, SMS provider abstractions. | **Never leak raw database entities with passwords, secret hashes, or private storage paths to clients.** |
+| **Data Access & Integrations** | TypeORM entities and repositories, Redis cache/locking, RobsPay API client, NALO USSD adapter, SMS provider abstractions. | **Never leak raw database entities with passwords, secret hashes, or private storage paths to clients.** |
 
 ---
 
@@ -70,7 +70,7 @@ api/
 │   │   ├── organizations/            # Multi-tenant organizations, verification status
 │   │   ├── projects/                 # Projects, unique event codes, contribution purposes
 │   │   ├── ussd/                     # Database-driven USSD engine, NALO adapter, runtime execution
-│   │   ├── payments/                 # Paystack provider, payments, webhook processor
+│   │   ├── payments/                 # RobsPay provider, payments, webhook processor
 │   │   ├── contributions/            # Public contributions, contributor records
 │   │   ├── refunds/                  # Refund request, approval, processing, ledger sync
 │   │   ├── financial/                # Double-entry ledger, reporting & reconciliation

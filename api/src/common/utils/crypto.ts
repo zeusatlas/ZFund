@@ -130,24 +130,4 @@ export class CryptoUtil {
     return crypto.timingSafeEqual(computedBuf, signatureBuf);
   }
 
-  /**
-   * Verifies Paystack HMAC SHA512 signature against raw request body
-   */
-  static verifyPaystackSignature(
-    rawBody: string | Buffer,
-    signature: string,
-    secretKey = env.PAYSTACK_SECRET_KEY
-  ): boolean {
-    if (!signature || !secretKey) return false;
-    const computed = crypto
-      .createHmac('sha512', secretKey)
-      .update(rawBody)
-      .digest('hex');
-    const computedBuf = Buffer.from(computed);
-    const signatureBuf = Buffer.from(signature);
-    if (computedBuf.length !== signatureBuf.length) {
-      return false;
-    }
-    return crypto.timingSafeEqual(computedBuf, signatureBuf);
-  }
 }

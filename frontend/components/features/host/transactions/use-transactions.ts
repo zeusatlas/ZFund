@@ -43,7 +43,7 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
     firstAttempt?.channel === "card"
       ? "Card"
       : firstAttempt?.provider
-        ? `${firstAttempt.provider === "PAYSTACK" ? "Mobile money" : firstAttempt.provider}`
+        ? `${firstAttempt.provider === "ROBSPAY" ? "Mobile money" : firstAttempt.provider}`
         : "Mobile money";
 
   let note = "Awaiting payment confirmation. Not yet included in your total received.";

@@ -60,7 +60,7 @@ export const configurePaymentMethodsSchema = z.object({
   methods: z.array(
     z.object({
       method: z.nativeEnum(PaymentMethodType),
-      provider: z.string().default('PAYSTACK'),
+      provider: z.string().default('ROBSPAY'),
       isEnabled: z.boolean().default(true),
       config: z.record(z.unknown()).optional(),
     })

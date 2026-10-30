@@ -72,7 +72,6 @@ export function createApp(): Application {
           'Content-Type',
           'Authorization',
           'x-correlation-id',
-          'x-paystack-signature',
           'x-robspay-signature',
           'x-timestamp',
           'X-TIMESTAMP',

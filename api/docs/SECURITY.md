@@ -54,7 +54,7 @@ Identity cards, business registration certificates, and financial verification d
 
 ## 4. Webhook & External Gateway Security
 
-- **Paystack Webhook Authentication:** Authenticated using HMAC SHA-512 with timing-safe comparison (`CryptoUtil.verifyPaystackSignature`). Unauthenticated or forged webhook calls are rejected with `401 Unauthorized`.
+- **RobsPay Webhook & Callback Authentication:** Verified using HMAC-SHA256 with timing-safe comparison (`CryptoUtil.verifyRobsPaySignature`).
 - **Durable Idempotency:** Webhook processing relies on database constraints (`provider_webhook_events`) rather than Redis alone. Duplicate requests cannot produce duplicate ledger entries.
 - **USSD Allowlisted Actions:** Menus in PostgreSQL select from allowlisted actions in `UssdActionRegistry`. Arbitrary code execution or SQL strings in USSD configurations are impossible.
 
@@ -67,4 +67,4 @@ All logging is handled via **Pino** (`src/config/logger.ts`). Secrets and person
 - `password`, `oldPassword`, `newPassword`
 - `refreshToken`, `token`
 - `pin`, `otp`
-- `paystackSecretKey`
+- `robspayApiKey`
