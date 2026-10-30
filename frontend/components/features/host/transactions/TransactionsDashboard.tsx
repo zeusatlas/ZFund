@@ -439,7 +439,7 @@ export default function TransactionsDashboard() {
                   id="transaction-search"
                   value={filters.query}
                   onChange={(event) => updateFilter("query", event.target.value)}
-                  placeholder="Reference or visible phone digits"
+                  placeholder="Reference or donor phone"
                   className={controlClass + " pl-10"}
                 />
               </div>
@@ -542,7 +542,7 @@ export default function TransactionsDashboard() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Loader2 size={32} className="animate-spin text-navy/40" aria-hidden="true" />
               <p className="mt-4 text-sm font-medium text-navy">Loading transactions…</p>
-              <p className="mt-1 text-xs text-steel">Fetching real records from database</p>
+              <p className="mt-1 text-xs text-steel">Fetching transaction records</p>
             </div>
           ) : totalItems === 0 ? (
             <div className="px-6 py-16 text-center">

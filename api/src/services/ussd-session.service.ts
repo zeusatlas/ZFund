@@ -191,6 +191,41 @@ export class UssdSessionService {
       // Non-blocking diagnostic event write
     }
   }
+
+  /**
+   * Retrieves paginated list of USSD sessions/dials for auditing and tracking
+   */
+  async getSessions(params: {
+    msisdn?: string;
+    projectId?: string;
+    status?: UssdSessionStatus;
+    page?: number;
+    limit?: number;
+  }): Promise<{ sessions: UssdSession[]; total: number }> {
+    const page = Math.max(params.page || 1, 1);
+    const limit = Math.min(params.limit || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const query = this.sessionRepo
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.events', 'events')
+      .orderBy('session.createdAt', 'DESC');
+
+    if (params.msisdn) {
+      query.andWhere('session.msisdn ILIKE :msisdn', { msisdn: `%${params.msisdn}%` });
+    }
+    if (params.projectId) {
+      query.andWhere('session.projectId = :projectId', { projectId: params.projectId });
+    }
+    if (params.status) {
+      query.andWhere('session.status = :status', { status: params.status });
+    }
+
+    query.skip(skip).take(limit);
+
+    const [sessions, total] = await query.getManyAndCount();
+    return { sessions, total };
+  }
 }
 
 export const ussdSessionService = new UssdSessionService();

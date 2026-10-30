@@ -10,6 +10,7 @@ import { financialService } from './financial.service';
 import { notificationService } from './notification.service';
 import { Project, ProjectStatus } from '../database/entities/project.entity';
 import { PaymentAttempt, PaymentChannel, PaymentStatus } from '../database/entities/payment-attempt.entity';
+import { ProjectPaymentMethod } from '../database/entities/project-payment-method.entity';
 import { ProviderTransaction } from '../database/entities/provider-transaction.entity';
 import { ProviderWebhookEvent } from '../database/entities/provider-webhook-event.entity';
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
@@ -32,10 +33,22 @@ export class PaymentService {
   private get projectRepo() { return AppDataSource.getRepository(Project); }
   private get webhookEventRepo() { return AppDataSource.getRepository(ProviderWebhookEvent); }
   private get providerTxRepo() { return AppDataSource.getRepository(ProviderTransaction); }
+  private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
 
   /**
    * Resolves the active payment provider (defaults to RobsPay)
    */
+  async getProviderForProject(projectId?: string): Promise<IPaymentProvider> {
+    if (projectId) {
+      const projectMethod = await this.paymentMethodRepo.findOne({ where: { projectId, isEnabled: true } });
+      if (projectMethod?.provider) {
+        if (projectMethod.provider.toUpperCase() === 'PAYSTACK' && env.PAYMENT_PROVIDER === 'paystack') return paystackProvider;
+        if (projectMethod.provider.toUpperCase() === 'ROBSPAY') return robspayProvider;
+      }
+    }
+    return this.currentProvider;
+  }
+
   get currentProvider(): IPaymentProvider {
     return robspayProvider;
   }
