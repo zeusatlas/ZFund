@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { AppDataSource } from '../config/database';
 import { logger } from '../config/logger';
+import { env } from '../config/env';
 import {
   BadRequestError,
   ForbiddenError,
@@ -59,6 +60,17 @@ export class AuthService {
     const user = await this.findOtpUser(input.email);
 
     if (!user?.phone || normalizePhone(user.phone) !== normalizePhone(input.phone)) {
+      if (env.NODE_ENV !== 'production') {
+        logger.warn(
+          {
+            email: input.email,
+            userFound: !!user,
+            storedPhone: user?.phone ? normalizePhone(user.phone) : null,
+            inputPhone: normalizePhone(input.phone),
+          },
+          'DEV sign-in OTP not sent: no matching email/phone'
+        );
+      }
       await this.recordAuthEvent({
         userId: user?.id,
         eventType: AuthEventType.LOGIN_FAILED,
@@ -85,6 +97,10 @@ export class AuthService {
     user.otpAttempts = 0;
     user.otpSentAt = new Date();
     await this.userRepo.save(user);
+
+    if (env.NODE_ENV !== 'production') {
+      logger.info({ userId: user.id, email: user.email, code }, 'DEV sign-in OTP');
+    }
 
     const sms = await smsService.send({
       recipient: normalizePhone(user.phone),

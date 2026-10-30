@@ -41,6 +41,7 @@ export interface BackendProject {
   ownerId?: string;
   categoryId?: string | null;
   eventCode: string;
+  requestedCode?: string | null;
   currency: string;
   targetAmount?: string | null;
   minAmount: string;
@@ -65,6 +66,8 @@ export interface CreateProjectInput {
   name: string;
   description?: string;
   eventCode?: string;
+  /** Special 2-4 digit code the host wants instead of the auto-generated one. */
+  requestedCode?: string;
   currency?: string;
   targetAmount?: string;
   minAmount?: string;
@@ -79,7 +82,7 @@ export interface CreateProjectInput {
   status?: ProjectStatus;
 }
 
-export interface UpdateProjectInput extends Partial<Omit<CreateProjectInput, "eventCode">> {
+export interface UpdateProjectInput extends Partial<Omit<CreateProjectInput, "eventCode" | "requestedCode">> {
   status?: ProjectStatus;
 }
 
@@ -156,6 +159,14 @@ export interface NextCodeResponse {
 export async function getNextProjectCode(): Promise<string> {
   const { data } = await api.get<NextCodeResponse>("/projects/next-code");
   return data.data?.code || "1001";
+}
+
+export async function checkCodeAvailability(code: string): Promise<boolean> {
+  const { data } = await api.get<{ data: { code: string; available: boolean } }>(
+    "/projects/code-availability",
+    { params: { code } }
+  );
+  return data.data.available;
 }
 
 export async function updateProjectStatus(

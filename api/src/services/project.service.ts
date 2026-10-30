@@ -19,6 +19,7 @@ import { ProjectSetting } from '../database/entities/project-setting.entity';
 import {
   ConfigurePaymentMethodsInput,
   ConfigurePurposesInput,
+  AdminCreateProjectInput,
   CreateProjectInput,
   UpdateProjectInput,
   UpdateProjectStatusInput,
@@ -80,7 +81,38 @@ export class ProjectService {
     return candidate.toString();
   }
 
-  async createProject(input: CreateProjectInput, ownerId: string): Promise<Project> {
+  /** True when no campaign already uses this event code. */
+  async isCodeAvailable(code: string): Promise<boolean> {
+    return (await this.projectRepo.count({ where: { eventCode: code.trim() } })) === 0;
+  }
+
+  /**
+   * Admin creates a campaign on behalf of a host. The campaign is owned by the host but goes
+   * live straight away (Scheduled when its start date is still ahead) so the admin can configure steps.
+   */
+  async createProjectForHost(input: AdminCreateProjectInput, adminId: string): Promise<Project> {
+    const host = await AppDataSource.getRepository(User).findOne({ where: { id: input.hostId } });
+    if (!host || host.role !== SystemRole.ACCOUNT_OWNER) throw new NotFoundError('Host not found');
+
+    const { hostId, ...rest } = input;
+    const startsLater = new Date(input.startDate) > new Date();
+    return this.createProject(
+      {
+        ...rest,
+        status: startsLater ? ProjectStatus.SCHEDULED : ProjectStatus.PUBLISHED,
+        acceptsContributions: !startsLater,
+      },
+      hostId,
+      adminId
+    );
+  }
+
+  async createProject(input: CreateProjectInput, ownerId: string, actorId: string = ownerId): Promise<Project> {
+    const requestedCode = input.requestedCode?.trim();
+    if (requestedCode && !(await this.isCodeAvailable(requestedCode))) {
+      throw new ConflictError(`Campaign code '${requestedCode}' is already taken. Please request another.`);
+    }
+
     let eventCode = input.eventCode?.trim();
     if (!eventCode) {
       eventCode = await this.getNextProjectCode();
@@ -99,6 +131,7 @@ export class ProjectService {
       ownerId,
       categoryId: input.categoryId,
       eventCode,
+      requestedCode: requestedCode || undefined,
       currency: input.currency || 'GHS',
       targetAmount: input.targetAmount,
       minAmount: input.minAmount || '1.00',
@@ -133,12 +166,17 @@ export class ProjectService {
     );
 
     await auditService.log({
-      userId: ownerId,
+      userId: actorId,
       organizationId: savedProject.organizationId,
       entityType: 'PROJECT',
       entityId: savedProject.id,
       action: 'CREATE_PROJECT',
-      newValues: { name: savedProject.name, eventCode: savedProject.eventCode },
+      newValues: {
+        name: savedProject.name,
+        eventCode: savedProject.eventCode,
+        requestedCode: savedProject.requestedCode,
+        ownerId,
+      },
     });
 
     // Auto-initialize published USSD flow for project event code

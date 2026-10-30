@@ -59,6 +59,13 @@ export class Project {
   @Index('idx_project_event_code')
   eventCode: string;
 
+  /**
+   * Special 2-4 digit code the host asked for instead of the auto-generated one.
+   * Informational for the approving admin; it does not replace eventCode on its own.
+   */
+  @Column({ type: 'varchar', length: 4, nullable: true })
+  requestedCode?: string | null;
+
   @Column({ default: 'GHS', length: 3 })
   currency: string;
 

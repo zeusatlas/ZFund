@@ -128,6 +128,15 @@ export class AdminController {
     }
   }
 
+  async createFund(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const project = await projectService.createProjectForHost(req.body, req.user!.id);
+      ApiResponse.success(res, project, 'Campaign created for host', 201);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async updateFundStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const fundId = requireId(req.params.id, 'Campaign');

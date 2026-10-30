@@ -60,6 +60,7 @@ export interface FundSummary {
   id: string;
   name: string;
   eventCode: string;
+  requestedCode?: string | null;
   status: ProjectStatus;
   hostId: string;
   hostName: string;
@@ -390,6 +391,7 @@ export class AdminDashboardService {
       id: p.id,
       name: p.name,
       eventCode: p.eventCode,
+      requestedCode: p.requestedCode ?? null,
       status: p.status,
       hostId: p.ownerId,
       hostName: ownerNames.get(p.ownerId) ?? 'Unknown host',

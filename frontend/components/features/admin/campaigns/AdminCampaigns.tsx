@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   List,
   SlidersHorizontal,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -26,7 +27,14 @@ import { formatCount, formatMoney } from "@/lib/format";
 import { useCampaigns, useUpdateCampaignStatus, type Fund } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
-import { ConfigureStepsDrawer } from "@/components/features/host/campaigns/ConfigureStepsDrawer";
+import {
+  ConfigureStepsDrawer,
+  type ConfigurableCampaign,
+} from "@/components/features/host/campaigns/ConfigureStepsDrawer";
+import AdminCreateCampaignModal from "./AdminCreateCampaignModal";
+
+/** Statuses where an admin can open the USSD steps editor. */
+const CONFIGURABLE_STATUSES = ["PENDING_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED"];
 
 /** Three cards per row on wide screens, so page in threes. */
 const CARDS_PER_PAGE = 9;
@@ -40,7 +48,8 @@ export default function AdminCampaigns() {
   const [reviewAction, setReviewAction] = useState<"APPROVE" | "REJECT">("APPROVE");
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewCommission, setReviewCommission] = useState<number | string>(14);
-  const [configuringCampaign, setConfiguringCampaign] = useState<Fund | null>(null);
+  const [configuringCampaign, setConfiguringCampaign] = useState<ConfigurableCampaign | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search);
   const { data, isPending, isError, error, refetch, isPlaceholderData } = useCampaigns({
@@ -85,11 +94,21 @@ export default function AdminCampaigns() {
 
   return (
     <div className="w-full space-y-6">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Campaigns</h1>
-        <p className="mt-2 text-sm text-steel">
-          Review host campaigns, approve them for the live USSD network, and monitor overall fundraising progress.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-navy md:text-3xl">Campaigns</h1>
+          <p className="mt-2 text-sm text-steel">
+            Review host campaigns, approve them for the live USSD network, and monitor overall fundraising progress.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-navy px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-steel"
+        >
+          <Plus size={18} aria-hidden="true" />
+          Create campaign
+        </button>
       </section>
 
       {/* Metric Cards including Pending Review */}
@@ -312,7 +331,7 @@ export default function AdminCampaigns() {
                                 </button>
                               </>
                             )}
-                            {(campaign.status === "PUBLISHED" || campaign.status === "APPROVED") && (
+                            {CONFIGURABLE_STATUSES.includes(campaign.status) && (
                               <button
                                 type="button"
                                 onClick={() => setConfiguringCampaign(campaign)}
@@ -431,7 +450,7 @@ export default function AdminCampaigns() {
                     <div className="mt-auto pt-4 flex items-center justify-between border-t border-navy/10 text-xs text-steel">
                       <span>{formatCount(campaign.transactions)} contributions</span>
                       <div className="flex items-center gap-2">
-                        {(campaign.status === "PUBLISHED" || campaign.status === "APPROVED") && (
+                        {CONFIGURABLE_STATUSES.includes(campaign.status) && (
                           <button
                             type="button"
                             onClick={() => setConfiguringCampaign(campaign)}
@@ -553,6 +572,13 @@ export default function AdminCampaigns() {
                 <strong className="text-navy">USSD Code:</strong> *920*969*
                 {reviewingCampaign.eventCode}#
               </p>
+              {reviewingCampaign.requestedCode && (
+                <p>
+                  <strong className="text-navy">Requested Code:</strong>{" "}
+                  <span className="font-mono">{reviewingCampaign.requestedCode}</span>{" "}
+                  <span className="text-steel">(host asked for a special code)</span>
+                </p>
+              )}
               {reviewingCampaign.targetAmount && (
                 <p>
                   <strong className="text-navy">Target:</strong>{" "}
@@ -635,6 +661,16 @@ export default function AdminCampaigns() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {creating && (
+        <AdminCreateCampaignModal
+          onClose={() => setCreating(false)}
+          onCreated={(campaign, configureSteps) => {
+            setCreating(false);
+            if (configureSteps) setConfiguringCampaign(campaign);
+          }}
+        />
       )}
 
       {/* Configure USSD Dial Steps Drawer for Admin */}

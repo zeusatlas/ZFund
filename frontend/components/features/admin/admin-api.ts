@@ -28,6 +28,7 @@ export type Fund = {
   id: string;
   name: string;
   eventCode: string;
+  requestedCode?: string | null;
   status: "DRAFT" | "PUBLISHED" | "SUSPENDED" | string;
   hostId: string;
   hostName: string;
@@ -248,6 +249,39 @@ export function useUpdateHostStatus() {
       );
     },
     onError: (error) => toast.error((error as { message?: string }).message ?? "Could not update the host."),
+  });
+}
+
+export type CreateCampaignForHostInput = {
+  hostId: string;
+  name: string;
+  description?: string;
+  categoryId?: string;
+  /** Hand-picked 2-4 digit code; the next sequential code is used when omitted. */
+  eventCode?: string;
+  targetAmount: string;
+  welcomeMessage?: string;
+  startDate: string;
+  endDate?: string;
+  commissionPercentage?: number;
+};
+
+export function useCreateCampaignForHost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateCampaignForHostInput) => {
+      const { data } = await api.post<ApiEnvelope<{ id: string; name: string; eventCode: string; currency?: string; welcomeMessage?: string }>>(
+        "/admin/funds",
+        input,
+      );
+      return data.data;
+    },
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: adminRoot });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(`Campaign "${project.name}" created with code ${project.eventCode}.`);
+    },
+    onError: (error) => toast.error((error as { message?: string }).message ?? "Could not create the campaign."),
   });
 }
 

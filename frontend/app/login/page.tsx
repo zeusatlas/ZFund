@@ -129,17 +129,7 @@ export default function LoginPage() {
             >
               {cooldown > 0 ? `Resend code in ${formatTime(cooldown)}` : "Resend code"}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIdentity(null);
-                setCode("");
-                setError("");
-              }}
-              className="text-xs text-steel hover:text-navy transition-colors underline underline-offset-4"
-            >
-              ← Use a different phone number
-            </button>
+           
           </div>
         </>
       ) : (
