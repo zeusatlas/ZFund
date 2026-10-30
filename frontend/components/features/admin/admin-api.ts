@@ -149,6 +149,7 @@ export function useHosts(params: ListParams) {
     queryKey: adminApiKeys.hosts(params),
     queryFn: () => list<HostAccount, { counts: HostCounts }>("/admin/hosts", params),
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
   });
 }
 
@@ -164,6 +165,7 @@ export function useCampaigns(params: ListParams) {
     queryKey: adminApiKeys.campaigns(params),
     queryFn: () => list<Fund, { counts: FundCounts }>("/admin/funds", params),
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
   });
 }
 
@@ -180,6 +182,7 @@ export function useCampaignContributions(id: string, params: ListParams, enabled
     queryFn: () => list<ContributionRow>(`/admin/funds/${id}/contributions`, params),
     enabled,
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
   });
 }
 
@@ -189,6 +192,7 @@ export function useTransactions(params: ListParams, enabled = true) {
     queryFn: () => list<Transaction, { counts: TransactionCounts }>("/admin/transactions", params),
     enabled,
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
   });
 }
 
@@ -197,6 +201,7 @@ export function useActivity(page: number) {
     queryKey: adminApiKeys.activity(page),
     queryFn: () => list<ActivityLogEntry>("/admin/activity", { page }),
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
   });
 }
 
@@ -205,6 +210,7 @@ export function useWithdrawals(params: ListParams) {
     queryKey: adminApiKeys.withdrawals(params),
     queryFn: () => list<Withdrawal, { counts: WithdrawalCounts }>("/admin/withdrawals", params),
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
   });
 }
 

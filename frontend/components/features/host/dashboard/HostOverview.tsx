@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Wallet, FolderHeart, Users, Radio, AlertCircle, RotateCcw, Percent, CheckCircle2, Info } from "lucide-react";
+import { ArrowUpRight, Wallet, FolderHeart, Users, Radio, AlertCircle, RotateCcw, Percent, CheckCircle2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import CampaignList from "@/components/features/host/campaigns/CampaignList";
 import CreateCampaignModal from "@/components/features/host/campaigns/CreateCampaignModal";

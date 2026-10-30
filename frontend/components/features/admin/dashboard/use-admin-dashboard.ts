@@ -28,7 +28,7 @@ async function get<T>(path: string, params?: Record<string, string | number>) {
 }
 
 export function useDashboardOverview() {
-  return useQuery({ queryKey: adminKeys.overview(), queryFn: () => get<DashboardOverview>("overview"), staleTime: 30_000 });
+  return useQuery({ queryKey: adminKeys.overview(), queryFn: () => get<DashboardOverview>("overview"), staleTime: 15_000, refetchInterval: 15_000 });
 }
 
 export function useFundTrend(period: TrendPeriod) {
@@ -49,6 +49,7 @@ export function useRecentActivity(limit = 3) {
     queryKey: adminKeys.activity(limit),
     queryFn: () => get<ActivityEntry[]>("recent-activity", { limit }),
     staleTime: 15_000,
+    refetchInterval: 15_000,
   });
 }
 

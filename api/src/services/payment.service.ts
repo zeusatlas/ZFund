@@ -330,7 +330,7 @@ export class PaymentService {
   }> {
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: [{ reference: params.reference }, { providerReference: params.reference }],
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -414,7 +414,7 @@ export class PaymentService {
     // 1. Find payment attempt by providerReference (12-char hex) or reference
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: [{ providerReference: transactionId }, { reference: transactionId }],
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -526,11 +526,12 @@ export class PaymentService {
 
       // Trigger contributor SMS confirmation notification (non-blocking)
       const contribution = paymentAttempt.contribution;
-      const project = contribution.project;
+      const project = contribution?.project;
+      const contributorPhone = paymentAttempt.msisdn || contribution?.contributor?.msisdn;
 
       await notificationService.sendNotification({
         templateKey: 'CONTRIBUTION_CONFIRMED_CONTRIBUTOR',
-        recipientPhone: paymentAttempt.msisdn,
+        recipientPhone: contributorPhone || paymentAttempt.msisdn,
         eventType: 'PAYMENT_SUCCESS',
         variables: {
           amount: paymentAttempt.amount,
@@ -539,6 +540,20 @@ export class PaymentService {
           reference: paymentAttempt.reference,
         },
       });
+      // Trigger host (project owner) SMS alert (non-blocking)
+      if (project?.owner?.phone) {
+        await notificationService.sendNotification({
+          templateKey: 'NEW_CONTRIBUTION_OWNER',
+          recipientPhone: project.owner.phone,
+          eventType: 'PAYMENT_SUCCESS',
+          variables: {
+            amount: paymentAttempt.amount,
+            currency: paymentAttempt.currency,
+            projectName: project.name,
+            reference: paymentAttempt.reference,
+          },
+        }).catch((err) => logger.warn({ err }, 'Failed to send host new contribution SMS alert'));
+      }
     } else if (isFailed) {
       paymentAttempt.status = PaymentStatus.FAILED;
       paymentAttempt.providerStatus = String(data.status || 'Failed');
@@ -615,7 +630,7 @@ export class PaymentService {
 
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: { reference },
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -754,7 +769,7 @@ export class PaymentService {
     const cleanRef = reference.trim();
     let paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: [{ reference: cleanRef }, { providerReference: cleanRef }],
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -772,7 +787,7 @@ export class PaymentService {
         );
         paymentAttempt = await this.paymentAttemptRepo.findOne({
           where: { id: sorted[0].id },
-          relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+          relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
         });
       }
     }
@@ -820,7 +835,7 @@ export class PaymentService {
 
     return (await this.paymentAttemptRepo.findOne({
       where: { id: paymentAttempt.id },
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     }))!;
   }
 

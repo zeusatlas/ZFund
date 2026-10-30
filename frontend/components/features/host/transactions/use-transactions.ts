@@ -7,7 +7,7 @@ import {
   type BackendContribution,
   verifyPayment,
   type GetContributionsParams,
-  type VerifyPaymentResponse,
+
 } from "@/lib/api/contributions";
 import type { Transaction, TransactionStatus } from "./transactions";
 
@@ -81,6 +81,7 @@ export function useTransactionsQuery(params?: GetContributionsParams) {
     queryKey: ["contributions", params],
     queryFn: () => getContributions(params),
     staleTime: 5_000,
+    refetchInterval: 10_000,
   });
 }
 

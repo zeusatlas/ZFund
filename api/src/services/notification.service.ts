@@ -3,6 +3,7 @@ import { logger } from '../config/logger';
 import { NotificationTemplate } from '../database/entities/notification-template.entity';
 import { Notification, NotificationStatus } from '../database/entities/notification.entity';
 import { NotificationChannel } from '../database/entities/notification-template.entity';
+import { normalizePhone } from '../common/utils/phone';
 import { smsService } from './sms.service';
 
 export interface SendNotificationParams {
@@ -69,7 +70,7 @@ export class NotificationService {
     try {
       const result = await smsService.send({
         notificationId: notification.id,
-        recipient: notification.recipientPhone!,
+        recipient: normalizePhone(notification.recipientPhone!),
         message: notification.messageBody,
       });
 

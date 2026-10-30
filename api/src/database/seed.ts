@@ -147,7 +147,7 @@ export async function runSeeds(): Promise<void> {
       channel: NotificationChannel.SMS,
       eventType: 'PAYMENT_SUCCESS',
       title: 'Contribution Confirmation',
-      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through RaiseFunds.',
+      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through Raise-Fundz.',
       approvedPlaceholders: ['currency', 'amount', 'projectName', 'reference'],
     },
     {

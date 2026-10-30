@@ -86,6 +86,7 @@ export function useProjectsQuery(params?: { search?: string; status?: string }) 
       return result.projects;
     },
     staleTime: 5_000,
+    refetchInterval: 10_000,
   });
 }
 
@@ -135,6 +136,7 @@ export function useProjectStatsQuery() {
     queryKey: ["projects", "stats"],
     queryFn: getProjectStats,
     staleTime: 5_000,
+    refetchInterval: 10_000,
   });
 }
 
