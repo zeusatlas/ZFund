@@ -2,7 +2,6 @@ import { IsNull } from 'typeorm';
 import { AppDataSource, initializeDatabase } from '../config/database';
 import { logger } from '../config/logger';
 import { PermissionCode, SystemRole } from '../common/types/auth';
-import { env } from '../config/env';
 import { normalizePhone } from '../common/utils/phone';
 import { CryptoUtil } from '../common/utils/crypto';
 import {
@@ -37,7 +36,6 @@ export async function runSeeds(): Promise<void> {
 
   const roleRepo = AppDataSource.getRepository(Role);
   const permRepo = AppDataSource.getRepository(Permission);
-  const rolePermRepo = AppDataSource.getRepository(RolePermission);
   const userRepo = AppDataSource.getRepository(User);
   const categoryRepo = AppDataSource.getRepository(ProjectCategory);
   const purposeRepo = AppDataSource.getRepository(ContributionPurpose);
@@ -167,6 +165,21 @@ export async function runSeeds(): Promise<void> {
       approvedPlaceholders: ['currency', 'amount', 'projectName'],
     },
   ];
+
+  for (const t of templates) {
+    const existing = await templateRepo.findOne({
+      where: { templateKey: t.templateKey },
+    });
+
+    if (existing) {
+      Object.assign(existing, t);
+      await templateRepo.save(existing);
+      logger.info(`Updated notification template: ${t.templateKey}`);
+    } else {
+      await templateRepo.save(templateRepo.create(t));
+      logger.info(`Created notification template: ${t.templateKey}`);
+    }
+  }
 
   for (const t of templates) {
     const existing = await templateRepo.findOne({ where: { templateKey: t.templateKey } });
