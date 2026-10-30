@@ -1,8 +1,10 @@
 import { AppDataSource } from '../config/database';
 import { logger } from '../config/logger';
+import { Contributor } from '../database/entities/contributor.entity';
 import { OrgVerificationStatus } from '../database/entities/organization.entity';
 import { Project, ProjectStatus } from '../database/entities/project.entity';
 import { UserStatus } from '../database/entities/user.entity';
+import { auditService } from './audit.service';
 import { projectService } from './project.service';
 import { UssdFlowVersion } from '../database/entities/ussd-flow-version.entity';
 import { UssdMenuOption, UssdOptionType } from '../database/entities/ussd-menu-option.entity';
@@ -16,9 +18,40 @@ import { ussdSessionService } from './ussd-session.service';
 
 export class UssdRuntimeService {
   private get versionRepo() { return AppDataSource.getRepository(UssdFlowVersion); }
+  private get contributorRepo() { return AppDataSource.getRepository(Contributor); }
+
+  /**
+   * Automatically records any caller who dials the USSD into the contributors table,
+   * ensuring that everyone who dials is tracked whether they donate or not.
+   */
+  private async recordCaller(msisdn: string): Promise<void> {
+    try {
+      const normalizedPhone = msisdn.trim();
+      const existing = await this.contributorRepo.findOne({ where: { msisdn: normalizedPhone } });
+      if (!existing) {
+        const caller = this.contributorRepo.create({ msisdn: normalizedPhone });
+        await this.contributorRepo.save(caller);
+        logger.info({ msisdn: normalizedPhone }, 'New caller registered as contributor on USSD dial');
+      }
+    } catch (err) {
+      // Non-blocking write to avoid failing USSD flow if already exists or db glitch
+      logger.error({ err, msisdn }, 'Failed to record caller in contributors on USSD dial');
+    }
+  }
 
   async processRequest(rawBody: NaloRawRequest): Promise<NaloRawResponse> {
     const request = NaloAdapter.parseRequest(rawBody);
+
+    logger.info(
+      {
+        msisdn: request.msisdn,
+        network: request.network,
+        sessionId: request.sessionId,
+        userInput: request.userInput,
+        isInitialRequest: request.isInitialRequest,
+      },
+      `USSD request received from ${request.msisdn}`
+    );
 
     try {
       const response = await this.executeTurn(request);
@@ -50,6 +83,24 @@ export class UssdRuntimeService {
     const isNewDialCode = request.userInput.startsWith('*');
     const isInitial = !session || isNewDialCode || (request.isInitialRequest && !session);
 
+    // Track every caller in contributors table whether they end up donating or not
+    await this.recordCaller(request.msisdn);
+
+    // Audit log every incoming dial or turn
+    auditService.log({
+      entityType: 'USSD_DIAL',
+      entityId: request.sessionId || `ussd_${request.msisdn}_${Date.now()}`,
+      action: isInitial ? 'USSD_DIAL_INITIAL' : 'USSD_TURN_INPUT',
+      newValues: {
+        msisdn: request.msisdn,
+        network: request.network,
+        userInput: request.userInput,
+        provider: request.provider,
+        sessionId: request.sessionId,
+        isInitial,
+      },
+    }).catch(() => {});
+
     const lockIdentifier = session?.sessionId || request.sessionId || `nalo_${request.msisdn}`;
     const lockAcquired = await ussdSessionService.acquireLock(lockIdentifier);
     if (!lockAcquired) {
@@ -64,14 +115,66 @@ export class UssdRuntimeService {
       if (isInitial) {
         const resolved = await ussdRoutingService.resolveFlow(request);
         if (resolved.rejectionMessage) {
+          // Log rejected dial in ussd_sessions and ussd_session_events so there is a permanent record
+          const rejectedSessionId = request.sessionId || `nalo_rej_${request.msisdn}_${Date.now()}`;
+          const rejectedSession = await ussdSessionService.createSession({
+            sessionId: rejectedSessionId,
+            msisdn: request.msisdn,
+            network: request.network,
+            provider: request.provider,
+            projectId: resolved.project?.id,
+            flowId: resolved.flow?.id,
+            flowVersionId: resolved.version?.id,
+            initialMenuKey: 'REJECTED',
+            contextData: {
+              dialedCode: request.userInput,
+              rejectionReason: resolved.rejectionMessage,
+            },
+          });
+          await ussdSessionService.recordEvent({
+            ussdSessionId: rejectedSession.id,
+            msisdn: request.msisdn,
+            stepNumber: 1,
+            menuKey: 'REJECTED',
+            userInput: request.userInput,
+            renderedMessage: resolved.rejectionMessage,
+            msgType: false,
+          });
+          await ussdSessionService.endSession(rejectedSession.sessionId, UssdSessionStatus.FAILED);
+
           return {
             message: resolved.rejectionMessage,
             continueSession: false,
           };
         }
         if (!resolved.flow || !resolved.version) {
+          const unavailMsg = 'Welcome to RaiseFunds. No active USSD service is currently available. Please contact support.';
+          const unavailSessionId = request.sessionId || `nalo_unavail_${request.msisdn}_${Date.now()}`;
+          const unavailSession = await ussdSessionService.createSession({
+            sessionId: unavailSessionId,
+            msisdn: request.msisdn,
+            network: request.network,
+            provider: request.provider,
+            projectId: resolved.project?.id,
+            initialMenuKey: 'UNAVAILABLE',
+            contextData: {
+              dialedCode: request.userInput,
+              reason: 'No active flow or version found',
+            },
+          });
+          await ussdSessionService.recordEvent({
+            ussdSessionId: unavailSession.id,
+            msisdn: request.msisdn,
+            stepNumber: 1,
+            menuKey: 'UNAVAILABLE',
+            userInput: request.userInput,
+            renderedMessage: unavailMsg,
+            msgType: false,
+          });
+          await ussdSessionService.endSession(unavailSession.sessionId, UssdSessionStatus.FAILED);
+
           return {
-            message: 'Welcome to RaiseFunds. No active USSD service is currently available. Please contact support.',
+            message: unavailMsg,
             continueSession: false,
           };
         }

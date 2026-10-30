@@ -127,7 +127,7 @@ export class ProjectService {
       this.paymentMethodRepo.create({
         projectId: savedProject.id,
         method: PaymentMethodType.MOBILE_MONEY,
-        provider: 'PAYSTACK',
+        provider: 'ROBSPAY',
         isEnabled: true,
       })
     );

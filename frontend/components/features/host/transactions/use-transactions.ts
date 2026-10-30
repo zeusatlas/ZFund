@@ -11,15 +11,16 @@ import {
 } from "@/lib/api/contributions";
 import type { Transaction, TransactionStatus } from "./transactions";
 
-export function maskPhone(phone?: string | null): string {
+export function formatPhone(phone?: string | null): string {
   if (!phone) return "—";
-  const trimmed = phone.trim();
-  if (trimmed.length >= 9) {
-    const prefix = trimmed.slice(0, 3);
-    const suffix = trimmed.slice(-4);
-    return `${prefix} *** ${suffix}`;
-  }
-  return trimmed;
+  return phone.trim();
+}
+
+/**
+ * Returns phone number in full (legacy alias preserved for backwards compatibility)
+ */
+export function maskPhone(phone?: string | null): string {
+  return formatPhone(phone);
 }
 
 export function contributionToTransaction(c: BackendContribution): Transaction {
@@ -64,7 +65,7 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
     campaignName: c.project?.name,
     contributorId: c.contributorId,
     donorName: c.contributor?.name || undefined,
-    phone: maskPhone(c.contributor?.msisdn),
+    phone: formatPhone(c.contributor?.msisdn),
     amount: amountInPesewas,
     status,
     rawStatus: c.status,
@@ -88,15 +89,16 @@ export function useTransaction(id: string) {
   return useQuery({
     queryKey: ["contribution", id],
     queryFn: async () => {
-      const contrib = await getContributionById(id);
-      return contributionToTransaction(contrib);
+      const data = await getContributionById(id);
+      return contributionToTransaction(data);
     },
-    enabled: Boolean(id),
+    enabled: !!id,
   });
 }
 
-export function useVerifyPaymentMutation() {
+export function useVerifyPayment() {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (reference: string) => verifyPayment(reference),
     onSuccess: () => {
@@ -105,3 +107,5 @@ export function useVerifyPaymentMutation() {
     },
   });
 }
+
+export const useVerifyPaymentMutation = useVerifyPayment;
