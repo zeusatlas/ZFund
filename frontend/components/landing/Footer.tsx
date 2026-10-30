@@ -6,7 +6,7 @@ import { HOST_FEATURES } from "@/components/landing/landing-data";
 const columns = {
   Platform: [
     { href: "#how-it-works", label: "How it works" },
-    { href: "#for-hosts", label: "For hosts" },
+    { href: "#for-organisers", label: "For organisers" },
     { href: "#for-organizations", label: "For organisations" },
     { href: "#security", label: "Security" },
   ],

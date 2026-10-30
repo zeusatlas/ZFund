@@ -9,28 +9,28 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Legal"
       title="Privacy Policy"
-      intro="How RaiseFundz collects, uses and protects information when you host or give to a campaign. Last updated: October 2026."
+      intro="How RaiseFundz collects, uses and protects information when you organise or give to a campaign. Last updated: October 2026."
     >
       <LegalSection heading="1. Information we collect">
         <p>We collect only what we need to run campaigns and process contributions:</p>
         <ul>
-          <li>Host and admin details: name, email, phone number and organisation.</li>
+          <li>Organiser&apos;s details: name, email, phone number and organisation.</li>
           <li>Campaign details: title, description, target amount, duration and payout account.</li>
-          <li>Donation records: amount, time, network and the donor&apos;s phone number (masked for hosts).</li>
+          <li>Donation records: amount, time, network and the donor&apos;s phone number (masked for organisers).</li>
           <li>Technical data: device, browser and log information used to keep the service secure.</li>
         </ul>
       </LegalSection>
       <LegalSection heading="2. How we use it">
         <ul>
           <li>To operate campaigns, record contributions and process withdrawals.</li>
-          <li>To verify hosts and review campaigns before they go live.</li>
+          <li>To verify organisers and review campaigns before they go live.</li>
           <li>To detect fraud, abuse and security incidents.</li>
           <li>To send service notices and respond to support requests.</li>
         </ul>
       </LegalSection>
       <LegalSection heading="3. Who sees donor information">
         <p>
-          Hosts see donations to their own campaigns with donor phone numbers masked. Authorised RaiseFundz
+          Organisers see donations to their own campaigns with donor phone numbers masked. Authorised RaiseFundz
           administrators can see full records where needed for review, support and compliance.
         </p>
       </LegalSection>

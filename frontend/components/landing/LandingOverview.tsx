@@ -100,7 +100,7 @@ export default function LandingOverview() {
               From an idea to a funded project
             </h2>
             <p className="mt-3 text-[16px] text-graphite max-w-xl leading-relaxed">
-              Four simple steps from creating your fundraiser to receiving your community&apos;s contributions.
+              Four clear steps, from getting your account to receiving your funds.
             </p>
           </div>
 
@@ -130,11 +130,11 @@ export default function LandingOverview() {
         </div>
       </section>
 
-      {/* Section 4: For hosts (Light) */}
-      <section id="for-hosts" className="scroll-mt-20 bg-navy py-24">
+      {/* Section 4: For organisers (Light) */}
+      <section id="for-organisers" className="scroll-mt-20 bg-navy py-24">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-4">
-            <SectionLabel>For hosts</SectionLabel>
+            <SectionLabel>For organisers</SectionLabel>
           </div>
           <div className="mb-16">
             <h2 className="text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-white">
@@ -159,9 +159,7 @@ export default function LandingOverview() {
           </div>
           <div className="mb-16 grid gap-8 md:grid-cols-2 md:items-end">
             <h2 className="text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-off-ink">
-              Built for groups
-              <br />
-              <span className="text-graphite font-medium">of every size.</span>
+              Built for
             </h2>
           
           </div>

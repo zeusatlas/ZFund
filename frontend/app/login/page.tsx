@@ -12,7 +12,8 @@ const inputClass = "auth-input";
 const buttonClass = "auth-submit";
 const CODE_LENGTH = 6;
 const CODE_SECONDS = 120; // matches how long the code stays valid
-const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+const formatTime = (s: number) =>
+  `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 const messageOf = (err: unknown) => {
   const apiError = err as ApiError;
@@ -21,14 +22,20 @@ const messageOf = (err: unknown) => {
     if (Array.isArray(firstVal) && firstVal.length > 0) return firstVal[0];
     if (typeof firstVal === "string") return firstVal;
   }
-  return apiError?.message || "Invalid or expired verification code. Please try again.";
+  return (
+    apiError?.message ||
+    "Invalid or expired verification code. Please try again."
+  );
 };
 
 export default function LoginPage() {
   const router = useRouter();
   const requestOtp = useRequestOtp();
   const verifyOtp = useVerifyOtp();
-  const [identity, setIdentity] = useState<{ email: string; phone: string } | null>(null);
+  const [identity, setIdentity] = useState<{
+    email: string;
+    phone: string;
+  } | null>(null);
   const [error, setError] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [locked, setLocked] = useState(false);
@@ -56,7 +63,10 @@ export default function LoginPage() {
   function submitIdentity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    sendCode({ email: String(form.get("email")).trim(), phone: String(form.get("phone")).trim() });
+    sendCode({
+      email: String(form.get("email")).trim(),
+      phone: String(form.get("phone")).trim(),
+    });
   }
 
   function submitCode(event: FormEvent<HTMLFormElement>) {
@@ -66,7 +76,8 @@ export default function LoginPage() {
     verifyOtp.mutate(
       { ...identity, code },
       {
-        onSuccess: ({ user }) => router.replace(adminRoles.includes(user.role) ? "/admin" : "/host"),
+        onSuccess: ({ user }) =>
+          router.replace(adminRoles.includes(user.role) ? "/admin" : "/host"),
         onError: (err) => {
           setError(messageOf(err));
           if ((err as unknown as ApiError).status === 429) setLocked(true);
@@ -83,7 +94,6 @@ export default function LoginPage() {
             <span className="auth-step-icon">
               <Smartphone size={20} aria-hidden="true" />
             </span>
-            <span>Step 02 / Verify your number</span>
           </div>
           <h1>Check your phone</h1>
           <p className="auth-description">
@@ -107,7 +117,12 @@ export default function LoginPage() {
             )}
             <button
               type="submit"
-              disabled={verifyOtp.isPending || locked || cooldown === 0 || code.length < CODE_LENGTH}
+              disabled={
+                verifyOtp.isPending ||
+                locked ||
+                cooldown === 0 ||
+                code.length < CODE_LENGTH
+              }
               className={buttonClass}
             >
               {verifyOtp.isPending ? (
@@ -127,9 +142,10 @@ export default function LoginPage() {
               onClick={() => sendCode(identity)}
               className="font-semibold text-navy underline decoration-gold decoration-2 underline-offset-4 disabled:no-underline disabled:opacity-50 hover:text-gold transition-colors"
             >
-              {cooldown > 0 ? `Resend code in ${formatTime(cooldown)}` : "Resend code"}
+              {cooldown > 0
+                ? `Resend code in ${formatTime(cooldown)}`
+                : "Resend code"}
             </button>
-           
           </div>
         </>
       ) : (
@@ -138,11 +154,10 @@ export default function LoginPage() {
             <span className="auth-step-icon">
               <KeyRound size={20} aria-hidden="true" />
             </span>
-            <span>Step 01 / Your account</span>
           </div>
-          <h1>Welcome back.</h1>
+          <h1>Welcome</h1>
           <p className="auth-description">
-            Enter the email and phone number your administrator registered. We&apos;ll text you a code.
+            Complete the below to receive a secure access{" "}
           </p>
 
           <form onSubmit={submitIdentity} className="mt-8 space-y-5">
@@ -173,7 +188,11 @@ export default function LoginPage() {
                 {error}
               </p>
             )}
-            <button type="submit" disabled={requestOtp.isPending} className={buttonClass}>
+            <button
+              type="submit"
+              disabled={requestOtp.isPending}
+              className={buttonClass}
+            >
               {requestOtp.isPending ? (
                 "Sending code…"
               ) : (
@@ -185,7 +204,8 @@ export default function LoginPage() {
           </form>
 
           <p className="auth-access-note text-center">
-            Accounts are created by your RaiseFundz administrator. Need access? Contact us on 0303981602 / 0203430792
+            Accounts are created by your RaiseFundz administrator. Need access?
+            Contact us on 0303981602 / 0538826858
           </p>
         </>
       )}

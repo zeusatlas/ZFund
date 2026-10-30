@@ -7,11 +7,11 @@ import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { ArrowRight, Menu, X, Zap } from "lucide-react";
 import HostCtaLink from "@/components/landing/HostCtaLink";
 
-const SECTION_IDS = ["how-it-works", "for-hosts", "for-organizations", "security"];
+const SECTION_IDS = ["how-it-works", "for-organisers", "for-organizations", "security"];
 
 const navLinks = [
   { href: "#how-it-works", label: "How it works" },
-  { href: "#for-hosts", label: "For hosts" },
+  { href: "#for-organisers", label: "For organisers" },
   { href: "#security", label: "Security" },
   { href: "/contact", label: "Contact" },
 ];
@@ -141,7 +141,7 @@ export default function Navbar() {
             Sign in
           </Link>
           <HostCtaLink className="group inline-flex items-center gap-2 rounded-full bg-off-ink px-5 py-2.5 text-[14px] font-semibold text-parchment transition-all hover:bg-charcoal hover:-translate-y-0.5">
-            Host a campaign
+            Organise a campaign
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
           </HostCtaLink>
         </div>
@@ -200,7 +200,7 @@ export default function Navbar() {
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-off-ink py-3.5 text-[15px] font-semibold text-parchment"
               onClick={() => setMobileOpen(false)}
             >
-              Host a campaign
+              Organise a campaign
               <ArrowRight size={15} />
             </HostCtaLink>
           </div>

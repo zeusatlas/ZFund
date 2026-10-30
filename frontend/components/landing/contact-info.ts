@@ -7,7 +7,7 @@ export const CONTACT = {
     note: "Mon - Fri: 8:30 AM - 05:00 PM GMT",
   },
   mobile: {
-    display: "0203430792",
+    display: "0538826858",
     href: "tel:+233203430792",
     note: "Typical reply time: Under 5 minutes",
   },

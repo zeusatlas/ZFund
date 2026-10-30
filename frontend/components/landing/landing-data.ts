@@ -21,10 +21,14 @@ export const TELECOMS = ["MTN", "Telecel (Vodafone)", "AirtelTigo"];
  * SECTION 2 — Social-proof ticker (LandingOverview.tsx): dark scrolling strip under the hero
  * ══════════════════════════════════════════════════════════════ */
 export const TICKER_ITEMS = [
-  "847 donors gave today",
-  "GH₵ 156,420 raised this month",
-  "Donations happening across Ghana",
+  "Withdrawals verified before funds are released",
   "Every contribution tracked securely",
+  "Full audit trail on every transaction",
+  "Role-based access for organisers and admins",
+  "Campaigns reviewed and verified before going live",
+  "Create and manage multiple campaigns in one dashboard",
+  "Export your full transaction history anytime",
+  "Donate online from anywhere in the world",
 ];
 
 /* ══════════════════════════════════════════════════════════════
@@ -32,29 +36,29 @@ export const TICKER_ITEMS = [
  * ══════════════════════════════════════════════════════════════ */
 export const JOURNEY_STEPS = [
   {
-    title: "Give your community a clear goal",
-    body: "Start with the purpose, a target in Ghana cedis (GH₵), and a closing date. Explain who will benefit and how the money will be used.",
-    example: "Example: GH₵ 50,000 for a community borehole in the Eastern Region.",
+    title: "Reach out to us",
+    body: "Contact our team and tell us about your cause or organisation. We create your organiser account for you and send you your login details.",
+    example: "No sign-up form. We set you up personally.",
   },
   {
-    title: "Prepare your campaign for review",
-    body: "Provide the organiser's details and a clear campaign description. The review process gives an administrator a chance to check a campaign before it opens for contributions.",
-    example: "Have your project budget, beneficiary details, and organiser contact ready.",
+    title: "Log in to your dashboard",
+    body: "Sign in with the details we gave you. Your dashboard is where you create campaigns, follow donations, and manage your withdrawals.",
+    example: "Only you can see your own campaigns and records.",
   },
   {
-    title: "Share the campaign with your people",
-    body: "The donation journey uses USSD so supporters can contribute from a basic phone. Share the approved campaign instructions through WhatsApp groups, community meetings, and announcements.",
-    example: "A school's alumni association can share the same campaign shortcode across Ghana.",
+    title: "Create your campaigns",
+    body: "Add your campaign's name, purpose, target amount, and dates. Our team reviews it before it goes live, then you share it with your community and watch donations come in.",
+    example: "You can run several campaigns at the same time.",
   },
   {
-    title: "Track contributions and request a payout",
-    body: "The host dashboard brings campaign totals, contribution records, and withdrawal requests together. When ready, request a payout directly to mobile money or bank.",
-    example: "Keep your community updated on what has been collected and what the funds support.",
+    title: "Request your money",
+    body: "When you are ready to use the funds, request a withdrawal from your dashboard. Once it is verified and approved, the money is released to you.",
+    example: "Every request and approval is logged for full transparency.",
   },
 ];
 
 /* ══════════════════════════════════════════════════════════════
- * SECTION 4 — For hosts (LandingOverview.tsx): "Everything you need" feature cards
+ * SECTION 4 — For organisers (LandingOverview.tsx): "Everything you need" feature cards
  * ══════════════════════════════════════════════════════════════ */
 export const HOST_FEATURES = [
   { icon: Smartphone, title: "USSD-powered collection", description: "Donors give via a simple shortcode from any mobile phone — no app, no internet, no bank card. Contributions land in your dashboard instantly.", highlight: false },
@@ -68,7 +72,7 @@ export const HOST_FEATURES = [
  * ══════════════════════════════════════════════════════════════ */
 export const ORG_TYPES = [
   { icon: HeartHandshake, title: "Community Groups", description: "Hometown associations, neighbourhood funds, and welfare groups can unite around a shared goal — with full transparency for every contributor." },
-  { icon: Building2, title: "NGOs & Nonprofits", description: "Run multiple concurrent campaigns with admin oversight, donor reporting, and exportable records for grant compliance and accountability." },
+  { icon: Building2, title: "NGOs", description: "Run multiple concurrent campaigns with admin oversight, donor reporting, and exportable records for grant compliance and accountability." },
   { icon: GraduationCap, title: "Schools & Institutions", description: "Fee drives, bursary funds, and alumni giving campaigns — managed by admin staff with role-based access and withdrawal approval flows." },
   { icon: Globe, title: "Faith Organisations", description: "Tithes, building funds, and mission drives collected via USSD from your congregation — anywhere, any time, any network." },
 ];
@@ -85,7 +89,7 @@ export const FAQ_ITEMS = [
   {
     question: "Can I collect donations right now?",
     answer:
-      "This site previews the fundraising experience. Live USSD collections and payouts are active for registered hosts following admin review.",
+      "This site previews the fundraising experience. Live USSD collections and payouts are active for registered organisers following admin review.",
   },
   {
     question: "Will supporters need a smartphone?",
@@ -95,7 +99,7 @@ export const FAQ_ITEMS = [
   {
     question: "What should I prepare for a campaign?",
     answer:
-      "A clear purpose, a target in Ghana cedis, a budget, a closing date, and organiser contact information. The host dashboard walks you through each step.",
+      "A clear purpose, a target in Ghana cedis, a budget, a closing date, and organiser contact information. The organiser dashboard walks you through each step.",
   },
 ];
 
@@ -106,7 +110,7 @@ export const SECURITY_POINTS = [
   {
     icon: Lock,
     title: "Role-based access control",
-    description: "Hosts see only their own campaigns. Admins have platform-wide visibility with separate approval workflows. No role can exceed its defined permissions.",
+    description: "Organisers see only their own campaigns. Admins have platform-wide visibility with separate approval workflows. No role can exceed its defined permissions.",
   },
   {
     icon: ShieldCheck,

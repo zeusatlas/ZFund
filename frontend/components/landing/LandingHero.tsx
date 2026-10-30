@@ -51,13 +51,11 @@ export default function LandingHero() {
             <h1 className="mb-6 text-[40px] sm:text-[clamp(48px,6vw,80px)] font-bold leading-[0.93] tracking-[-2px] sm:tracking-[-3.5px] text-off-ink">
               Raise funds
               <br />
-              <span className="text-off-ink">easily with</span>
-              <br />
-              <span className="text-graphite font-medium">RaiseFundz.</span>
+              <span className="text-graphite font-medium">with Ease.</span>
             </h1>
 
             <p className="mb-10 max-w-[440px] text-[18px] leading-[1.6] text-graphite">
-              Create a campaign, share a USSD code, and collect contributions in cedis from any phone
+              Create a campaign, share a USSD code, and collect contributions from any phone
               on any network. No app and no internet needed.
             </p>
 
@@ -74,17 +72,6 @@ export default function LandingHero() {
               </Link>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-[13px] text-graphite">Works on</span>
-              {TELECOMS.map((name) => (
-                <span
-                  key={name}
-                  className="rounded-full border border-ash bg-white px-3 py-1 text-[12px] font-semibold text-off-ink"
-                >
-                  {name}
-                </span>
-              ))}
-            </div>
           </div>
 
           {/* Right: Mockup */}
@@ -116,7 +103,7 @@ export default function LandingHero() {
               className="absolute -bottom-4 -right-2 z-10 hidden rounded-2xl bg-off-ink px-4 py-3 text-parchment shadow-md sm:block"
               style={{ animation: "float 7s 1.2s ease-in-out infinite" }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-parchment/60">Give via USSD</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-parchment/60">Donate via USSD</p>
               <p className="mt-0.5 font-bold text-white">{HERO_USSD_CODE}</p>
             </div>
           </div>

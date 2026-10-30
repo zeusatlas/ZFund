@@ -40,9 +40,8 @@ export default function LandingStepsAndFAQ() {
             <div className="mb-14">
               <SectionLabel>Frequently asked questions</SectionLabel>
               <h2 className="mt-2 text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-off-ink">
-                A few things
-                <br />
-                before you begin.
+                Few things to know
+               
               </h2>
             </div>
 
@@ -56,7 +55,7 @@ export default function LandingStepsAndFAQ() {
           <div className="relative hidden overflow-hidden rounded-[32px] lg:sticky lg:top-28 lg:block">
             <Image
               src="/images/faq.png"
-              alt="A smiling host pointing at a laptop showing a processed payment"
+              alt="A smiling organiser pointing at a laptop showing a processed payment"
               width={1536}
               height={1024}
               sizes="(min-width: 1024px) 520px, 0px"

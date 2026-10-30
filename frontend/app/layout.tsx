@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "RaiseFundz",
-  description: "Community fundraising for Ghana. Explore USSD giving, campaigns in Ghana cedis, and tools for hosts and organisations.",
+  description: "Community fundraising for Ghana. Explore USSD giving, campaigns in Ghana cedis, and tools for organisers and organisations.",
 };
 
 export default function RootLayout({

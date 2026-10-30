@@ -1,8 +1,8 @@
-import { MoneyUtil } from '../common/utils/decimal';
-import { Project } from '../database/entities/project.entity';
-import { UssdMenuOption } from '../database/entities/ussd-menu-option.entity';
-import { UssdSession } from '../database/entities/ussd-session.entity';
-import { paymentService } from './payment.service';
+import { MoneyUtil } from "../common/utils/decimal";
+import { Project } from "../database/entities/project.entity";
+import { UssdMenuOption } from "../database/entities/ussd-menu-option.entity";
+import { UssdSession } from "../database/entities/ussd-session.entity";
+import { paymentService } from "./payment.service";
 
 export interface UssdActionContext {
   session: UssdSession;
@@ -18,7 +18,9 @@ export interface UssdActionResult {
   contextUpdates?: Record<string, unknown>;
 }
 
-export type UssdActionHandler = (context: UssdActionContext) => Promise<UssdActionResult>;
+export type UssdActionHandler = (
+  context: UssdActionContext,
+) => Promise<UssdActionResult>;
 
 export class UssdActionRegistry {
   private static handlers = new Map<string, UssdActionHandler>();
@@ -31,7 +33,10 @@ export class UssdActionRegistry {
     return this.handlers.has(name.toUpperCase());
   }
 
-  static async execute(name: string, context: UssdActionContext): Promise<UssdActionResult> {
+  static async execute(
+    name: string,
+    context: UssdActionContext,
+  ): Promise<UssdActionResult> {
     const handler = this.handlers.get(name.toUpperCase());
     if (!handler) {
       throw new Error(`Unapproved or unknown USSD action: ${name}`);
@@ -48,17 +53,24 @@ export class UssdActionRegistry {
 // Built-in Approved Action Handlers (Allowlisted only)
 // ----------------------------------------------------------------------------
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-UssdActionRegistry.register('SELECT_PURPOSE', async (ctx) => {
-  const cfgPurposeId = ctx.selectedOption?.validationConfig?.purposeId as string | undefined;
+UssdActionRegistry.register("SELECT_PURPOSE", async (ctx) => {
+  const cfgPurposeId = ctx.selectedOption?.validationConfig?.purposeId as
+    | string
+    | undefined;
   const isCfgUuid = cfgPurposeId && UUID_REGEX.test(cfgPurposeId);
   const isInputUuid = ctx.userInput && UUID_REGEX.test(ctx.userInput.trim());
-  const purposeId = isCfgUuid ? cfgPurposeId : isInputUuid ? ctx.userInput.trim() : undefined;
+  const purposeId = isCfgUuid
+    ? cfgPurposeId
+    : isInputUuid
+      ? ctx.userInput.trim()
+      : undefined;
   const customName = ctx.selectedOption?.label;
 
   return {
-    nextMenuKey: 'AMOUNT_INPUT',
+    nextMenuKey: "AMOUNT_INPUT",
     contextUpdates: {
       selectedPurposeId: purposeId,
       selectedPurposeName: customName,
@@ -68,19 +80,27 @@ UssdActionRegistry.register('SELECT_PURPOSE', async (ctx) => {
   };
 });
 
-UssdActionRegistry.register('SELECT_SUB_PURPOSE', async (ctx) => {
-  const cfgPurposeId = ctx.selectedOption?.validationConfig?.purposeId as string | undefined;
+UssdActionRegistry.register("SELECT_SUB_PURPOSE", async (ctx) => {
+  const cfgPurposeId = ctx.selectedOption?.validationConfig?.purposeId as
+    | string
+    | undefined;
   const isCfgUuid = cfgPurposeId && UUID_REGEX.test(cfgPurposeId);
   const isInputUuid = ctx.userInput && UUID_REGEX.test(ctx.userInput.trim());
-  const purposeId = isCfgUuid ? cfgPurposeId : isInputUuid ? ctx.userInput.trim() : undefined;
+  const purposeId = isCfgUuid
+    ? cfgPurposeId
+    : isInputUuid
+      ? ctx.userInput.trim()
+      : undefined;
 
   const subPurpose =
     (ctx.selectedOption?.validationConfig?.subPurpose as string) ||
     ctx.selectedOption?.label;
-  const parentPurpose = ctx.selectedOption?.validationConfig?.parentPurpose as string | undefined;
+  const parentPurpose = ctx.selectedOption?.validationConfig?.parentPurpose as
+    | string
+    | undefined;
 
   return {
-    nextMenuKey: 'AMOUNT_INPUT',
+    nextMenuKey: "AMOUNT_INPUT",
     contextUpdates: {
       selectedPurposeId: purposeId,
       selectedPurposeName: subPurpose,
@@ -93,13 +113,14 @@ UssdActionRegistry.register('SELECT_SUB_PURPOSE', async (ctx) => {
   };
 });
 
-UssdActionRegistry.register('ENTER_AMOUNT', async (ctx) => {
+UssdActionRegistry.register("ENTER_AMOUNT", async (ctx) => {
   const amountStr = ctx.userInput.trim();
 
   if (!MoneyUtil.isValidAmount(amountStr)) {
     return {
-      customMessage: 'Invalid amount. Please enter a valid number (e.g. 10 or 50):',
-      nextMenuKey: 'AMOUNT_INPUT',
+      customMessage:
+        "Invalid amount. Please enter a valid number (e.g. 10 or 50):",
+      nextMenuKey: "AMOUNT_INPUT",
     };
   }
 
@@ -108,49 +129,49 @@ UssdActionRegistry.register('ENTER_AMOUNT', async (ctx) => {
     if (MoneyUtil.compare(amountStr, project.minAmount) < 0) {
       return {
         customMessage: `Minimum amount is ${project.currency} ${project.minAmount}. Please enter a valid amount:`,
-        nextMenuKey: 'AMOUNT_INPUT',
+        nextMenuKey: "AMOUNT_INPUT",
       };
     }
     if (MoneyUtil.compare(amountStr, project.maxAmount) > 0) {
       return {
         customMessage: `Maximum amount is ${project.currency} ${project.maxAmount}. Please enter a valid amount:`,
-        nextMenuKey: 'AMOUNT_INPUT',
+        nextMenuKey: "AMOUNT_INPUT",
       };
     }
   }
 
   return {
-    nextMenuKey: 'CONFIRM_PAYMENT',
+    nextMenuKey: "CONFIRM_PAYMENT",
     contextUpdates: {
       amount: amountStr,
     },
   };
 });
 
-UssdActionRegistry.register('CONFIRM_CONTRIBUTION', async (ctx) => {
-  const amount = ctx.session.contextData.amount || '0.00';
-  const currency = ctx.project?.currency || 'GHS';
+UssdActionRegistry.register("CONFIRM_CONTRIBUTION", async (ctx) => {
+  const amount = ctx.session.contextData.amount || "0.00";
+  const currency = ctx.project?.currency || "GHS";
   const target =
     (ctx.session.contextData.selectedPurposeName as string) ||
     (ctx.session.contextData.purpose as string) ||
     ctx.project?.name ||
-    'RaiseFunds';
+    "RaiseFunds";
 
   return {
     customMessage: `Contribute ${currency} ${amount} to ${target}?\n1. Confirm\n2. Cancel`,
-    nextMenuKey: 'CONFIRM_PAYMENT',
+    nextMenuKey: "CONFIRM_PAYMENT",
   };
 });
 
-UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
-  const amount = (ctx.session.contextData.amount as string) || '0.00';
-  const currency = ctx.project?.currency || 'GHS';
+UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
+  const amount = (ctx.session.contextData.amount as string) || "0.00";
+  const currency = ctx.project?.currency || "GHS";
   const msisdn = ctx.session.msisdn;
   const projectId = ctx.project?.id || ctx.session.projectId;
 
   if (!projectId) {
     return {
-      customMessage: 'Invalid project session. Payment cannot be initiated.',
+      customMessage: "Invalid project session. Payment cannot be initiated.",
       terminate: true,
     };
   }
@@ -160,21 +181,23 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
       msisdn,
       amount,
       projectId,
-      purposeId: ctx.session.contextData.selectedPurposeId as string | undefined,
+      purposeId: ctx.session.contextData.selectedPurposeId as
+        | string
+        | undefined,
     });
 
     const { chargeResult, paymentAttempt } = paymentResult;
 
-    if (chargeResult.requiresOtp || chargeResult.status === 'send_otp') {
+    if (chargeResult.requiresOtp || chargeResult.status === "send_otp") {
       const promptText =
         chargeResult.displayText ||
-        (chargeResult.message?.includes('Voucher')
+        (chargeResult.message?.includes("Voucher")
           ? chargeResult.message
-          : 'Please enter the OTP/voucher code sent to your phone (or 0 to cancel):');
+          : "Please enter the OTP/voucher code sent to your phone (or 0 to cancel):");
 
       return {
         customMessage: promptText,
-        nextMenuKey: 'ENTER_PAYMENT_OTP',
+        nextMenuKey: "ENTER_PAYMENT_OTP",
         terminate: false,
         contextUpdates: {
           paymentReference: paymentAttempt.reference,
@@ -183,9 +206,9 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
       };
     }
 
-    if (chargeResult.status === 'success') {
+    if (chargeResult.status === "success") {
       return {
-        customMessage: `Payment of ${currency} ${amount} received successfully! Thank you for supporting ${ctx.project?.name || 'RaiseFunds'}.`,
+        customMessage: `Payment of ${currency} ${amount} received successfully! Thank you for supporting ${ctx.project?.name || "RaiseFunds"}.`,
         terminate: true,
         contextUpdates: {
           paymentReference: paymentAttempt.reference,
@@ -194,9 +217,12 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
       };
     }
 
-    if (chargeResult.status === 'failed') {
+    if (chargeResult.status === "failed") {
       return {
-        customMessage: chargeResult.displayText || chargeResult.message || 'Payment failed. Please try again.',
+        customMessage:
+          chargeResult.displayText ||
+          chargeResult.message ||
+          "Payment failed. Please try again.",
         terminate: true,
         contextUpdates: {
           paymentReference: paymentAttempt.reference,
@@ -206,8 +232,7 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
     }
 
     // Default 'pay_offline' -> Direct network prompt
-    const offlineMsg =
-      `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN. Thank you for supporting ${ctx.project?.name || 'RaiseFunds'}!`;
+    const offlineMsg = `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN. Thank you for supporting ${ctx.project?.name || "RaiseFunds"}!`;
 
     return {
       customMessage: offlineMsg,
@@ -220,19 +245,20 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
     };
   } catch (err: any) {
     return {
-      customMessage: err?.message || 'Payment initiation error. Please try again.',
+      customMessage:
+        err?.message || "Payment initiation error. Please try again.",
       terminate: true,
     };
   }
 });
 
-UssdActionRegistry.register('SUBMIT_PAYMENT_OTP', async (ctx) => {
+UssdActionRegistry.register("SUBMIT_PAYMENT_OTP", async (ctx) => {
   const userInput = ctx.userInput.trim();
   const paymentReference = ctx.session.contextData.paymentReference as string;
 
-  if (userInput === '0') {
+  if (userInput === "0") {
     return {
-      customMessage: 'Payment cancelled.',
+      customMessage: "Payment cancelled.",
       terminate: true,
       contextUpdates: {
         waitingForPaymentOtp: false,
@@ -243,7 +269,7 @@ UssdActionRegistry.register('SUBMIT_PAYMENT_OTP', async (ctx) => {
 
   if (!paymentReference) {
     return {
-      customMessage: 'Payment session expired. Please start again.',
+      customMessage: "Payment session expired. Please start again.",
       terminate: true,
     };
   }
@@ -254,9 +280,11 @@ UssdActionRegistry.register('SUBMIT_PAYMENT_OTP', async (ctx) => {
       otp: userInput,
     });
 
-    if (result.status === 'success') {
+    if (result.status === "success") {
       return {
-        customMessage: result.displayText || 'Payment verified successfully! Thank you for your contribution.',
+        customMessage:
+          result.displayText ||
+          "Payment verified successfully! Thank you for your contribution.",
         terminate: true,
         contextUpdates: {
           waitingForPaymentOtp: false,
@@ -265,12 +293,12 @@ UssdActionRegistry.register('SUBMIT_PAYMENT_OTP', async (ctx) => {
       };
     }
 
-    if (result.status === 'pay_offline') {
+    if (result.status === "pay_offline") {
       return {
         customMessage:
           result.displayText ||
           result.message ||
-          'OTP verified. Please approve the MoMo prompt on your phone to complete.',
+          "OTP verified. Please approve the MoMo prompt on your phone to complete.",
         terminate: true,
         contextUpdates: {
           waitingForPaymentOtp: false,
@@ -280,62 +308,65 @@ UssdActionRegistry.register('SUBMIT_PAYMENT_OTP', async (ctx) => {
 
     // Failed OTP -> let the contributor retry or enter 0 to cancel
     return {
-      customMessage: `${result.displayText || result.message || 'Invalid OTP code.'}\nPlease enter valid OTP (or 0 to cancel):`,
-      nextMenuKey: 'ENTER_PAYMENT_OTP',
+      customMessage: `${result.displayText || result.message || "Invalid OTP code."}\nPlease enter valid OTP (or 0 to cancel):`,
+      nextMenuKey: "ENTER_PAYMENT_OTP",
       terminate: false,
     };
   } catch (err: any) {
     return {
-      customMessage: `${err?.message || 'Verification error.'}\nPlease enter valid OTP (or 0 to cancel):`,
-      nextMenuKey: 'ENTER_PAYMENT_OTP',
+      customMessage: `${err?.message || "Verification error."}\nPlease enter valid OTP (or 0 to cancel):`,
+      nextMenuKey: "ENTER_PAYMENT_OTP",
       terminate: false,
     };
   }
 });
 
-UssdActionRegistry.register('SUPPORT_PROJECT', async () => {
+UssdActionRegistry.register("SUPPORT_PROJECT", async () => {
   return {
-    nextMenuKey: 'SELECT_HOST',
+    nextMenuKey: "SELECT_HOST",
   };
 });
 
-UssdActionRegistry.register('KNOW_MORE', async () => {
+UssdActionRegistry.register("KNOW_MORE", async () => {
   return {
-    customMessage: "Raise-Fundz is Ghana's leading USSD & digital fundraising platform.\nRead more from www.raisefundz.com",
+    customMessage:
+      "Raise-Fundz is Ghana's leading USSD & digital fundraising platform.\nRead more from www.raisefundz.com",
     terminate: true,
   };
 });
 
-UssdActionRegistry.register('REGISTER_TODAY', async () => {
+UssdActionRegistry.register("REGISTER_TODAY", async () => {
   return {
-    customMessage: "Contact the business team on\nMobile: 0203430792\nLandline: 0303981602\nsupport@zeusatlasltd.com",
+    customMessage:
+      "Contact the business team on\nMobile: 0538826858\nLandline: 0303981602\nsupport@zeusatlasltd.com",
     terminate: true,
   };
 });
 
-UssdActionRegistry.register('LOOKUP_PROJECT_BY_CODE', async (ctx) => {
+UssdActionRegistry.register("LOOKUP_PROJECT_BY_CODE", async (ctx) => {
   const code = ctx.userInput.trim();
   // Handled dynamically in routing service if needed
   return {
     contextUpdates: {
       enteredEventCode: code,
     },
-    nextMenuKey: 'WELCOME',
+    nextMenuKey: "WELCOME",
   };
 });
 
-UssdActionRegistry.register('VIEW_PROJECT_INFO', async (ctx) => {
+UssdActionRegistry.register("VIEW_PROJECT_INFO", async (ctx) => {
   const project = ctx.project;
-  const desc = project?.description || project?.name || 'RaiseFunds contribution project.';
+  const desc =
+    project?.description || project?.name || "RaiseFunds contribution project.";
   return {
     customMessage: `${desc}\n0. Back`,
-    nextMenuKey: 'PROJECT_INFO',
+    nextMenuKey: "PROJECT_INFO",
   };
 });
 
-UssdActionRegistry.register('EXIT', async () => {
+UssdActionRegistry.register("EXIT", async () => {
   return {
-    customMessage: 'Thank you for using RaiseFunds.',
+    customMessage: "Thank you for using RaiseFunds.",
     terminate: true,
   };
 });

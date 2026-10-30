@@ -110,7 +110,7 @@ export default function LandingTrust() {
       <section className="bg-white py-24">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-16 text-center">
-            <SectionLabel>What people say</SectionLabel>
+            <SectionLabel>Shared Experience</SectionLabel>
             <h2 className="mt-2 text-[clamp(34px,4vw,52px)] font-bold leading-[1.05] tracking-[-1.5px] text-off-ink">
               Communities that chose RaiseFundz
             </h2>
@@ -152,7 +152,7 @@ export default function LandingTrust() {
             Start collecting today.
           </h2>
           <p className="mx-auto mb-12 max-w-[440px] text-[17px] leading-relaxed text-graphite">
-            Create your host account, set up your campaign, and share a USSD shortcode your community
+            Contact us to get your organiser account, set up your campaign, and share a USSD shortcode your community
             can use from any mobile phone — all in under 10 minutes.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
