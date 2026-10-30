@@ -3,6 +3,7 @@ import { authenticate, optionalAuthenticate } from '../common/middleware/auth.mi
 import { validate } from '../common/middleware/validate.middleware';
 import { projectController } from '../controllers/project.controller';
 import {
+  codeAvailabilitySchema,
   configurePaymentMethodsSchema,
   configurePurposesSchema,
   createProjectSchema,
@@ -26,6 +27,13 @@ router.get('/categories', optionalAuthenticate, (req, res, next) =>
 
 router.get('/next-code', optionalAuthenticate, (req, res, next) =>
   projectController.getNextCode(req, res, next)
+);
+
+router.get(
+  '/code-availability',
+  authenticate,
+  validate({ query: codeAvailabilitySchema }),
+  (req, res, next) => projectController.checkCodeAvailability(req, res, next)
 );
 
 router.get('/:id', optionalAuthenticate, (req, res, next) =>

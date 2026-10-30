@@ -30,6 +30,20 @@ export class ProjectController {
     }
   }
 
+  async checkCodeAvailability(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const code = String(req.query.code ?? '').trim();
+      const available = await projectService.isCodeAvailable(code);
+      ApiResponse.success(
+        res,
+        { code, available },
+        available ? 'Code is available' : 'Code is already taken'
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getProjects(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string, 10) || 1;

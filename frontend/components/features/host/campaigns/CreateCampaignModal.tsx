@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo, type FormEvent } from "react";
 import { Plus, X, Loader2, Sparkles, Hash } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,7 @@ import {
 import type { CreateProjectInput } from "@/lib/api/projects";
 import Select from "react-select";
 import { getSelectStyles } from "@/components/ui/selectStyles";
+import { SpecialCodeField, type CodeStatus } from "./SpecialCodeField";
 
 type Props = { onCreated: (name: string) => void };
 const inputClass =
@@ -30,6 +31,10 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
   const [error, setError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<CategoryOption | null>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const [wantsSpecialCode, setWantsSpecialCode] = useState(false);
+  const [requestedCode, setRequestedCode] = useState("");
+  const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
+  const handleCodeStatus = useCallback((status: CodeStatus) => setCodeStatus(status), []);
 
   const { data: backendCategories = [], isLoading: categoriesLoading } = useProjectCategoriesQuery();
   const { data: existingProjects = [] } = useProjectsQuery();
@@ -78,6 +83,8 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
     form.current?.reset();
     setSelectedCategory(null);
     setError("");
+    setWantsSpecialCode(false);
+    setRequestedCode("");
     setToday(new Date().toISOString().slice(0, 10));
     nextCodeQuery.refetch();
     setOpen(true);
@@ -121,6 +128,19 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
       toast.error(msg);
       return;
     }
+    if (wantsSpecialCode && requestedCode) {
+      const msg =
+        codeStatus === "taken"
+          ? `Code ${requestedCode} is already taken. Please choose another or remove your request.`
+          : codeStatus === "available"
+            ? ""
+            : "Please wait for the special code check to finish, with a code of 2 to 4 digits.";
+      if (msg) {
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+    }
     if (!/^\d+(\.\d{1,2})?$/.test(goal) || Number(goal) <= 0) {
       const msg = "Please enter a valid fundraising goal in GH₵ (up to 2 decimals).";
       setError(msg);
@@ -160,6 +180,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
       const payload: CreateProjectInput = {
         name,
         eventCode: code,
+        requestedCode: wantsSpecialCode && requestedCode ? requestedCode : undefined,
         currency: "GHS",
         targetAmount: Number(goal).toFixed(2),
         minAmount: "1.00",
@@ -304,6 +325,42 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                     <p className="mt-1.5 text-xs text-steel">
                       Auto-assigned 4-digit code (e.g. 1001, 1002) based on the last campaign code. Dialed on MTN, Telecel, or AT anywhere in Ghana.
                     </p>
+
+                    {/* Optional special code request */}
+                    <div className="mt-3 border-t border-navy/10 pt-3">
+                      {wantsSpecialCode ? (
+                        <>
+                          <SpecialCodeField
+                            id="new-campaign-requested-code"
+                            label="Requested special code"
+                            value={requestedCode}
+                            onChange={setRequestedCode}
+                            onStatusChange={handleCodeStatus}
+                            disabled={createMutation.isPending}
+                            hint="Enter 2 to 4 digits. We'll check it's free; an admin confirms it when approving your campaign."
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWantsSpecialCode(false);
+                              setRequestedCode("");
+                            }}
+                            className="mt-1 text-xs font-medium text-steel underline-offset-2 hover:text-navy hover:underline"
+                          >
+                            Keep the auto-generated code
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setWantsSpecialCode(true)}
+                          disabled={createMutation.isPending}
+                          className="text-xs font-medium text-navy underline-offset-2 hover:text-gold hover:underline"
+                        >
+                          Don&apos;t like this code? Request a special code
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Category & Location */}
