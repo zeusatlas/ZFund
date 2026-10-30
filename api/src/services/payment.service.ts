@@ -32,7 +32,6 @@ export class PaymentService {
   private get contributorRepo() { return AppDataSource.getRepository(Contributor); }
   private get projectRepo() { return AppDataSource.getRepository(Project); }
   private get webhookEventRepo() { return AppDataSource.getRepository(ProviderWebhookEvent); }
-  private get providerTxRepo() { return AppDataSource.getRepository(ProviderTransaction); }
   private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
 
   /**
@@ -42,7 +41,6 @@ export class PaymentService {
     if (projectId) {
       const projectMethod = await this.paymentMethodRepo.findOne({ where: { projectId, isEnabled: true } });
       if (projectMethod?.provider) {
-        if (projectMethod.provider.toUpperCase() === 'PAYSTACK' && env.PAYMENT_PROVIDER === 'paystack') return paystackProvider;
         if (projectMethod.provider.toUpperCase() === 'ROBSPAY') return robspayProvider;
       }
     }
