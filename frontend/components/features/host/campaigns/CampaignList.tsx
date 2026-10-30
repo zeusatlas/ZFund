@@ -742,7 +742,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                   {money(viewingCampaign.raised ?? 0)}
                 </p>
               </div>
-{(() => {
+              {(() => {
                 const commPercent = viewingCampaign.commissionPercentage ?? 14;
                 const commAmount = Math.round((viewingCampaign.raised ?? 0) * (commPercent / 100));
                 const netAmount = (viewingCampaign.raised ?? 0) - commAmount;
