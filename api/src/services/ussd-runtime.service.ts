@@ -245,7 +245,7 @@ export class UssdRuntimeService {
       const project = session!.projectId ? await projectService.getProjectById(session!.projectId) : null;
       const userInput = request.userInput.trim();
 
-      // Special Interceptor: Contributor is entering Paystack OTP/voucher
+      // Special Interceptor: Contributor is entering payment OTP/voucher
       if (session!.currentMenuKey === 'ENTER_PAYMENT_OTP') {
         const actionResult = await UssdActionRegistry.execute('SUBMIT_PAYMENT_OTP', {
           session: session!,
@@ -512,7 +512,7 @@ export class UssdRuntimeService {
         return await this.renderHostList(session!, request);
       }
 
-      // If next step is awaiting Paystack payment OTP
+      // If next step is awaiting payment OTP
       if (targetMenuKey === 'ENTER_PAYMENT_OTP') {
         session!.currentMenuKey = 'ENTER_PAYMENT_OTP';
         await ussdSessionService.updateSession(session!);

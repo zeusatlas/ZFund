@@ -7,7 +7,7 @@ import {
   type BackendContribution,
   verifyPayment,
   type GetContributionsParams,
-  type VerifyPaymentResponse,
+
 } from "@/lib/api/contributions";
 import type { Transaction, TransactionStatus } from "./transactions";
 
@@ -44,7 +44,7 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
     firstAttempt?.channel === "card"
       ? "Card"
       : firstAttempt?.provider
-        ? `${firstAttempt.provider === "PAYSTACK" ? "Mobile money" : firstAttempt.provider}`
+        ? `${firstAttempt.provider === "ROBSPAY" ? "Mobile money" : firstAttempt.provider}`
         : "Mobile money";
 
   let note = "Awaiting payment confirmation. Not yet included in your total received.";
@@ -82,6 +82,7 @@ export function useTransactionsQuery(params?: GetContributionsParams) {
     queryKey: ["contributions", params],
     queryFn: () => getContributions(params),
     staleTime: 5_000,
+    refetchInterval: 10_000,
   });
 }
 

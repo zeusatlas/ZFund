@@ -13,7 +13,7 @@ export const logger = pino({
       'refreshToken',
       'secret',
       'key',
-      'PAYSTACK_SECRET_KEY',
+      'ROBSPAY_API_KEY',
       'SMS_API_KEY',
       'body.password',
       'body.pin',

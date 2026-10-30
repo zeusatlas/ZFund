@@ -527,7 +527,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
     expect(turn4.status).toBe(200);
     // Final prompt terminates session (MSGTYPE = false)
     expect(turn4.body.MSGTYPE).toBe(false);
-    expect(turn4.body.MSG).toContain('Payment of GHS 50.00 initiated');
+    expect(turn4.body.MSG).toContain('Payment prompt of GHS 50.00 has been sent');
   });
 
   it('should handle invalid menu input gracefully without crashing session', async () => {
@@ -560,8 +560,8 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
     expect(res.body.MSG).toContain('Invalid choice.');
   });
 
-  it('should handle Paystack Mobile Money OTP challenge during USSD session', async () => {
-    // Mock Paystack to require OTP for this test
+  it('should handle Mobile Money OTP challenge during USSD session', async () => {
+    // Mock payment provider to require OTP for this test
     const chargeSpy = jest.spyOn(paymentService.currentProvider as any, 'chargeMobileMoney').mockResolvedValueOnce({
       reference: 'ZF-PAY-TEST-OTP-1',
       status: 'send_otp',
@@ -612,7 +612,7 @@ describe('Database-Driven USSD Engine (Dynamic menus, state transitions & NALO r
         SESSIONID: sessionId,
       });
 
-    // Turn 4: Select '1' (Confirm) -> Paystack returns send_otp
+    // Turn 4: Select '1' (Confirm) -> Provider returns send_otp
     const turn4 = await request(app)
       .post('/api/v1/ussd/nalo')
       .send({

@@ -11,7 +11,7 @@ import { PaymentAttempt, PaymentChannel, PaymentStatus } from '../../src/databas
 import { Project, ProjectStatus } from '../../src/database/entities/project.entity';
 import { Refund, RefundStatus } from '../../src/database/entities/refund.entity';
 import { User, UserStatus } from '../../src/database/entities/user.entity';
-import { PaystackProvider, paystackProvider } from '../../src/services/paystack.provider';
+import { RobspayProvider, robspayProvider } from '../../src/services/robspay.provider';
 import { closeTestDatabase, setupTestDatabase } from '../test-db';
 
 describe('Refund Management & Financial Reconciliation Workflow', () => {
@@ -25,10 +25,10 @@ describe('Refund Management & Financial Reconciliation Workflow', () => {
   let financeToken: string;
 
   beforeAll(async () => {
-    // Mock Paystack initiateRefund for offline deterministic integration tests
-    paystackProvider.initiateRefund = async (params) => {
+    // Mock RobsPay initiateRefund for offline deterministic integration tests
+    robspayProvider.initiateRefund = async (params) => {
       return {
-        providerRefundId: 'paystack_ref_' + Date.now(),
+        providerRefundId: 'robs_ref_' + Date.now(),
         status: 'success',
         amount: params.amount || '0.00',
         currency: params.currency || 'GHS',
@@ -125,14 +125,14 @@ describe('Refund Management & Financial Reconciliation Workflow', () => {
       paymentAttemptRepo.create({
         reference: 'ZF-PAY-REFUND-001',
         contributionId: testContribution.id,
-        provider: 'PAYSTACK',
+        provider: 'ROBSPAY',
         channel: PaymentChannel.MOBILE_MONEY,
         msisdn: '233240000002',
         amount: '100.00',
         currency: 'GHS',
         status: PaymentStatus.SUCCESSFUL,
         fee: '2.00',
-        providerReference: 'paystack_tx_123456',
+        providerReference: 'robs_tx_123456',
       })
     );
   });

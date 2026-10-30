@@ -62,7 +62,7 @@ All 39 entities are centrally registered in `src/database/entities.ts` and loade
 ### 2.5 Financial Ledger & Payments (11 Entities)
 23. **`Contributor`** (`contributors`): Contributor registry identified by mobile phone number (`msisdn`), optional name and email.
 24. **`Contribution`** (`contributions`): The business contribution record (`reference` `ZF-CON-...`), amount (`NUMERIC(14,2)`), purpose, status (`INITIATED`, `CONFIRMED`, `PARTIALLY_REFUNDED`, `REFUNDED`, `FAILED`).
-25. **`PaymentProvider`** (`payment_providers`): Integrated payment gateways (Paystack, MTN MoMo Direct, etc.).
+25. **`PaymentProvider`** (`payment_providers`): Integrated payment gateways (RobsPay, etc.).
 26. **`PaymentAttempt`** (`payment_attempts`): Individual collection attempts (`reference` `ZF-PAY-...`), provider reference, fee, channel, status (`INITIATED`, `PENDING`, `SUCCESSFUL`, `FAILED`).
 27. **`ProviderTransaction`** (`provider_transactions`): External gateway transaction logs and raw response payloads.
 28. **`ProviderWebhookEvent`** (`provider_webhook_events`): Raw incoming webhook logs with idempotency tracking (`isProcessed: boolean`).

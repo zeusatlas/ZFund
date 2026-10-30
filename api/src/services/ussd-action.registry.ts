@@ -207,8 +207,7 @@ UssdActionRegistry.register('INITIATE_PAYMENT', async (ctx) => {
 
     // Default 'pay_offline' -> Direct network prompt
     const offlineMsg =
-      chargeResult.displayText ||
-      `Payment of ${currency} ${amount} initiated for ${msisdn}. Please approve prompt with your MoMo PIN.`;
+      `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN. Thank you for supporting ${ctx.project?.name || 'RaiseFunds'}!`;
 
     return {
       customMessage: offlineMsg,

@@ -25,7 +25,7 @@ export class ReconciliationRun {
   @Index('idx_recon_run_ref')
   runReference: string;
 
-  @Column({ default: 'PAYSTACK' })
+  @Column({ default: 'ROBSPAY' })
   provider: string;
 
   @Column({ type: 'timestamp with time zone' })

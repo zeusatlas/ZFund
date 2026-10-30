@@ -52,7 +52,7 @@ To prevent arbitrary code execution or unsafe dynamic evaluation, all actions tr
 |---|---|---|
 | `SELECT_PURPOSE` | Contributor selects a contribution purpose | Saves `purposeId` in session state, transitions to `ENTER_AMOUNT`. |
 | `VALIDATE_AMOUNT` | Validates numeric input against project min/max bounds | Formats decimal string, saves `amount` in session state, transitions to `CONFIRM_CONTRIBUTION`. |
-| `INITIATE_PAYMENT` | Triggers Paystack Mobile Money collection | Calls `PaymentService.initiatePayment`, binds payment reference, displays USSD prompt with payment instructions, and terminates USSD session (`MSGTYPE: false`). |
+| `INITIATE_PAYMENT` | Triggers RobsPay Mobile Money collection | Calls `PaymentService.initiatePayment`, binds payment reference, displays USSD prompt that payment prompt has been sent to phone to authorize with MoMo PIN, and terminates USSD session (`MSGTYPE: false`). |
 | `CHECK_STATUS` | Queries recent payment status | Retrieves status of last payment attempt and displays confirmation. |
 | `NAVIGATE_BACK` | Returns to the parent menu | Pops previous menu from session navigation stack. |
 | `EXIT` | Terminates the USSD session | Returns friendly exit message and sets `MSGTYPE: false`. |

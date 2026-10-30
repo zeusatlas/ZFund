@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { authenticate } from '../common/middleware/auth.middleware';
-import { paystackWebhookAuth } from '../common/middleware/paystack-auth.middleware';
 import { robspayWebhookAuth } from '../common/middleware/robspay-auth.middleware';
 import { validate } from '../common/middleware/validate.middleware';
 import { paymentController } from '../controllers/payment.controller';
@@ -56,13 +55,6 @@ router.post(
   (req, res, next) => webhookController.handleRobspayWebhook(req, res, next)
 );
 
-/**
- * Legacy Paystack Webhook endpoint (Signature verified via HMAC SHA512)
- */
-router.post(
-  '/webhook/paystack',
-  paystackWebhookAuth,
-  (req, res, next) => webhookController.handlePaystackWebhook(req, res, next)
-);
+
 
 export default router;

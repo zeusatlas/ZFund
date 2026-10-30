@@ -7,7 +7,6 @@ import { Contribution, ContributionStatus } from '../database/entities/contribut
 import { financialService } from './financial.service';
 import { notificationService } from './notification.service';
 import { PaymentAttempt, PaymentStatus } from '../database/entities/payment-attempt.entity';
-import { paystackProvider } from './paystack.provider';
 import { robspayProvider } from './robspay.provider';
 import { Refund, RefundStatus } from '../database/entities/refund.entity';
 import { CreateRefundInput, ReviewRefundInput } from '../schemas/refund.schemas';
@@ -158,7 +157,7 @@ export class RefundService {
     }
 
     // Call payment provider refund API
-    const provider = refund.paymentAttempt.provider === 'PAYSTACK' ? paystackProvider : robspayProvider;
+    const provider = robspayProvider;
     const providerResult = await provider.initiateRefund({
       transactionReference: refund.paymentAttempt.reference,
       amount: refund.amount,

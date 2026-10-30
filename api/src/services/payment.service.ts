@@ -16,7 +16,6 @@ import { ProviderWebhookEvent } from '../database/entities/provider-webhook-even
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
 import { IPaymentProvider } from './payment-provider.interface';
 import { robspayProvider, RobspayProvider } from './robspay.provider';
-import { paystackProvider } from './paystack.provider';
 
 export interface InitiateUssdPaymentInput {
   msisdn: string;
@@ -51,9 +50,6 @@ export class PaymentService {
   }
 
   get currentProvider(): IPaymentProvider {
-    if (env.PAYMENT_PROVIDER === 'paystack') {
-      return paystackProvider;
-    }
     return robspayProvider;
   }
 
@@ -337,7 +333,7 @@ export class PaymentService {
   }
 
   /**
-   * Submits OTP received from contributor via USSD (Paystack fallback)
+   * Submits OTP received from contributor via USSD
    */
   async submitUssdPaymentOtp(params: { reference: string; otp: string }): Promise<{
     status: 'success' | 'pay_offline' | 'pending' | 'failed';
@@ -347,7 +343,7 @@ export class PaymentService {
   }> {
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: [{ reference: params.reference }, { providerReference: params.reference }],
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -431,7 +427,7 @@ export class PaymentService {
     // 1. Find payment attempt by providerReference (12-char hex) or reference
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: [{ providerReference: transactionId }, { reference: transactionId }],
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -543,11 +539,12 @@ export class PaymentService {
 
       // Trigger contributor SMS confirmation notification (non-blocking)
       const contribution = paymentAttempt.contribution;
-      const project = contribution.project;
+      const project = contribution?.project;
+      const contributorPhone = paymentAttempt.msisdn || contribution?.contributor?.msisdn;
 
       await notificationService.sendNotification({
         templateKey: 'CONTRIBUTION_CONFIRMED_CONTRIBUTOR',
-        recipientPhone: paymentAttempt.msisdn,
+        recipientPhone: contributorPhone || paymentAttempt.msisdn,
         eventType: 'PAYMENT_SUCCESS',
         variables: {
           amount: paymentAttempt.amount,
@@ -556,6 +553,20 @@ export class PaymentService {
           reference: paymentAttempt.reference,
         },
       });
+      // Trigger host (project owner) SMS alert (non-blocking)
+      if (project?.owner?.phone) {
+        await notificationService.sendNotification({
+          templateKey: 'NEW_CONTRIBUTION_OWNER',
+          recipientPhone: project.owner.phone,
+          eventType: 'PAYMENT_SUCCESS',
+          variables: {
+            amount: paymentAttempt.amount,
+            currency: paymentAttempt.currency,
+            projectName: project.name,
+            reference: paymentAttempt.reference,
+          },
+        }).catch((err) => logger.warn({ err }, 'Failed to send host new contribution SMS alert'));
+      }
     } else if (isFailed) {
       paymentAttempt.status = PaymentStatus.FAILED;
       paymentAttempt.providerStatus = String(data.status || 'Failed');
@@ -579,7 +590,7 @@ export class PaymentService {
   }
 
   /**
-   * Handles authenticated Paystack webhook event idempotently (legacy support)
+   * Handles authenticated webhook event idempotently
    */
   async handleWebhook(rawBody: string | Buffer, eventPayload: Record<string, unknown>): Promise<void> {
     const eventType = String(eventPayload.event || '');
@@ -599,7 +610,7 @@ export class PaymentService {
 
     // Persist Webhook Event record
     const webhookRecord = this.webhookEventRepo.create({
-      provider: 'PAYSTACK',
+      provider: 'ROBSPAY',
       eventType,
       eventId,
       reference,
@@ -613,7 +624,7 @@ export class PaymentService {
     } else if (eventType === 'charge.failed') {
       await this.processFailedCharge(data, webhookRecord);
     } else {
-      logger.info({ eventType }, 'Unhandled Paystack webhook event type');
+      logger.info({ eventType }, 'Unhandled webhook event type');
       webhookRecord.isProcessed = true;
       webhookRecord.processingResult = 'Ignored event type';
       await this.webhookEventRepo.save(webhookRecord);
@@ -632,7 +643,7 @@ export class PaymentService {
 
     const paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: { reference },
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -694,7 +705,7 @@ export class PaymentService {
       // Create ProviderTransaction record
       const providerTx = manager.create(ProviderTransaction, {
         paymentAttemptId: paymentAttempt.id,
-        provider: paymentAttempt.provider || 'PAYSTACK',
+        provider: paymentAttempt.provider || 'ROBSPAY',
         providerTransactionId: String(data.id),
         reference,
         amount: amountInMajor,
@@ -771,7 +782,7 @@ export class PaymentService {
     const cleanRef = reference.trim();
     let paymentAttempt = await this.paymentAttemptRepo.findOne({
       where: [{ reference: cleanRef }, { providerReference: cleanRef }],
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     });
 
     if (!paymentAttempt) {
@@ -789,7 +800,7 @@ export class PaymentService {
         );
         paymentAttempt = await this.paymentAttemptRepo.findOne({
           where: { id: sorted[0].id },
-          relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+          relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
         });
       }
     }
@@ -802,7 +813,7 @@ export class PaymentService {
       return paymentAttempt;
     }
 
-    const provider = paymentAttempt.provider === 'PAYSTACK' ? paystackProvider : this.currentProvider;
+    const provider = this.currentProvider;
     const verifyResult = await provider.verifyTransaction(paymentAttempt.providerReference || paymentAttempt.reference);
 
     if (verifyResult.status === 'success') {
@@ -837,7 +848,7 @@ export class PaymentService {
 
     return (await this.paymentAttemptRepo.findOne({
       where: { id: paymentAttempt.id },
-      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
     }))!;
   }
 

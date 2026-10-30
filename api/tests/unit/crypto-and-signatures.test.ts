@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { CryptoUtil } from '../../src/common/utils/crypto';
 
-describe('CryptoUtil (Argon2id, JWT, RobsPay and Paystack signatures)', () => {
+describe('CryptoUtil (Argon2id, JWT and RobsPay signatures)', () => {
   it('should hash and verify passwords using Argon2id', async () => {
     const rawPassword = 'SecurePassword2026!';
     const hash = await CryptoUtil.hashPassword(rawPassword);
@@ -67,38 +67,6 @@ describe('CryptoUtil (Argon2id, JWT, RobsPay and Paystack signatures)', () => {
 
     const isWrongKey = CryptoUtil.verifyRobspaySignature(payload, signature, timestamp, 'wrong_key');
     expect(isWrongKey).toBe(false);
-  });
-
-  it('should verify Paystack HMAC SHA512 webhook signature accurately', () => {
-    const secretKey = 'sk_test_mock_paystack_secret_key_123456';
-    const payload = JSON.stringify({
-      event: 'charge.success',
-      data: { reference: 'ZF-PAY-123', amount: 5000 },
-    });
-
-    // Compute expected HMAC SHA512
-    const validSignature = crypto
-      .createHmac('sha512', secretKey)
-      .update(payload)
-      .digest('hex');
-
-    const isValid = CryptoUtil.verifyPaystackSignature(payload, validSignature, secretKey);
-    expect(isValid).toBe(true);
-
-    // Tampered payload or wrong signature
-    const isInvalidTampered = CryptoUtil.verifyPaystackSignature(
-      payload + 'tampered',
-      validSignature,
-      secretKey
-    );
-    expect(isInvalidTampered).toBe(false);
-
-    const isInvalidKey = CryptoUtil.verifyPaystackSignature(
-      payload,
-      validSignature,
-      'wrong_secret_key'
-    );
-    expect(isInvalidKey).toBe(false);
   });
 
   it('should generate unique formatted business references', () => {

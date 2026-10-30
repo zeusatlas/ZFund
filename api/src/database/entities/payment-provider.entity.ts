@@ -17,7 +17,7 @@ export class PaymentProvider {
 
   @Column({ unique: true })
   @Index('idx_payment_provider_code')
-  code: string; // e.g. 'PAYSTACK'
+  code: string; // e.g. 'ROBSPAY'
 
   @Column({ default: true })
   isActive: boolean;
