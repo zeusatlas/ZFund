@@ -312,7 +312,7 @@ export default function PublicHostView({ profile }: PublicHostViewProps) {
                 <div className="flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 border border-navy/5 shadow-2xs min-w-0">
                   <Phone size={13} className="text-gold shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <span className="text-[10px] uppercase font-semibold text-steel block">Phone / MoMo</span>
+                    <span className="text-[10px] uppercase font-semibold text-steel block">Phone</span>
                     <span className="font-mono text-xs font-bold text-navy truncate block">
                       {hostPhoneDisplay || "Not provided"}
                     </span>
