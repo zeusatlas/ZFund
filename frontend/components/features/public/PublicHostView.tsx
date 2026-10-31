@@ -148,14 +148,14 @@ export default function PublicHostView({ profile }: PublicHostViewProps) {
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-3">
               {campaigns.map((c) => {
                 const targetNum = parseFloat(c.targetAmount || "0");
                 return (
                   <Link
                     key={c.id}
                     href={`/${host.slug}/${c.slug}`}
-                    className="flex flex-col justify-between rounded-2xl border border-navy/10 bg-white p-5 sm:p-6 shadow-xs hover:border-navy/25 hover:shadow-md transition-all group cursor-pointer block"
+                    className="flex flex-col justify-between rounded-0 border border-navy/10 bg-white p-5 sm:p-6 shadow-xs hover:border-navy/25 hover:shadow-md transition-all group cursor-pointer block"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-xs">
