@@ -30,6 +30,8 @@ export interface PublicCampaign {
     id: string;
     name: string;
     slug: string;
+    phone?: string | null;
+    email?: string | null;
   };
   totalRaised: string;
   contributorsCount: number;
@@ -71,11 +73,15 @@ export interface PublicHostProfile {
     id: string;
     name: string;
     slug: string;
+    phone?: string | null;
+    email?: string | null;
   };
   campaigns: Array<{
     id: string;
     name: string;
     slug: string;
+    phone?: string | null;
+    email?: string | null;
     description?: string;
     eventCode: string;
     category?: string;

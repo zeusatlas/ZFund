@@ -27,6 +27,7 @@ export const createProjectSchema = z.object({
   startDate: z.string().datetime({ message: 'Valid start date is required' }),
   endDate: z.string().datetime().optional(),
   acceptsContributions: z.boolean().default(true),
+  enableWebPortal: z.boolean().default(false).optional(),
   commissionPercentage: z
     .union([z.number(), z.string()])
     .transform((val) => String(Number(val).toFixed(2)))
@@ -52,6 +53,7 @@ export const adminCreateProjectSchema = createProjectSchema
   });
 
 export const updateProjectStatusSchema = z.object({
+  enableWebPortal: z.boolean().optional(),
   status: z.nativeEnum(ProjectStatus),
   notes: z.string().optional(),
   commissionPercentage: z

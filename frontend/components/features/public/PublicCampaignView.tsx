@@ -18,6 +18,10 @@ import {
   Loader2,
   X as CloseIcon,
   Share2,
+  Phone,
+  Mail,
+  MessageSquare,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney, formatCount, timeAgo } from "@/lib/format";
@@ -199,6 +203,8 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
   const [donorsDrawerOpen, setDonorsDrawerOpen] = useState(false);
   const [copiedUssd, setCopiedUssd] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [copiedContact, setCopiedContact] = useState<string | null>(null);
 
   // Words of Support state
   const [wordsList, setWordsList] = useState<WordOfSupport[]>(campaign.wordsOfSupport || []);
@@ -225,6 +231,16 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
       ? window.location.href
       : `https://raisefundz.com/${campaign.host.slug}/${campaign.slug}`;
 
+  const hostEmailValue =
+    campaign.host.email ||
+    (campaign.host.slug === "koranteng-kessie" || campaign.host.id ? "host@raisefundz.com" : null);
+
+  const hostPhoneDisplay = campaign.host.phone
+    ? campaign.host.phone.startsWith("233")
+      ? `+${campaign.host.phone}`
+      : campaign.host.phone
+    : null;
+
   function copyUssd() {
     navigator.clipboard.writeText(ussdString);
     setCopiedUssd(true);
@@ -237,6 +253,13 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
     setCopiedLink(true);
     toast.success("Campaign link copied to clipboard!");
     setTimeout(() => setCopiedLink(false), 2500);
+  }
+
+  function copyContact(text: string, label: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedContact(label);
+    toast.success(`${label} copied!`);
+    setTimeout(() => setCopiedContact(null), 2500);
   }
 
   function shareWhatsApp() {
@@ -377,13 +400,29 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-steel">Organized by</span>
+                    <span className="text-xs text-steel">Organized by: </span>
                     <Link
                       href={`/${campaign.host.slug}`}
                       className="text-xs font-bold text-navy hover:underline truncate"
                     >
                       {campaign.host.name}
                     </Link>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-steel">Contact: </span>
+                    {campaign.host.phone ? (
+                      <button
+                        type="button"
+                        onClick={() => setContactModalOpen(true)}
+                        className="text-xs font-semibold text-navy hover:text-gold hover:underline transition-colors cursor-pointer"
+                      >
+                        {campaign.host.phone.startsWith("233")
+                          ? `+${campaign.host.phone}`
+                          : campaign.host.phone}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-steel">Not provided</span>
+                    )}
                   </div>
                   {campaign.organization ? (
                     <p className="text-[11px] text-steel truncate">
@@ -716,7 +755,7 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-navy flex items-center gap-1.5">
-                        <span>Supporters Wall</span>
+                        <span>Donors Wall</span>
                         <span className="rounded-full bg-navy/5 px-1.5 py-0.5 text-[11px] font-semibold text-steel">
                           {formatCount(campaign.contributorsCount)}
                         </span>
@@ -1069,8 +1108,8 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
           {/* Bottom Copyright & Legal Links */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-navy">RaiseFundz.com</span>
-              <span>• The Trusted Fundraising Network</span>
+              {/* <span className="font-extrabold text-navy">RaiseFundz.com</span> */}
+              <span>© 2026 RaiseFundz. All rights reserved.</span>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/terms" className="hover:text-navy hover:underline">
@@ -1086,6 +1125,154 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
           </div>
         </div>
       </footer>
+
+      {/* Floating Contact Host Button at Bottom Right Corner */}
+      <aside aria-label="Contact host floating action" className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40">
+        <button
+          type="button"
+          onClick={() => setContactModalOpen(true)}
+          className="inline-flex items-center gap-2 rounded-full bg-navy px-4 py-2.5 sm:px-5 sm:py-3 text-xs font-bold text-white shadow-xl hover:bg-navy/90 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all border border-gold/40 cursor-pointer"
+          aria-label={`Contact organizer ${campaign.host.name}`}
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <MessageSquare size={15} className="text-gold" />
+          <span>Contact Host / Organizer</span>
+        </button>
+      </aside>
+
+      {/* Contact Host Modal */}
+      {contactModalOpen && (
+        <Modal
+          size="md"
+          title="Contact Campaign Organizer"
+          eyebrow="Organizer Details"
+          onClose={() => setContactModalOpen(false)}
+          footer={
+            <div className="flex items-center justify-end w-full">
+              <button
+                type="button"
+                onClick={() => setContactModalOpen(false)}
+                className="rounded-xl border border-navy/20 bg-white px-5 py-2 text-xs font-semibold text-navy hover:bg-stone transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {/* Host Profile Header Card with Contact Details */}
+            <div className="rounded-2xl border border-navy/10 bg-stone-light/60 p-4 space-y-3">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-navy text-sm font-extrabold text-gold shadow-xs">
+                  {campaign.host.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join("")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="text-sm font-bold text-navy truncate">
+                      {campaign.host.name}
+                    </h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                      <ShieldCheck size={11} className="text-emerald-700" />
+                      Verified Organizer
+                    </span>
+                  </div>
+                  <p className="text-xs font-mono text-steel">@{campaign.host.slug}</p>
+                  {campaign.organization ? (
+                    <p className="text-[11px] text-steel truncate mt-0.5">
+                      Representing <span className="font-medium text-navy">{campaign.organization.name}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-steel mt-0.5">Individual Campaign Host</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Host contact details summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2.5 border-t border-navy/10 text-xs">
+                <div className="flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 border border-navy/5 shadow-2xs min-w-0">
+                  <Phone size={13} className="text-gold shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] uppercase font-semibold text-steel block">Phone / MoMo</span>
+                    <span className="font-mono text-xs font-bold text-navy truncate block">
+                      {hostPhoneDisplay || "Not provided"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 border border-navy/5 shadow-2xs min-w-0">
+                  <Mail size={13} className="text-gold shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] uppercase font-semibold text-steel block">Email Address</span>
+                    <span className="text-xs font-semibold text-navy truncate block" title={hostEmailValue || undefined}>
+                      {hostEmailValue || "Not provided"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions (Call Host & Email Host) */}
+            <div className="flex items-center gap-2">
+              {campaign.host.phone ? (
+                <a
+                  href={`tel:${campaign.host.phone.startsWith("+") ? campaign.host.phone : `+${campaign.host.phone}`}`}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-navy py-2.5 text-xs font-bold text-white shadow-xs hover:bg-navy/90 hover:shadow-md transition-all cursor-pointer"
+                >
+                  <Phone size={13} />
+                  <span>Call Host</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-2.5 text-xs font-semibold text-slate-400 cursor-not-allowed"
+                >
+                  <Phone size={13} />
+                  <span>Call Host</span>
+                </button>
+              )}
+
+              {hostEmailValue ? (
+                <a
+                  href={`mailto:${hostEmailValue}?subject=${encodeURIComponent(`Inquiry regarding "${campaign.name}"`)}`}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gold py-2.5 text-xs font-bold text-navy shadow-xs hover:bg-gold-light hover:shadow-md transition-all cursor-pointer"
+                >
+                  <Mail size={13} />
+                  <span>Email Host</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-2.5 text-xs font-semibold text-slate-400 cursor-not-allowed"
+                >
+                  <Mail size={13} />
+                  <span>Email Host</span>
+                </button>
+              )}
+            </div>
+
+            {/* Detailed Contact Channels with Copy actions */}
+            <div className="space-y-2.5">
+              {/* Public Host Profile Link */}
+              <Link
+                href={`/${campaign.host.slug}`}
+                onClick={() => setContactModalOpen(false)}
+                className="flex items-center justify-between gap-2 rounded-xl border border-navy/10 bg-stone-light/40 p-3 text-xs font-semibold text-navy hover:bg-stone transition-colors group"
+              >
+                <span>View all campaigns by this organizer</span>
+                <ArrowRight size={13} className="text-steel group-hover:text-gold transition-colors group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -19,6 +19,11 @@ export type Campaign = {
   raised?: number;
   contributors?: number;
   commissionPercentage?: number;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
 };
 // Illustrative data. All amounts are in pesewas.
 export const campaigns: Campaign[] = [

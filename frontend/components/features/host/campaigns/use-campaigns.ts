@@ -76,6 +76,7 @@ export function projectToCampaign(project: BackendProject): Campaign {
     welcomeMessage: project.welcomeMessage || undefined,
     currency: project.currency,
     acceptsContributions: project.acceptsContributions,
+    settings: project.settings,
   };
 }
 

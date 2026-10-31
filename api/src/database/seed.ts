@@ -126,9 +126,20 @@ export async function runSeeds(): Promise<void> {
       })
     );
     logger.info(`Seeded Demo Host: Koranteng Kessie (@koranteng-kessie)`);
-  } else if (!hostUser.slug) {
-    hostUser.slug = 'koranteng-kessie';
-    await userRepo.save(hostUser);
+  } else {
+    let hostChanged = false;
+    if (!hostUser.slug) {
+      hostUser.slug = 'koranteng-kessie';
+      hostChanged = true;
+    }
+    if (!hostUser.phone) {
+      hostUser.phone = hostPhone;
+      hostChanged = true;
+    }
+    if (hostChanged) {
+      await userRepo.save(hostUser);
+      logger.info(`Updated Demo Host phone/slug: ${hostEmail} (${hostPhone})`);
+    }
   }
 
   // 4. Seed Project Categories
@@ -172,7 +183,7 @@ export async function runSeeds(): Promise<void> {
       channel: NotificationChannel.SMS,
       eventType: 'PAYMENT_SUCCESS',
       title: 'Contribution Confirmation',
-      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through Raise-Fundz.',
+      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through Raise-Fundz. Visit: https://raisefundz.com',
       approvedPlaceholders: ['currency', 'amount', 'projectName', 'reference'],
     },
     {

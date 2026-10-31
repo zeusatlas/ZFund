@@ -757,9 +757,10 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
         </div>
       )}
 
-      {/* Campaign Details Modal (Replaces previous inline details card) */}
+      {/* Campaign Details Modal */}
       {viewingCampaign && (
         <Modal
+          size="4xl"
           title={viewingCampaign.name}
           eyebrow={viewingCampaign.category}
           onClose={() => setViewingCampaign(null)}
@@ -875,43 +876,81 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
             </div>
 
             {/* Public Web Portal Link for Donors Abroad & Online */}
-            {viewingCampaign.eventCode && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-navy/10 bg-slate-50/80 p-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <Globe size={14} className="text-navy" />
-                  <span className="text-steel">Web Portal (Online & Abroad):</span>
-                  <span className="font-mono font-bold text-navy">
-                    /c/{viewingCampaign.eventCode}
-                  </span>
+            {viewingCampaign.eventCode && (() => {
+              const isApproved =
+                viewingCampaign.rawStatus === "PUBLISHED" ||
+                viewingCampaign.rawStatus === "APPROVED";
+              const hasWebPortal = Boolean(viewingCampaign.settings?.webPortalEnabled);
+
+              if (hasWebPortal && isApproved) {
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-600/20 bg-emerald-50/50 p-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Globe size={14} className="text-emerald-700" />
+                      <span className="font-semibold text-emerald-900">Web Portal:</span>
+                      <span className="font-mono font-bold text-navy">
+                        /c/{viewingCampaign.eventCode}
+                      </span>
+                      <span className="inline-flex items-center rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                        Active (+1% fee)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${window.location.origin}/c/${viewingCampaign.eventCode}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success("Public donation link copied!");
+                        }}
+                        className="inline-flex items-center gap-1 font-semibold text-navy hover:text-gold transition-colors"
+                      >
+                        <Copy size={12} />
+                        <span>Copy Link</span>
+                      </button>
+                      <a
+                        href={`/c/${viewingCampaign.eventCode}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:text-navy transition-colors"
+                      >
+                        <ExternalLink size={12} />
+                        <span>Open Portal</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (hasWebPortal && !isApproved) {
+                return (
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-200/80 bg-amber-50/60 p-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Globe size={14} className="text-amber-700 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-amber-900">Web Portal Enabled (+1% commission):</span>{" "}
+                        <span className="text-amber-800">
+                          Your online web donation link will become available here once this campaign is approved by admin.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-navy/10 bg-stone-light/50 p-2.5 text-xs text-steel">
+                  <div className="flex items-center gap-2">
+                    <Globe size={14} className="text-steel shrink-0" />
+                    <span>Web Portal:</span>
+                    <span className="font-medium text-navy">Disabled (Dial *920*969*{viewingCampaign.eventCode}# only)</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = `${window.location.origin}/c/${viewingCampaign.eventCode}`;
-                      navigator.clipboard.writeText(url);
-                      toast.success("Public donation link copied!");
-                    }}
-                    className="inline-flex items-center gap-1 font-semibold text-navy hover:text-gold transition-colors"
-                  >
-                    <Copy size={12} />
-                    <span>Copy Link</span>
-                  </button>
-                  <a
-                    href={`/c/${viewingCampaign.eventCode}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-semibold text-navy hover:text-gold transition-colors"
-                  >
-                    <ExternalLink size={12} />
-                    <span>Open Portal</span>
-                  </a>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Financial Stat Cards */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <div className="rounded-none bg-stone-light p-3 border border-navy/10">
                 <p className="text-xs text-steel">Gross Raised</p>
                 <p className="mt-1 text-lg font-semibold text-navy">
@@ -995,7 +1034,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
             </div>
 
             {/* Metadata DL */}
-            <dl className="grid grid-cols-2 gap-4 border-t border-navy/10 pt-4 text-xs">
+            <dl className="grid grid-cols-2 gap-4 border-t border-navy/10 pt-4 text-xs sm:grid-cols-3 md:grid-cols-5">
               <div>
                 <dt className="text-steel">Location</dt>
                 <dd className="mt-0.5 font-medium text-navy">

@@ -43,6 +43,7 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
 
   const [userCategory, setUserCategory] = useState<Option | null>(null);
   const [userStatus, setUserStatus] = useState<Option | null>(null);
+  const [userWebPortal, setUserWebPortal] = useState<boolean | null>(null);
 
   const { data: categories = [], isLoading: categoriesLoading } = useProjectCategoriesQuery();
 
@@ -72,6 +73,11 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
     const current = projectData?.status || (campaign.status as ProjectStatus);
     return STATUS_OPTIONS.find((s) => s.value === current) || STATUS_OPTIONS[0];
   }, [userStatus, projectData?.status, campaign.status]);
+
+  const enableWebPortal = useMemo(() => {
+    if (userWebPortal !== null) return userWebPortal;
+    return Boolean(projectData?.settings?.webPortalEnabled ?? campaign.settings?.webPortalEnabled);
+  }, [userWebPortal, projectData?.settings?.webPortalEnabled, campaign.settings?.webPortalEnabled]);
 
   function fail(message: string) {
     setError(message);
@@ -121,6 +127,7 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
       commissionPercentage: commission ? Number(commission) : undefined,
       status: (selectedStatus?.value as ProjectStatus) || undefined,
       acceptsContributions,
+      enableWebPortal,
     };
 
     setSaving(true);
@@ -410,6 +417,36 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
             />
             <label htmlFor="edit-acceptsContributions" className="text-xs font-medium text-navy cursor-pointer">
               Accept Contributions (Open for donations via USSD and Mobile Money)
+            </label>
+          </div>
+
+          {/* Web Portal Opt-In Toggle */}
+          <div className="rounded-xl border border-navy/15 bg-stone-light/40 p-3.5 transition-colors hover:border-navy/30">
+            <label
+              htmlFor="edit-web-portal"
+              className="flex items-start gap-3 cursor-pointer select-none"
+            >
+              <input
+                type="checkbox"
+                id="edit-web-portal"
+                checked={enableWebPortal}
+                onChange={(e) => setUserWebPortal(e.target.checked)}
+                disabled={saving}
+                className="mt-0.5 h-4 w-4 rounded accent-navy focus:ring-navy"
+              />
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-navy">
+                    Enable Online Web Donation Portal
+                  </span>
+                  <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+                    +1% commission
+                  </span>
+                </div>
+                <p className="text-[11px] text-steel leading-relaxed">
+                  Attracts an additional 1% platform commission on web contributions. Gives donors a dedicated web portal to donate via Cards, Apple Pay, and Mobile Money.
+                </p>
+              </div>
             </label>
           </div>
         </form>

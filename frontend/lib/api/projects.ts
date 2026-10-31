@@ -48,12 +48,17 @@ export interface BackendProject {
   minAmount: string;
   maxAmount: string;
   commissionPercentage?: string | number;
+  enableWebPortal?: boolean;
   status: ProjectStatus;
   acceptsContributions: boolean;
   welcomeMessage?: string | null;
   startDate?: string | null;
   endDate?: string | null;
-  settings?: Record<string, unknown>;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
   organization?: { id: string; name: string } | null;
   category?: ProjectCategory | null;
   purposes?: ProjectContributionPurpose[];
@@ -80,6 +85,7 @@ export interface CreateProjectInput {
   categoryId?: string;
   organizationId?: string;
   commissionPercentage?: string | number;
+  enableWebPortal?: boolean;
   status?: ProjectStatus;
 }
 

@@ -22,6 +22,11 @@ export type ActivityLogEntry = {
   oldValues?: Record<string, unknown>;
   newValues?: Record<string, unknown>;
   createdAt: string;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
 };
 
 export type Fund = {
@@ -37,6 +42,11 @@ export type Fund = {
   commissionPercentage?: string | number;
   transactions: number;
   createdAt: string;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
 };
 
 export type FundCounts = {
@@ -66,6 +76,11 @@ export type ContributionRow = {
   status: Transaction["status"];
   purposeName: string | null;
   createdAt: string;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
 };
 
 export type Transaction = {
@@ -78,6 +93,11 @@ export type Transaction = {
   hostName: string;
   contributorName: string | null;
   createdAt: string;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
 };
 
 export type WithdrawalStatus = "PENDING" | "PROCESSING" | "DONE" | "REJECTED";
@@ -101,6 +121,11 @@ export type Withdrawal = {
   reviewedByName: string | null;
   reviewedAt?: string;
   createdAt: string;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
 };
 
 export type WithdrawalCounts = {
@@ -264,6 +289,7 @@ export type CreateCampaignForHostInput = {
   startDate: string;
   endDate?: string;
   commissionPercentage?: number;
+  enableWebPortal?: boolean;
 };
 
 export function useCreateCampaignForHost() {

@@ -331,6 +331,14 @@ export default function AdminCampaigns() {
                             <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
                               {campaign.commissionPercentage ?? "14"}% fee
                             </span>
+                            {campaign.settings?.webPortalEnabled && (
+                              <span
+                                className="inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-200/60"
+                                title="Web donation portal enabled (+1% commission)"
+                              >
+                                Web (+1%)
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -432,6 +440,14 @@ export default function AdminCampaigns() {
                           <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
                             {campaign.commissionPercentage ?? "14"}% fee
                           </span>
+                          {campaign.settings?.webPortalEnabled && (
+                            <span
+                              className="inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-200/60"
+                              title="Web donation portal enabled (+1% commission)"
+                            >
+                              Web (+1%)
+                            </span>
+                          )}
                         </div>
                       </div>
                       <CampaignStatusBadge status={campaign.status} />
@@ -620,6 +636,16 @@ export default function AdminCampaigns() {
                   {reviewingCampaign.commissionPercentage}%
                 </p>
               )}
+              <p>
+                <strong className="text-navy">Web Portal:</strong>{" "}
+                {reviewingCampaign.settings?.webPortalEnabled ? (
+                  <span className="font-semibold text-emerald-700">
+                    Enabled (+1% commission)
+                  </span>
+                ) : (
+                  <span className="text-steel">Disabled</span>
+                )}
+              </p>
             </div>
 
             {reviewAction === "APPROVE" ? (

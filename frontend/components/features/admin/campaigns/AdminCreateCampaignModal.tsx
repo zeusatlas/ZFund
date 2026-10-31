@@ -35,6 +35,7 @@ export default function AdminCreateCampaignModal({ onClose, onCreated }: Readonl
   const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
   const handleCodeStatus = useCallback((status: CodeStatus) => setCodeStatus(status), []);
   const [error, setError] = useState("");
+  const [enableWebPortal, setEnableWebPortal] = useState(false);
   /** Which submit button was pressed: "Create & configure steps" or plain "Create campaign". */
   const configureAfterCreate = useRef(false);
 
@@ -111,6 +112,7 @@ export default function AdminCreateCampaignModal({ onClose, onCreated }: Readonl
         startDate: `${startDate}T00:00:00.000Z`,
         endDate: closing ? `${closing}T23:59:59.000Z` : undefined,
         commissionPercentage: commission ? Number(commission) : undefined,
+        enableWebPortal,
       });
       onCreated(
         {
@@ -343,6 +345,36 @@ export default function AdminCreateCampaignModal({ onClose, onCreated }: Readonl
             disabled={busy}
             className={`${inputClass} mt-2 resize-y`}
           />
+        </div>
+
+        {/* Web Portal Opt-In */}
+        <div className="rounded-xl border border-navy/15 bg-stone-light/40 p-3.5 transition-colors hover:border-navy/30">
+          <label
+            htmlFor="admin-campaign-web-portal"
+            className="flex items-start gap-3 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              id="admin-campaign-web-portal"
+              checked={enableWebPortal}
+              onChange={(e) => setEnableWebPortal(e.target.checked)}
+              disabled={busy}
+              className="mt-0.5 h-4 w-4 rounded accent-navy focus:ring-navy"
+            />
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-navy">
+                  Enable Online Web Donation Portal
+                </span>
+                <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+                  +1% commission
+                </span>
+              </div>
+              <p className="text-[11px] text-steel leading-relaxed">
+                Attracts an additional 1% platform commission on web contributions. Gives donors a dedicated web portal to donate via Cards, Apple Pay, and Mobile Money.
+              </p>
+            </div>
+          </label>
         </div>
 
         {error && (

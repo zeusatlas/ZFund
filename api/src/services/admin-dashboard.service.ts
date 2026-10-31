@@ -45,6 +45,7 @@ export interface HostSummary {
   fundsIssued: string;
   lastActiveAt: Date | null;
   createdAt: Date;
+  settings?: Record<string, unknown>;
 }
 
 export interface Page<T> {
@@ -69,6 +70,7 @@ export interface FundSummary {
   targetAmount?: string;
   transactions: number;
   createdAt: Date;
+  settings?: Record<string, unknown>;
 }
 
 export interface TransactionSummary {
@@ -81,6 +83,7 @@ export interface TransactionSummary {
   hostName: string;
   contributorName: string | null;
   createdAt: Date;
+  settings?: Record<string, unknown>;
 }
 
 export interface FundCounts {
@@ -123,6 +126,7 @@ export interface ContributionRow {
   status: ContributionStatus;
   purposeName: string | null;
   createdAt: Date;
+  settings?: Record<string, unknown>;
 }
 
 export interface HostDetail {
@@ -143,6 +147,7 @@ export interface ActivityEntry {
   oldValues?: Record<string, unknown>;
   newValues?: Record<string, unknown>;
   createdAt: Date;
+  settings?: Record<string, unknown>;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -400,6 +405,7 @@ export class AdminDashboardService {
       targetAmount: p.targetAmount == null ? undefined : Number(p.targetAmount).toFixed(2),
       transactions: raised.get(p.id)?.count ?? 0,
       createdAt: p.createdAt,
+      settings: p.settings ?? undefined,
     }));
   }
 
