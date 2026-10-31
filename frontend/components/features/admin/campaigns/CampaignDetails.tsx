@@ -6,11 +6,11 @@ import {
   CircleDollarSign,
   ReceiptText,
   TrendingUp,
-  Users,
   Check,
   X,
   Loader2,
   SlidersHorizontal,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -24,6 +24,7 @@ import { useCampaign, useCampaignContributions, useUpdateCampaignStatus } from "
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
 import { ConfigureStepsDrawer } from "@/components/features/host/campaigns/ConfigureStepsDrawer";
+import AdminEditCampaignModal from "./AdminEditCampaignModal";
 
 type Tab = "overview" | "contributions";
 
@@ -114,6 +115,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
   const [commissionRate, setCommissionRate] = useState<number | string>(14);
   const [approveNotes, setApproveNotes] = useState("");
   const [configuringFlow, setConfiguringFlow] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const back = (
     <Link href="/admin/campaigns" className="inline-flex items-center gap-2 text-sm font-medium text-steel hover:text-navy">
@@ -177,6 +179,14 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-navy/15 bg-white px-3.5 py-2 text-xs font-medium text-navy hover:bg-stone hover:border-navy/30 transition-colors shadow-2xs"
+              >
+                <Pencil size={13} className="text-steel" />
+                Edit
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setConfigureAfterApprove(true);
                   setCommissionRate(campaign.commissionPercentage ? Number(campaign.commissionPercentage) : 14);
@@ -219,6 +229,14 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-navy/15 bg-white px-3.5 py-2 text-xs font-medium text-navy hover:bg-stone hover:border-navy/30 transition-colors shadow-2xs"
+              >
+                <Pencil size={13} className="text-steel" />
+                Edit campaign
+              </button>
               <button
                 type="button"
                 onClick={() => setConfiguringFlow(true)}
@@ -450,6 +468,17 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
         open={configuringFlow}
         onClose={() => setConfiguringFlow(false)}
       />
+
+      {editing && (
+        <AdminEditCampaignModal
+          campaign={campaign}
+          onClose={() => setEditing(false)}
+          onUpdated={() => {
+            setEditing(false);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -59,6 +59,7 @@ export function projectToCampaign(project: BackendProject): Campaign {
   return {
     id: project.id,
     name: project.name,
+    slug: project.slug || undefined,
     eventCode: project.eventCode,
     location: project.welcomeMessage || "Ghana",
     category: project.category?.name || "General Fundraising",

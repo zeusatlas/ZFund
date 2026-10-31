@@ -16,8 +16,11 @@ import {
   Eye,
   SlidersHorizontal,
   Send,
+  AlertCircle,
   LayoutGrid,
   List,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -105,6 +108,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [deletingCampaign, setDeletingCampaign] = useState<Campaign | null>(null);
+  const [resubmittingCampaign, setResubmittingCampaign] = useState<Campaign | null>(null);
   const [configuringFlowCampaign, setConfiguringFlowCampaign] = useState<Campaign | null>(null);
 
   function getCampaignMenuItems(campaign: Campaign): RowMenuItem[] {
@@ -127,11 +131,12 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
     ];
 
     if (isDraftOrRejected) {
+      const isRejected = campaign.rawStatus === "REJECTED";
       items.push(
         {
-          label: "Submit for review",
+          label: isRejected ? "Resubmit for review" : "Submit for review",
           icon: <Send size={14} className="text-steel" />,
-          onSelect: () => handleSubmitForReview(campaign),
+          onSelect: () => (isRejected ? setResubmittingCampaign(campaign) : handleSubmitForReview(campaign)),
         },
         {
           label: "Edit campaign",
@@ -181,6 +186,29 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
     }
   }
 
+  async function handleResubmit(campaign: Campaign) {
+    try {
+      await updateStatusMutation.mutateAsync({
+        id: campaign.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        status: "PENDING_REVIEW" as any,
+      });
+      toast.success(
+        `Campaign "${campaign.name}" resubmitted for admin review!`
+      );
+      setResubmittingCampaign(null);
+      refetch();
+    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiErr = err as any;
+      const msg =
+        apiErr?.response?.data?.message ||
+        apiErr?.message ||
+        "Failed to resubmit campaign for review.";
+      toast.error(msg);
+    }
+  }
+
   async function confirmDelete() {
     if (!deletingCampaign) return;
     try {
@@ -200,9 +228,17 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
   }
 
   const filtered = campaigns
-    .filter(
-      (campaign) =>
-        (status === "All" || campaign.status === status) &&
+    .filter((campaign) => {
+      const matchesStatus =
+        status === "All" ||
+        (status === "Rejected"
+          ? campaign.rawStatus === "REJECTED"
+          : status === "Draft"
+            ? (campaign.status === "Draft" || campaign.rawStatus === "DRAFT") && campaign.rawStatus !== "REJECTED"
+            : campaign.status === status);
+
+      return (
+        matchesStatus &&
         [
           campaign.name,
           campaign.location,
@@ -213,7 +249,8 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
           .join(" ")
           .toLowerCase()
           .includes(query.trim().toLowerCase())
-    )
+      );
+    })
     .sort((a, b) => {
       if (sort === "raised") {
         return (b.raised || 0) - (a.raised || 0);
@@ -348,11 +385,15 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
             role="group"
             aria-label="Filter by campaign status"
           >
-            {["All", "Active", "Upcoming", "Completed", "Draft"].map((filter) => {
+            {["All", "Active", "Upcoming", "Completed", "Draft", "Rejected"].map((filter) => {
               const count =
                 filter === "All"
                   ? campaigns.length
-                  : campaigns.filter((c) => c.status === filter).length;
+                  : filter === "Rejected"
+                    ? campaigns.filter((c) => c.rawStatus === "REJECTED").length
+                    : filter === "Draft"
+                      ? campaigns.filter((c) => (c.status === "Draft" || c.rawStatus === "DRAFT") && c.rawStatus !== "REJECTED").length
+                      : campaigns.filter((c) => c.status === filter).length;
               return (
                 <button
                   type="button"
@@ -536,6 +577,40 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                       </p>
                     </div>
                   </div>
+
+                  {campaign.rawStatus === "REJECTED" && (
+                    <div
+                      className="mt-4 rounded-xl border border-crimson/25 bg-crimson/5 p-3.5 space-y-2.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-crimson">
+                        <AlertCircle size={14} className="shrink-0" />
+                        <span>Campaign Rejected by Admin</span>
+                      </div>
+                      <p className="text-[11px] text-crimson/85 leading-relaxed">
+                        This campaign was rejected. Please review or edit your campaign details and resubmit for approval.
+                      </p>
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditingCampaign(campaign)}
+                          className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg border border-navy/20 bg-white px-2.5 py-1.5 text-xs font-medium text-navy hover:bg-stone transition-colors shadow-2xs"
+                        >
+                          <Pencil size={12} className="text-steel" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setResubmittingCampaign(campaign)}
+                          disabled={updateStatusMutation.isPending}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-steel transition-colors shadow-xs"
+                        >
+                          <Send size={12} />
+                          Resubmit
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Bottom: Contributors count and created date */}
@@ -658,6 +733,18 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                       status={campaign.status}
                       rawStatus={campaign.rawStatus}
                     />
+                    {campaign.rawStatus === "REJECTED" && (
+                      <button
+                        type="button"
+                        onClick={() => setResubmittingCampaign(campaign)}
+                        disabled={updateStatusMutation.isPending}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-steel transition-colors shadow-xs"
+                        title="Resubmit campaign for review"
+                      >
+                        <Send size={12} />
+                        <span>Resubmit</span>
+                      </button>
+                    )}
                     <RowMenu
                       label={`Actions for ${campaign.name}`}
                       items={getCampaignMenuItems(campaign)}
@@ -677,7 +764,7 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
           eyebrow={viewingCampaign.category}
           onClose={() => setViewingCampaign(null)}
           footer={
-            <div className="flex justify-between items-center w-full">
+            <div className="flex flex-wrap justify-between items-center gap-3 w-full">
               <button
                 type="button"
                 onClick={() => {
@@ -690,17 +777,70 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                 <SlidersHorizontal size={14} className="text-steel" />
                 Configure USSD steps
               </button>
-              <button
-                type="button"
-                onClick={() => setViewingCampaign(null)}
-                className="rounded-xl border border-navy/20 bg-white px-5 py-2 text-sm font-medium hover:bg-stone transition-colors"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                {viewingCampaign.rawStatus === "REJECTED" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const camp = viewingCampaign;
+                      setViewingCampaign(null);
+                      setResubmittingCampaign(camp);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-steel transition-colors shadow-sm"
+                  >
+                    <Send size={14} />
+                    Resubmit for review
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setViewingCampaign(null)}
+                  className="rounded-xl border border-navy/20 bg-white px-5 py-2 text-sm font-medium hover:bg-stone transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           }
         >
           <div className="space-y-5">
+            {viewingCampaign.rawStatus === "REJECTED" && (
+              <div className="rounded-xl border border-crimson/25 bg-crimson/5 p-4 flex items-start gap-3">
+                <AlertCircle size={18} className="text-crimson shrink-0 mt-0.5" />
+                <div className="flex-1 text-xs">
+                  <p className="font-semibold text-crimson">This campaign was rejected by administrator</p>
+                  <p className="text-steel mt-1 leading-relaxed">
+                    Review your campaign details and USSD menu configuration. When ready, edit any details and click &quot;Resubmit for review&quot;.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const camp = viewingCampaign;
+                        setViewingCampaign(null);
+                        setEditingCampaign(camp);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-navy/20 bg-white px-3 py-1.5 text-xs font-medium text-navy hover:bg-stone transition-colors"
+                    >
+                      <Pencil size={12} />
+                      Edit details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const camp = viewingCampaign;
+                        setViewingCampaign(null);
+                        setResubmittingCampaign(camp);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-steel transition-colors"
+                    >
+                      <Send size={12} />
+                      Resubmit now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Status & USSD Pill */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy/10 pb-4">
               <StatusBadge
@@ -733,6 +873,42 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                 </div>
               )}
             </div>
+
+            {/* Public Web Portal Link for Donors Abroad & Online */}
+            {viewingCampaign.eventCode && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-navy/10 bg-slate-50/80 p-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <Globe size={14} className="text-navy" />
+                  <span className="text-steel">Web Portal (Online & Abroad):</span>
+                  <span className="font-mono font-bold text-navy">
+                    /c/{viewingCampaign.eventCode}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `${window.location.origin}/c/${viewingCampaign.eventCode}`;
+                      navigator.clipboard.writeText(url);
+                      toast.success("Public donation link copied!");
+                    }}
+                    className="inline-flex items-center gap-1 font-semibold text-navy hover:text-gold transition-colors"
+                  >
+                    <Copy size={12} />
+                    <span>Copy Link</span>
+                  </button>
+                  <a
+                    href={`/c/${viewingCampaign.eventCode}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-semibold text-navy hover:text-gold transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    <span>Open Portal</span>
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* Financial Stat Cards */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -917,6 +1093,76 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
             </p>
             <p className="text-xs text-steel leading-relaxed">
               This campaign is currently in <span className="font-semibold text-navy">Draft</span> status. Deleting it will permanently remove the record from PostgreSQL.
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* Resubmit Rejected Campaign Confirmation Modal */}
+      {resubmittingCampaign && (
+        <Modal
+          title="Resubmit campaign for review"
+          eyebrow="Review & Approval"
+          onClose={() => {
+            if (!updateStatusMutation.isPending) setResubmittingCampaign(null);
+          }}
+          footer={
+            <div className="flex flex-wrap items-center justify-end gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setResubmittingCampaign(null)}
+                disabled={updateStatusMutation.isPending}
+                className="rounded-xl border border-navy/20 bg-white px-4 py-2.5 text-sm font-medium hover:bg-stone disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleResubmit(resubmittingCampaign)}
+                disabled={updateStatusMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-xl bg-navy px-5 py-2.5 text-sm font-medium text-white hover:bg-steel disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {updateStatusMutation.isPending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Resubmitting...
+                  </>
+                ) : (
+                  <>
+                    <Send size={15} />
+                    Confirm &amp; Resubmit
+                  </>
+                )}
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="rounded-xl bg-stone-light p-3.5 border border-navy/10 space-y-1.5 text-xs text-steel">
+              <p>
+                <strong className="text-navy">Campaign:</strong> {resubmittingCampaign.name}
+              </p>
+              {resubmittingCampaign.eventCode && (
+                <p>
+                  <strong className="text-navy">USSD Code:</strong> *920*969*
+                  {resubmittingCampaign.eventCode}#
+                </p>
+              )}
+              <p>
+                <strong className="text-navy">Category:</strong> {resubmittingCampaign.category}
+              </p>
+              {resubmittingCampaign.goal > 0 && (
+                <p>
+                  <strong className="text-navy">Goal:</strong> {money(resubmittingCampaign.goal)}
+                </p>
+              )}
+            </div>
+
+            <p className="text-xs text-steel leading-relaxed">
+              Resubmitting this campaign will change its status from <strong className="text-crimson">Rejected</strong> to <strong className="text-navy">Pending Review</strong>.
+            </p>
+            <p className="text-xs text-steel leading-relaxed">
+              Platform administrators will review your campaign details and approve it to go live on the USSD network.
             </p>
           </div>
         </Modal>

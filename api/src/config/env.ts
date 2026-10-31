@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // Load .env file
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 // Helper to parse boolean strings correctly (z.coerce.boolean parses any non-empty string like "false" as true)
 const booleanEnv = (defaultValue: boolean = false) =>
@@ -82,6 +83,12 @@ const envSchema = z.object({
       "239d7edb7e27c718f0f662eb5779f26930c74cd909d95113b886349802b1579b"
     ),
   ROBSPAY_CALLBACK_URL: z.string().optional().default(""),
+
+  // Paystack (Card & International Payments)
+  PAYSTACK_SECRET_KEY: z.string().default("sk_test_mock_paystack_secret_key"),
+  PAYSTACK_PUBLIC_KEY: z.string().default("pk_test_mock_paystack_public_key"),
+  PAYSTACK_API_URL: z.string().default(process.env.PAYSTACK_BASE_URL || "https://api.paystack.co"),
+  PAYSTACK_CALLBACK_URL: z.string().optional().default(""),
 
   // SMS
   SMS_PROVIDER: z

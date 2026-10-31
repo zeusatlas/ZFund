@@ -7,6 +7,7 @@ import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { smsService } from './sms.service';
 import { auditService } from './audit.service';
+import { slugify, isReservedSlug } from '../common/utils/slug';
 import { User, UserStatus } from '../database/entities/user.entity';
 import { CreateUserInput, UpdateUserInput } from '../schemas/user.schemas';
 
@@ -74,11 +75,22 @@ export class UserService {
 
     // Sign-in is by SMS code, so no usable password is ever issued.
     const passwordHash = await CryptoUtil.hashPassword(CryptoUtil.generateRandomString(48));
+
+    let userSlug = slugify(`${input.firstName} ${input.lastName}`);
+    if (isReservedSlug(userSlug)) {
+      userSlug = `${userSlug}-${CryptoUtil.generateRandomString(4)}`;
+    }
+    const existingSlug = await this.userRepo.findOne({ where: { slug: userSlug } });
+    if (existingSlug) {
+      userSlug = `${userSlug}-${CryptoUtil.generateRandomString(4)}`;
+    }
+
     const user = this.userRepo.create({
       email: input.email,
       passwordHash,
       firstName: input.firstName,
       lastName: input.lastName,
+      slug: userSlug,
       phone: normalizePhone(input.phone),
       role: input.role,
       // Becomes ACTIVE on first successful login.
@@ -131,6 +143,17 @@ export class UserService {
     if (input.phone !== undefined) {
       await this.assertPhoneAvailable(input.phone, id);
       user.phone = normalizePhone(input.phone);
+    }
+    if (input.slug !== undefined) {
+      const cleanSlug = slugify(input.slug);
+      if (isReservedSlug(cleanSlug)) {
+        throw new ConflictError(`The handle '@${cleanSlug}' is a reserved system URL.`);
+      }
+      const existing = await this.userRepo.findOne({ where: { slug: cleanSlug } });
+      if (existing && existing.id !== id) {
+        throw new ConflictError(`The handle '@${cleanSlug}' is already claimed by another host.`);
+      }
+      user.slug = cleanSlug;
     }
     if (input.settings !== undefined) {
       user.settings = { ...(user.settings || {}), ...input.settings };

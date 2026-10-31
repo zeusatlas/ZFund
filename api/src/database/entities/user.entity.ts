@@ -35,6 +35,13 @@ export class User {
   @Column()
   lastName: string;
 
+  /**
+   * Unique public URL handle for the user / host (e.g. 'koranteng-kessie' for raisefundz.com/koranteng-kessie)
+   */
+  @Column({ type: 'varchar', length: 120, nullable: true, unique: true })
+  @Index('idx_user_slug')
+  slug?: string | null;
+
   @Column({ nullable: true })
   @Index('idx_user_phone')
   phone?: string;

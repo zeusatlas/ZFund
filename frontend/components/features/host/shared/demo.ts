@@ -9,6 +9,7 @@ export type Campaign = {
   status: CampaignStatus;
   created: string;
   closing: string;
+  slug?: string;
   startDate?: string;
   welcomeMessage?: string;
   eventCode?: string;

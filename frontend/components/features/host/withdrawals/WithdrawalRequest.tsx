@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowUpRight, Loader2, Wallet, X } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Loader2, Wallet, X, RotateCcw, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { money, type Campaign } from "@/components/features/host/shared/demo";
 import { availableForCampaign, type Withdrawal } from "@/components/features/host/withdrawals/withdrawals";
@@ -17,10 +17,16 @@ export function WithdrawalRequestDrawer({
   campaigns,
   withdrawals,
   onRequested,
+  resubmitItem = null,
+  open: externalOpen,
+  onClose: externalOnClose,
 }: {
   campaigns: Campaign[];
   withdrawals: Withdrawal[];
   onRequested: () => void;
+  resubmitItem?: Withdrawal | null;
+  open?: boolean;
+  onClose?: () => void;
 }) {
   const form = useRef<HTMLFormElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
@@ -28,15 +34,41 @@ export function WithdrawalRequestDrawer({
   const { data: me } = useMe();
   const settings = useHostSettings(me?.id);
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+
   const [error, setError] = useState("");
-  const [campaignId, setCampaignId] = useState("");
+  const [userCampaignId, setUserCampaignId] = useState<string | null>(null);
+  const [useCustomPayout, setUseCustomPayout] = useState(false);
+  const [userCustomMethod, setUserCustomMethod] = useState<"Mobile money" | "Bank transfer" | null>(null);
+  const [userCustomInstitution, setUserCustomInstitution] = useState<string | null>(null);
+  const [userCustomAccountNumber, setUserCustomAccountNumber] = useState<string | null>(null);
+  const [userCustomRecipientName, setUserCustomRecipientName] = useState<string | null>(null);
 
   const createMutation = useCreateWithdrawalMutation();
 
   const eligible = campaigns.filter(
     (campaign) => availableForCampaign(campaign.id, withdrawals, campaign.raised) >= 100
   );
+
+  const campaignId =
+    userCampaignId !== null
+      ? userCampaignId
+      : (resubmitItem?.campaignId || eligible[0]?.id || campaigns[0]?.id || "");
+
+  const customMethod =
+    userCustomMethod !== null
+      ? userCustomMethod
+      : (resubmitItem?.method === "Bank transfer" ? "Bank transfer" : "Mobile money");
+
+  const customInstitution =
+    userCustomInstitution !== null ? userCustomInstitution : (resubmitItem?.institution || "");
+
+  const customAccountNumber =
+    userCustomAccountNumber !== null ? userCustomAccountNumber : (resubmitItem?.accountNumber || "");
+
+  const customRecipientName =
+    userCustomRecipientName !== null ? userCustomRecipientName : (resubmitItem?.recipient || "");
 
   const selectedCampaign = campaigns.find((c) => c.id === campaignId);
   const available = availableForCampaign(
@@ -51,43 +83,52 @@ export function WithdrawalRequestDrawer({
 
   // Lock body scroll when drawer is open
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [open]);
+  }, [isOpen]);
+
+  const handleClose = useCallback(() => {
+    if (createMutation.isPending) return;
+    if (externalOnClose) {
+      externalOnClose();
+    } else {
+      setInternalOpen(false);
+    }
+  }, [createMutation.isPending, externalOnClose]);
 
   // Close on Escape key
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (!createMutation.isPending) setOpen(false);
+        handleClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, createMutation.isPending]);
+  }, [isOpen, handleClose]);
 
   useEffect(() => {
     if (error) errorRef.current?.focus();
   }, [error]);
 
-  function openDrawer() {
+  function handleOpen() {
     form.current?.reset();
     setError("");
-    const initialCampaign = eligible[0]?.id ?? campaigns[0]?.id ?? "";
-    setCampaignId(initialCampaign);
-    setOpen(true);
-  }
-
-  function closeDrawer() {
-    if (createMutation.isPending) return;
-    setOpen(false);
+    const initialCampaign = resubmitItem?.campaignId || eligible[0]?.id || campaigns[0]?.id || "";
+    setUserCampaignId(initialCampaign);
+    setUserCustomMethod(null);
+    setUserCustomInstitution(null);
+    setUserCustomAccountNumber(null);
+    setUserCustomRecipientName(null);
+    setUseCustomPayout(false);
+    setInternalOpen(true);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -95,8 +136,8 @@ export function WithdrawalRequestDrawer({
     if (createMutation.isPending) return;
     setError("");
 
-    if (!hasConfiguredPayout) {
-      const msg = "Please configure your default payout details in Settings before requesting a withdrawal.";
+    if (!useCustomPayout && !hasConfiguredPayout) {
+      const msg = "Please configure your default payout details in Settings, or enter custom destination details below.";
       setError(msg);
       toast.error(msg);
       return;
@@ -130,33 +171,64 @@ export function WithdrawalRequestDrawer({
       return;
     }
 
-    const institution =
-      settings.preferredPayout === "Bank transfer" && settings.defaultBranch
-        ? `${settings.defaultInstitution} (${settings.defaultBranch})`
-        : settings.defaultInstitution;
-
-    const finalPurpose = notesVal || (
-      settings.preferredPayout === "Bank transfer" && settings.defaultBranch
-        ? `Withdrawal to ${settings.defaultInstitution} (${settings.defaultBranch})`
-        : `Withdrawal request for ${selectedCampaign?.name || "Campaign"}`
-    );
+    let finalMethod: "Mobile money" | "Bank transfer";
+    let finalInstitution: string;
+    let finalAccount: string;
+    let finalRecipient: string;
 
     const hostName = [me?.firstName, me?.lastName].filter(Boolean).join(" ");
+
+    if (useCustomPayout) {
+      const customAcc = String(formData.get("customAccountNumber") || "").trim();
+      const customRec = String(formData.get("customRecipientName") || "").trim();
+      const customInst = String(formData.get("customInstitution") || "").trim();
+      const methodVal = String(formData.get("customMethod") || customMethod);
+
+      if (!customAcc || !customRec || !customInst) {
+        const msg = "Please fill in all payout destination fields (Network/Bank, Account number, Recipient name).";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      finalMethod = methodVal === "Bank transfer" ? "Bank transfer" : "Mobile money";
+      finalInstitution = customInst;
+      finalAccount = customAcc;
+      finalRecipient = customRec;
+    } else {
+      finalMethod = settings.preferredPayout === "Bank transfer" ? "Bank transfer" : "Mobile money";
+      finalInstitution =
+        settings.preferredPayout === "Bank transfer" && settings.defaultBranch
+          ? `${settings.defaultInstitution} (${settings.defaultBranch})`
+          : settings.defaultInstitution;
+      finalAccount = settings.defaultAccount;
+      finalRecipient = settings.defaultRecipient || hostName || "Campaign Host";
+    }
+
+    const finalPurpose = notesVal || (
+      finalMethod === "Bank transfer"
+        ? `Withdrawal to ${finalInstitution}`
+        : `Withdrawal request for ${selectedCampaign?.name || "Campaign"}`
+    );
 
     try {
       await createMutation.mutateAsync({
         campaignId: targetCampaignId,
         amount: numericAmount.toFixed(2),
-        method: settings.preferredPayout === "Bank transfer" ? "Bank transfer" : "Mobile money",
-        recipientName: settings.defaultRecipient || hostName || "Campaign Host",
-        institution,
-        accountNumber: settings.defaultAccount,
+        method: finalMethod,
+        recipientName: finalRecipient,
+        institution: finalInstitution,
+        accountNumber: finalAccount,
         purpose: finalPurpose,
       });
 
-      toast.success("Withdrawal request submitted for administrator review!");
+      toast.success(
+        resubmitItem
+          ? "Withdrawal request resubmitted for administrator review!"
+          : "Withdrawal request submitted for administrator review!"
+      );
       onRequested();
-      closeDrawer();
+      handleClose();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -166,25 +238,30 @@ export function WithdrawalRequestDrawer({
     }
   }
 
+  const isResubmission = Boolean(resubmitItem);
+  const defaultAmount = resubmitItem ? (resubmitItem.amount / 100).toFixed(2) : "";
+
   return (
     <>
-      <button
-        type="button"
-        onClick={openDrawer}
-        disabled={!campaigns.length}
-        className="inline-flex items-center gap-2 rounded-none bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
-      >
-        Request withdrawal
-        <ArrowUpRight size={17} aria-hidden="true" />
-      </button>
+      {externalOpen === undefined && (
+        <button
+          type="button"
+          onClick={handleOpen}
+          disabled={!campaigns.length}
+          className="inline-flex items-center gap-2 rounded-none bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+        >
+          Request withdrawal
+          <ArrowUpRight size={17} aria-hidden="true" />
+        </button>
+      )}
 
-      {open && (
+      {isOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden" role="presentation">
           {/* Backdrop overlay */}
           <button
             type="button"
             aria-label="Close withdrawal drawer"
-            onClick={closeDrawer}
+            onClick={handleClose}
             className="fixed inset-0 h-full w-full cursor-default bg-midnight/55 backdrop-blur-[1px] transition-opacity duration-300"
           />
 
@@ -202,18 +279,22 @@ export function WithdrawalRequestDrawer({
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Host Console</span>
                     <span className="text-xs text-steel">·</span>
-                    <span className="text-xs font-medium text-steel">Payouts</span>
+                    <span className="text-xs font-medium text-steel">
+                      {isResubmission ? "Resubmission" : "Payouts"}
+                    </span>
                   </div>
                   <h2 id="withdrawal-drawer-title" className="text-2xl font-medium tracking-tight">
-                    Request a withdrawal
+                    {isResubmission ? "Resubmit withdrawal request" : "Request a withdrawal"}
                   </h2>
                   <p id="withdrawal-drawer-description" className="mt-1 text-sm leading-relaxed text-steel">
-                    Select a campaign and enter the amount. Payment destination details are automatically loaded from your host settings.
+                    {isResubmission
+                      ? "Review previous feedback, make any corrections, and resubmit for administrator approval."
+                      : "Select a campaign and enter the amount. Payment destination details are automatically loaded from your host settings."}
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={closeDrawer}
+                  onClick={handleClose}
                   aria-label="Close withdrawal drawer"
                   className="shrink-0 rounded-none p-2 text-steel hover:bg-stone transition-colors"
                   disabled={createMutation.isPending}
@@ -225,6 +306,22 @@ export function WithdrawalRequestDrawer({
               {/* Drawer Form Body */}
               <form ref={form} onSubmit={submit} className="flex flex-1 flex-col overflow-hidden">
                 <div className="flex-1 overflow-y-auto space-y-5 p-6">
+                  {/* Resubmission Rejection Notice */}
+                  {resubmitItem && (
+                    <div className="border border-crimson/30 bg-crimson/5 p-4 rounded-none space-y-2">
+                      <div className="flex items-center gap-2 font-semibold text-crimson text-xs">
+                        <AlertCircle size={15} className="shrink-0" />
+                        <span>Previous Request Rejected ({resubmitItem.reference || resubmitItem.id})</span>
+                      </div>
+                      <p className="text-xs text-navy">
+                        <strong className="text-crimson">Reason:</strong> {resubmitItem.note}
+                      </p>
+                      <p className="text-[11px] text-steel leading-relaxed">
+                        Funds from the rejected request were returned to your available balance. Please review the campaign balance, amount, and payout account before resubmitting.
+                      </p>
+                    </div>
+                  )}
+
                   <p className="rounded-none bg-gold/10 p-3 text-xs leading-relaxed text-steel border border-gold/20">
                     Submitted requests undergo administrator review before funds are released to your destination account.
                   </p>
@@ -240,7 +337,7 @@ export function WithdrawalRequestDrawer({
                       id="withdraw-campaign"
                       name="campaignId"
                       value={campaignId}
-                      onChange={(event) => setCampaignId(event.target.value)}
+                      onChange={(event) => setUserCampaignId(event.target.value)}
                       className={field}
                       disabled={createMutation.isPending}
                     >
@@ -282,70 +379,154 @@ export function WithdrawalRequestDrawer({
                     </div>
                   </div>
 
-                  {/* Automatically Loaded Payout Details Card */}
-                  {hasConfiguredPayout ? (
-                    <div className="border border-navy/15 bg-white p-4 rounded-none space-y-3">
-                      <div className="flex items-center justify-between border-b border-navy/10 pb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center bg-navy/10 text-navy">
-                            <Wallet size={14} />
-                          </span>
-                          <span className="text-xs font-semibold uppercase tracking-wider text-navy">
-                            Payout Destination (Auto-Loaded from Settings)
-                          </span>
-                        </div>
-                        <Link
-                          href="/dashboard/settings"
-                          className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold transition-colors"
-                        >
-                          Edit in Settings <ArrowUpRight size={13} />
-                        </Link>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="text-steel block">Channel</span>
-                          <span className="font-semibold text-navy">{settings.preferredPayout}</span>
-                        </div>
-                        <div>
-                          <span className="text-steel block">
-                            {settings.preferredPayout === "Mobile money" ? "Network" : "Bank"}
-                          </span>
-                          <span className="font-semibold text-navy">{settings.defaultInstitution}</span>
-                        </div>
-                        {settings.preferredPayout === "Bank transfer" && settings.defaultBranch && (
-                          <div>
-                            <span className="text-steel block">Branch</span>
-                            <span className="font-semibold text-navy">{settings.defaultBranch}</span>
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-steel block">Recipient Name</span>
-                          <span className="font-semibold text-navy">{settings.defaultRecipient}</span>
-                        </div>
-                        <div>
-                          <span className="text-steel block">Destination Number</span>
-                          <span className="font-semibold font-mono text-navy">{settings.defaultAccount}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="border border-warning/30 bg-warning-soft/20 p-4 text-xs text-navy rounded-none space-y-2">
-                      <div className="flex items-center gap-2 font-semibold text-warning">
-                        <AlertCircle size={16} />
-                        <span>Payout destination not configured</span>
-                      </div>
-                      <p className="text-steel">
-                        Please configure your default Mobile Money or Bank account in Settings before submitting a withdrawal request.
-                      </p>
-                      <Link
-                        href="/dashboard/settings"
-                        className="inline-flex items-center gap-1.5 font-medium text-navy underline hover:text-gold"
+                  {/* Payout Destination Selector: Default vs Custom */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-navy">
+                        Payout Destination Account <span className="text-crimson">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setUseCustomPayout(!useCustomPayout)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-navy underline hover:text-gold"
                       >
-                        Configure Payout Defaults in Settings <ArrowUpRight size={13} />
-                      </Link>
+                        <Pencil size={12} />
+                        {useCustomPayout ? "Use Settings Defaults" : "Specify custom account"}
+                      </button>
                     </div>
-                  )}
+
+                    {!useCustomPayout ? (
+                      /* Auto-Loaded from Settings Card */
+                      hasConfiguredPayout ? (
+                        <div className="border border-navy/15 bg-white p-4 rounded-none space-y-3">
+                          <div className="flex items-center justify-between border-b border-navy/10 pb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-6 w-6 items-center justify-center bg-navy/10 text-navy">
+                                <Wallet size={14} />
+                              </span>
+                              <span className="text-xs font-semibold uppercase tracking-wider text-navy">
+                                Default Payout Account (from Settings)
+                              </span>
+                            </div>
+                            <Link
+                              href="/dashboard/settings"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold transition-colors"
+                            >
+                              Edit in Settings <ArrowUpRight size={13} />
+                            </Link>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <span className="text-steel block">Channel</span>
+                              <span className="font-semibold text-navy">{settings.preferredPayout}</span>
+                            </div>
+                            <div>
+                              <span className="text-steel block">
+                                {settings.preferredPayout === "Mobile money" ? "Network" : "Bank"}
+                              </span>
+                              <span className="font-semibold text-navy">{settings.defaultInstitution}</span>
+                            </div>
+                            {settings.preferredPayout === "Bank transfer" && settings.defaultBranch && (
+                              <div>
+                                <span className="text-steel block">Branch</span>
+                                <span className="font-semibold text-navy">{settings.defaultBranch}</span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-steel block">Recipient Name</span>
+                              <span className="font-semibold text-navy">{settings.defaultRecipient}</span>
+                            </div>
+                            <div>
+                              <span className="text-steel block">Destination Number</span>
+                              <span className="font-semibold font-mono text-navy">{settings.defaultAccount}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border border-warning/30 bg-warning-soft/20 p-4 text-xs text-navy rounded-none space-y-2">
+                          <div className="flex items-center gap-2 font-semibold text-warning">
+                            <AlertCircle size={16} />
+                            <span>Payout destination not configured</span>
+                          </div>
+                          <p className="text-steel">
+                            Please configure your default Mobile Money or Bank account in Settings, or click &quot;Specify custom account&quot; above.
+                          </p>
+                          <Link
+                            href="/dashboard/settings"
+                            className="inline-flex items-center gap-1.5 font-medium text-navy underline hover:text-gold"
+                          >
+                            Configure Payout Defaults in Settings <ArrowUpRight size={13} />
+                          </Link>
+                        </div>
+                      )
+                    ) : (
+                      /* Custom Payout Destination Form */
+                      <div className="border border-navy/20 bg-white p-4 rounded-none space-y-4">
+                        <p className="text-xs font-semibold text-navy">Custom Destination for this Request</p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <label htmlFor="custom-method" className="text-xs text-steel block">
+                              Payout Method
+                            </label>
+                            <select
+                              id="custom-method"
+                              name="customMethod"
+                              value={customMethod}
+                              onChange={(e) => setUserCustomMethod(e.target.value as "Mobile money" | "Bank transfer")}
+                              className={field}
+                              disabled={createMutation.isPending}
+                            >
+                              <option value="Mobile money">Mobile money</option>
+                              <option value="Bank transfer">Bank transfer</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor="custom-institution" className="text-xs text-steel block">
+                              {customMethod === "Mobile money" ? "Network (MTN, Telecel, AT)" : "Bank Name"}
+                            </label>
+                            <input
+                              id="custom-institution"
+                              name="customInstitution"
+                              required
+                              defaultValue={customInstitution || (resubmitItem?.institution || "")}
+                              placeholder={customMethod === "Mobile money" ? "e.g. MTN Mobile Money" : "e.g. GCB Bank"}
+                              className={field}
+                              disabled={createMutation.isPending}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="custom-account" className="text-xs text-steel block">
+                              Account / Phone Number
+                            </label>
+                            <input
+                              id="custom-account"
+                              name="customAccountNumber"
+                              required
+                              defaultValue={customAccountNumber || (resubmitItem?.accountNumber || "")}
+                              placeholder="e.g. 0244123456"
+                              className={field}
+                              disabled={createMutation.isPending}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="custom-recipient" className="text-xs text-steel block">
+                              Recipient Name
+                            </label>
+                            <input
+                              id="custom-recipient"
+                              name="customRecipientName"
+                              required
+                              defaultValue={customRecipientName || (resubmitItem?.recipient || "")}
+                              placeholder="e.g. Kwame Mensah"
+                              className={field}
+                              disabled={createMutation.isPending}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Amount Field */}
                   <div>
@@ -361,6 +542,7 @@ export function WithdrawalRequestDrawer({
                       max={available > 0 ? (available / 100).toFixed(2) : undefined}
                       step="0.01"
                       inputMode="decimal"
+                      defaultValue={defaultAmount}
                       placeholder="500.00"
                       className={field}
                       disabled={createMutation.isPending}
@@ -381,6 +563,7 @@ export function WithdrawalRequestDrawer({
                       name="notes"
                       maxLength={500}
                       rows={3}
+                      defaultValue={resubmitItem?.purpose || ""}
                       placeholder="Add any internal context or references for this request (optional)."
                       className={field + " resize-y"}
                       disabled={createMutation.isPending}
@@ -395,7 +578,7 @@ export function WithdrawalRequestDrawer({
                       className="mt-1 accent-navy rounded-none"
                       disabled={createMutation.isPending}
                     />
-                    I confirm this withdrawal request. Funds will be disbursed to the configured account above upon administrator review.
+                    I confirm this withdrawal request. Funds will be disbursed to the specified account upon administrator review.
                   </label>
 
                   {error && (
@@ -414,7 +597,7 @@ export function WithdrawalRequestDrawer({
                 <div className="flex flex-wrap items-center justify-end gap-3 border-t border-navy/10 bg-white p-5">
                   <button
                     type="button"
-                    onClick={closeDrawer}
+                    onClick={handleClose}
                     disabled={createMutation.isPending}
                     className="rounded-none border border-navy/20 bg-white px-5 py-3 text-sm font-medium hover:bg-stone disabled:opacity-50 transition-colors"
                   >
@@ -422,13 +605,22 @@ export function WithdrawalRequestDrawer({
                   </button>
                   <button
                     type="submit"
-                    disabled={createMutation.isPending || available < 100 || !hasConfiguredPayout}
+                    disabled={createMutation.isPending || available < 100 || (!useCustomPayout && !hasConfiguredPayout)}
                     className="inline-flex items-center gap-2 rounded-none bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
                   >
                     {createMutation.isPending && (
                       <Loader2 size={16} className="animate-spin" aria-hidden="true" />
                     )}
-                    {createMutation.isPending ? "Submitting request…" : "Submit request"}
+                    {createMutation.isPending ? (
+                      "Submitting request…"
+                    ) : isResubmission ? (
+                      <>
+                        <RotateCcw size={15} />
+                        Confirm &amp; Resubmit Request
+                      </>
+                    ) : (
+                      "Submit request"
+                    )}
                   </button>
                 </div>
               </form>

@@ -36,6 +36,7 @@ export interface ProjectContributionPurpose {
 export interface BackendProject {
   id: string;
   name: string;
+  slug?: string | null;
   description?: string | null;
   organizationId?: string | null;
   ownerId?: string;

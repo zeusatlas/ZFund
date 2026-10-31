@@ -11,6 +11,7 @@ import notificationRoutes from './notification.routes';
 import organizationRoutes from './organization.routes';
 import paymentRoutes from './payment.routes';
 import projectRoutes from './project.routes';
+import publicRoutes from './public.routes';
 import refundRoutes from './refund.routes';
 import settingsRoutes from './settings.routes';
 import userRoutes from './user.routes';
@@ -69,6 +70,9 @@ router.use('/admin', adminRoutes);
 
 // Public website contact form
 router.use('/contact', contactRoutes);
+
+// Public Campaign & Donation Portal
+router.use('/public', publicRoutes);
 
 // Audit Logging
 router.use('/audit', auditRoutes);

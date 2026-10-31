@@ -14,6 +14,7 @@ export const updateUserSchema = z.object({
   firstName: z.string().min(2).optional(),
   lastName: z.string().min(2).optional(),
   phone: z.string().optional(),
+  slug: z.string().min(3).max(120).optional(),
   settings: z.record(z.unknown()).optional(),
 });
 

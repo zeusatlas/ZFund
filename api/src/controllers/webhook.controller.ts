@@ -32,6 +32,29 @@ export class WebhookController {
     }
   }
 
+  /**
+   * Handles Paystack webhook notifications (e.g. charge.success)
+   */
+  async handlePaystackWebhook(req: Request, res: Response, _next?: NextFunction): Promise<void> {
+    try {
+      const data = req.body;
+      logger.info(
+        {
+          event: data?.event,
+          reference: data?.data?.reference,
+          status: data?.data?.status,
+        },
+        'Received Paystack webhook'
+      );
+
+      await paymentService.handlePaystackCallback(data);
+      res.sendStatus(200);
+    } catch (err: any) {
+      logger.error({ error: err?.message, stack: err?.stack }, 'Error handling Paystack webhook');
+      res.sendStatus(500);
+    }
+  }
+
 }
 
 export const webhookController = new WebhookController();
