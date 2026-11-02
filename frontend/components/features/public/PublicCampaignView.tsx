@@ -171,7 +171,7 @@ function ApplePayLogo() {
   );
 }
 
-function PaystackBadge() {
+function PayPalBadge() {
   return (
     <span
       className="inline-flex items-center justify-center rounded-lg border border-navy/10 bg-white px-2.5 py-1.5 shadow-2xs hover:border-navy/25 transition-colors"
@@ -1101,7 +1101,7 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
               <VisaLogo />
               <MastercardLogo />
               <ApplePayLogo />
-              <PaystackBadge />
+              <PayPalBadge />
             </div>
           </div>
 

@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Strip console.* calls from production bundles; dev keeps them.
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -387,7 +387,7 @@ export async function runSeeds(): Promise<void> {
       paymentMethodRepo.create({
         projectId: project1001.id,
         method: PaymentMethodType.CARD,
-        provider: 'PAYSTACK',
+        provider: 'ROBSPAY',
         isEnabled: true,
       }),
     ]);
@@ -557,7 +557,7 @@ export async function runSeeds(): Promise<void> {
       paymentMethodRepo.create({
         projectId: project1002.id,
         method: PaymentMethodType.CARD,
-        provider: 'PAYSTACK',
+        provider: 'ROBSPAY',
         isEnabled: true,
       }),
     ]);

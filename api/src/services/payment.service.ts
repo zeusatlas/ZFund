@@ -16,7 +16,6 @@ import { ProviderWebhookEvent } from '../database/entities/provider-webhook-even
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
 import { IPaymentProvider } from './payment-provider.interface';
 import { robspayProvider, RobspayProvider } from './robspay.provider';
-import { paystackProvider } from './paystack.provider';
 
 export interface InitiateUssdPaymentInput {
   msisdn: string;
@@ -36,19 +35,9 @@ export class PaymentService {
   private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
 
   /**
-   * Resolves the active payment provider (defaults to RobsPay for mobile money, Paystack for card)
+   * RobsPay handles every channel: hosted checkout for card, STK push for mobile money.
    */
-  async getProviderForProject(projectId?: string, channel?: PaymentChannel): Promise<IPaymentProvider> {
-    if (channel === PaymentChannel.CARD) {
-      return robspayProvider;
-    }
-    if (projectId) {
-      const projectMethod = await this.paymentMethodRepo.findOne({ where: { projectId, isEnabled: true } });
-      if (projectMethod?.provider) {
-        if (projectMethod.provider.toUpperCase() === 'ROBSPAY') return robspayProvider;
-        if (projectMethod.provider.toUpperCase() === 'PAYSTACK') return paystackProvider;
-      }
-    }
+  async getProviderForProject(_projectId?: string, _channel?: PaymentChannel): Promise<IPaymentProvider> {
     return this.currentProvider;
   }
 
@@ -659,38 +648,6 @@ export class PaymentService {
     }
   }
 
-  async handlePaystackCallback(eventPayload: Record<string, unknown>): Promise<void> {
-    const eventType = String(eventPayload.event || '');
-    const data = (eventPayload.data || {}) as Record<string, unknown>;
-    const eventId = String(data.id || '');
-    const reference = String(data.reference || '');
-
-    const existingEvent = await this.webhookEventRepo.findOne({
-      where: [{ eventId }, { reference, isProcessed: true }],
-    });
-
-    if (existingEvent && existingEvent.isProcessed) {
-      logger.info({ reference, eventType }, 'Paystack webhook already processed (idempotent skip)');
-      return;
-    }
-
-    const webhookRecord = this.webhookEventRepo.create({
-      provider: 'PAYSTACK',
-      eventType,
-      eventId,
-      reference,
-      rawPayload: eventPayload,
-      isProcessed: false,
-    });
-    await this.webhookEventRepo.save(webhookRecord);
-
-    if (eventType === 'charge.success') {
-      await this.processSuccessfulCharge(data, webhookRecord);
-    } else if (eventType === 'charge.failed') {
-      await this.processFailedCharge(data, webhookRecord);
-    }
-  }
-
   /**
    * Handles authenticated webhook event idempotently
    */
@@ -915,7 +872,7 @@ export class PaymentService {
       return paymentAttempt;
     }
 
-    const provider = paymentAttempt.provider === 'PAYSTACK' ? paystackProvider : this.currentProvider;
+    const provider = this.currentProvider;
     const verifyResult = await provider.verifyTransaction(paymentAttempt.providerReference || paymentAttempt.reference);
 
     if (verifyResult.status === 'success') {

@@ -90,12 +90,6 @@ const envSchema = z.object({
     ),
   ROBSPAY_CALLBACK_URL: z.string().optional().default(""),
 
-  // Paystack (Card & International Payments)
-  PAYSTACK_SECRET_KEY: z.string().default("sk_test_mock_paystack_secret_key"),
-  PAYSTACK_PUBLIC_KEY: z.string().default("pk_test_mock_paystack_public_key"),
-  PAYSTACK_API_URL: z.string().default(process.env.PAYSTACK_BASE_URL || "https://api.paystack.co"),
-  PAYSTACK_CALLBACK_URL: z.string().optional().default(""),
-
   // SMS
   SMS_PROVIDER: z
     .enum(["mock", "mnotify", "arkesel", "nalo"])
@@ -136,19 +130,13 @@ export type EnvConfig = z.infer<typeof envSchema>;
 function validateEnv(): EnvConfig {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
-    console.error("Invalid environment variables configuration:");
-    console.error(JSON.stringify(result.error.format(), null, 2));
-    throw new Error("Invalid environment configuration");
-  }
-
-  // Safety rule: In production, enforce that TYPEORM_SYNCHRONIZE is not accidentally turned on without explicit intention
-  if (
-    result.data.NODE_ENV === "production" &&
-    result.data.TYPEORM_SYNCHRONIZE
-  ) {
-    console.warn(
-      "WARNING: TYPEORM_SYNCHRONIZE is enabled in PRODUCTION environment. Ensure this is intentional and schema changes are audited."
-    );
+    // Console output is dev-only; in production the failing variable names ride on the thrown error instead.
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Invalid environment variables configuration:");
+      console.error(JSON.stringify(result.error.format(), null, 2));
+    }
+    const failing = result.error.issues.map((issue) => issue.path.join(".")).join(", ");
+    throw new Error(`Invalid environment configuration: ${failing}`);
   }
 
   return result.data;

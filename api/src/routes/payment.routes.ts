@@ -64,14 +64,6 @@ router.post(
   (req, res, next) => webhookController.handleRobspayWebhook(req, res, next)
 );
 
-/**
- * Dedicated Paystack Webhook endpoint
- */
-router.post(
-  '/webhook/paystack',
-  (req, res, next) => webhookController.handlePaystackWebhook(req, res, next)
-);
-
 
 
 export default router;

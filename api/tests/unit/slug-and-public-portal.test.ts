@@ -1,5 +1,4 @@
 import { isReservedSlug, slugify } from '../../src/common/utils/slug';
-import { PaystackProvider } from '../../src/services/paystack.provider';
 
 describe('Slug Utility & Public Portal Routing', () => {
   it('converts host names and campaign titles into clean URL-safe slugs', () => {
@@ -39,47 +38,5 @@ describe('Slug Utility & Public Portal Routing', () => {
 
     expect(matched).toBeDefined();
     expect(matched?.id).toBe('uuid-1');
-  });
-});
-
-describe('Paystack Provider for Card & International Payments', () => {
-  const provider = new PaystackProvider();
-
-  it('verifies provider code is PAYSTACK', () => {
-    expect(provider.code).toBe('PAYSTACK');
-  });
-
-  it('initializes card payment in test/mock mode with valid checkout details', async () => {
-    const result = await provider.initializePayment({
-      reference: 'ZF-PAY-TEST-001',
-      amount: '50.00',
-      currency: 'GHS',
-      email: 'donor@example.com',
-      channel: 'card',
-    });
-
-    expect(result.providerReference).toBe('ZF-PAY-TEST-001');
-    expect(result.authorizationUrl).toContain('https://checkout.paystack.com/');
-    expect(result.status).toBe('pending');
-  });
-
-  it('verifies transaction status correctly', async () => {
-    const verification = await provider.verifyTransaction('ZF-PAY-TEST-001');
-    expect(verification.status).toBe('success');
-    expect(verification.amount).toBe('50.00');
-    expect(verification.channel).toBe('card');
-  });
-
-  it('validates webhook HMAC signature', () => {
-    const payload = JSON.stringify({ event: 'charge.success', data: { reference: 'ZF-PAY-123' } });
-    const crypto = require('crypto');
-    const { env } = require('../../src/config/env');
-    const validSignature = crypto
-      .createHmac('sha512', env.PAYSTACK_SECRET_KEY)
-      .update(payload)
-      .digest('hex');
-
-    expect(provider.verifyWebhookSignature(payload, validSignature)).toBe(true);
-    expect(provider.verifyWebhookSignature(payload, 'invalid-signature')).toBe(false);
   });
 });

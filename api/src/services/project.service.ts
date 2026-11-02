@@ -249,12 +249,12 @@ export class ProjectService {
       })
     );
 
-    // Initialize default Card payment method (Paystack)
+    // Initialize default Card payment method (RobsPay hosted checkout)
     await this.paymentMethodRepo.save(
       this.paymentMethodRepo.create({
         projectId: savedProject.id,
         method: PaymentMethodType.CARD,
-        provider: 'PAYSTACK',
+        provider: 'ROBSPAY',
         isEnabled: true,
       })
     );
