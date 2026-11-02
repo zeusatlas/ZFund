@@ -67,7 +67,7 @@ function StatusBadge({
   } else if (rawStatus === "SUSPENDED") {
     label = "Suspended";
     style = "bg-crimson/10 text-crimson";
-  } else if (status === "Upcoming" || rawStatus === "SCHEDULED") {
+  } else if (status === "Upcoming") {
     label = "Upcoming";
     style = "bg-sky-50 text-sky-800 border border-sky-200/60";
   } else if (status === "Active" || rawStatus === "PUBLISHED" || rawStatus === "APPROVED") {

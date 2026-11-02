@@ -48,12 +48,12 @@ export function projectToCampaign(project: BackendProject): Campaign {
   const hasFutureStartDate = Boolean(project.startDate && new Date(project.startDate) > now);
   let resolvedStatus = statusMap[project.status] || "Active";
   if (
-    hasFutureStartDate &&
-    (project.status === "APPROVED" ||
-      project.status === "PUBLISHED" ||
-      project.status === "SCHEDULED")
+    project.status === "APPROVED" ||
+    project.status === "PUBLISHED" ||
+    project.status === "SCHEDULED"
   ) {
-    resolvedStatus = "Upcoming";
+    // Start date decides: SCHEDULED stays Upcoming only until the start date is reached.
+    resolvedStatus = hasFutureStartDate ? "Upcoming" : "Active";
   }
 
   return {

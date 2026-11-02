@@ -29,6 +29,7 @@ export default function RootLayout({
   return (
     <html
       lang="en-GH"
+      data-scroll-behavior="smooth"
       className={`${manrope.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className={`${manrope.className} min-h-full flex flex-col font-sans`}>

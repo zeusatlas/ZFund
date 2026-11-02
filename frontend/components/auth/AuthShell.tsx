@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ShieldCheck, Smartphone, TrendingUp } from "lucide-react";
@@ -25,14 +26,17 @@ export default function AuthShell({ children }: { children: ReactNode }) {
           className="absolute -bottom-40 -left-24 h-[460px] w-[460px] rounded-full bg-charcoal blur-2xl pointer-events-none"
         />
 
-        <Link
-          href="/"
-          className="absolute top-8 left-8 lg:top-12 lg:left-14 text-[22px] font-medium tracking-tight text-white hover:text-lime transition-colors z-20"
-        >
-          RaiseFundz
-        </Link>
-
         <div className="relative z-10 w-full max-w-md mx-auto my-auto flex flex-col justify-center space-y-10">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 text-[22px] font-medium tracking-tight text-white hover:text-lime transition-colors"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+              <Image src="/images/logo.png" alt="" width={28} height={28} priority />
+            </span>
+            RaiseFundz
+          </Link>
+
           <div>
             <p className="text-eyebrow mb-4 text-lime font-medium tracking-wider uppercase text-xs">
               Fundraising for Ghana
@@ -54,7 +58,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
 
           <div className="w-full rounded-3xl bg-white/[0.07] p-6 backdrop-blur border border-white/10 shadow-lg">
             <p className="text-eyebrow text-white/50 text-xs uppercase tracking-wider">Example campaign</p>
-            <p className="mt-1.5 text-[16px] font-medium text-white">Aburi Community Water Project</p>
+            <p className="mt-1.5 text-[16px] font-medium text-white">Atwease Community Water Project</p>
             <p className="mt-4 text-[30px] font-medium leading-none tracking-[-1px] text-white">GH₵ 28,475</p>
             <p className="mt-1 text-[12px] text-white/60">raised of GH₵ 50,000 goal</p>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/15">
@@ -69,8 +73,9 @@ export default function AuthShell({ children }: { children: ReactNode }) {
         <div className="auth-content w-full max-w-[420px] mx-auto">
           <Link
             href="/"
-            className="mb-8 block text-[22px] font-medium tracking-tight text-off-ink lg:hidden text-center"
+            className="mb-8 flex items-center justify-center gap-2.5 text-[22px] font-medium tracking-tight text-off-ink lg:hidden"
           >
+            <Image src="/images/logo.png" alt="" width={32} height={32} />
             RaiseFundz
           </Link>
           {children}

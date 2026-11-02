@@ -48,7 +48,7 @@ function TestimonialCard({
 /* ── Campaign example card ── */
 function CampaignCard({
   description, name, role, raised, goal,
-}: {
+}:{
   description: string; name: string; role: string; raised: string; goal: string;
 }) {
   return (
@@ -144,7 +144,7 @@ export default function LandingTrust() {
 
       {/* Section 11: Grand CTA (Deep yellow) */}
       <section className="relative overflow-hidden bg-white py-28 text-off-ink">
-        <div className="relative mx-auto max-w-300 px-6 text-center">
+        <div className="relative mx-auto max-w-350 px-6 text-center">
          
           <h2 className="mb-6 text-[34px] sm:text-[clamp(42px,5vw,72px)] font-bold leading-[0.93] tracking-[-1.5px] sm:tracking-[-2.5px] text-off-ink">
             Launch your fundraiser.
