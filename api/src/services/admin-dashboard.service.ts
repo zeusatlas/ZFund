@@ -1,4 +1,5 @@
 import { In, Not } from 'typeorm';
+import { describePaymentChannel, pickRelevantAttempt } from '../common/utils/payment-channel';
 import { AppDataSource } from '../config/database';
 import { NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
@@ -84,6 +85,8 @@ export interface TransactionSummary {
   contributorName: string | null;
   /** Name on the paying mobile money or card account, as reported by RobsPay. */
   accountName: string | null;
+  /** How it was paid, e.g. "MTN MoMo" or "Visa card". */
+  paymentMethod: string | null;
   createdAt: Date;
   settings?: Record<string, unknown>;
 }
@@ -125,6 +128,7 @@ export interface ContributionRow {
   contributorName: string | null;
   /** Name on the paying mobile money or card account, as reported by RobsPay. */
   accountName: string | null;
+  paymentMethod: string | null;
   msisdn: string | null;
   amount: string;
   status: ContributionStatus;
@@ -450,7 +454,8 @@ export class AdminDashboardService {
     const query = this.contributionRepo
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.project', 'project')
-      .leftJoinAndSelect('c.contributor', 'contributor');
+      .leftJoinAndSelect('c.contributor', 'contributor')
+      .leftJoinAndSelect('c.paymentAttempts', 'paymentAttempts');
     if (params.status) query.andWhere('c.status = :status', { status: params.status });
     if (params.search) {
       query.andWhere('(LOWER(c.reference) LIKE :s OR LOWER(project.name) LIKE :s OR LOWER(c.accountName) LIKE :s)', {
@@ -479,6 +484,7 @@ export class AdminDashboardService {
         hostName: (c.project && ownerNames.get(c.project.ownerId)) ?? 'Unknown host',
         contributorName: c.contributor?.name ?? null,
         accountName: c.accountName ?? null,
+        paymentMethod: describePaymentChannel(pickRelevantAttempt(c.paymentAttempts)),
         createdAt: c.createdAt,
       })),
     };
@@ -519,6 +525,7 @@ export class AdminDashboardService {
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.contributor', 'contributor')
       .leftJoinAndSelect('c.purpose', 'purpose')
+      .leftJoinAndSelect('c.paymentAttempts', 'paymentAttempts')
       .where('c.projectId = :id', { id });
     if (params.status) query.andWhere('c.status = :status', { status: params.status });
     if (params.search) {
@@ -540,6 +547,7 @@ export class AdminDashboardService {
         reference: c.reference,
         contributorName: c.contributor?.name ?? null,
         accountName: c.accountName ?? null,
+        paymentMethod: describePaymentChannel(pickRelevantAttempt(c.paymentAttempts)),
         msisdn: c.contributor?.msisdn ?? null,
         amount: c.amount,
         status: c.status,

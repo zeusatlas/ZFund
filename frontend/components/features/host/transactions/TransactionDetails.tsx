@@ -214,7 +214,6 @@ export default function TransactionDetails({
 
           <dl className="mt-5 divide-y divide-navy/10">
             {[
-              ["Full reference", currentTx.reference],
               ["Campaign", campaignName],
               ["Account name", currentTx.accountName ?? "Not available"],
               ["Donor phone", currentTx.phone],

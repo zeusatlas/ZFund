@@ -33,6 +33,8 @@ export interface BackendContribution {
   status: "INITIATED" | "PENDING" | "CONFIRMED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED";
   /** Name on the paying account, as reported by the payment provider. */
   accountName?: string | null;
+  /** How it was paid, e.g. "MTN MoMo" or "Visa card". */
+  paymentMethodLabel?: string | null;
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;

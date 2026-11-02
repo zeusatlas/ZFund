@@ -1,4 +1,5 @@
 import { AppDataSource } from '../config/database';
+import { formatPersonName } from '../common/utils/name';
 import { BadRequestError, NotFoundError } from '../common/errors/app-error';
 import { CryptoUtil } from '../common/utils/crypto';
 import { MoneyUtil } from '../common/utils/decimal';
@@ -52,6 +53,7 @@ export class PaymentService {
     paymentAttempt: PaymentAttempt;
     contribution: Contribution;
     authorizationUrl?: string;
+    modalUrl?: string;
   }> {
     const project = await this.projectRepo.findOne({
       where: { id: input.projectId },
@@ -215,6 +217,7 @@ export class PaymentService {
         paymentAttempt: savedAttempt,
         contribution: savedContribution,
         authorizationUrl: initResult.authorizationUrl,
+        modalUrl: initResult.modalUrl,
       };
     } catch (err) {
       savedAttempt.status = PaymentStatus.FAILED;
@@ -470,7 +473,8 @@ export class PaymentService {
     const rawStatus = String(data.status || '').toLowerCase().trim();
     const amount = data.amount !== undefined ? String(data.amount) : undefined;
     const paymentMethod = data.payment_method ? String(data.payment_method) : undefined;
-    const customerName = data.customer_name ? String(data.customer_name) : undefined;
+    const network = data.network ? String(data.network) : undefined;
+    const customerName = data.customer_name ? formatPersonName(String(data.customer_name)) : undefined;
 
     logger.info(
       { transactionId, telcoTransId, status: rawStatus, amount, paymentMethod, customerName },
@@ -554,6 +558,7 @@ export class PaymentService {
           ...paymentAttempt.metadata,
           telcoTransId,
           paymentMethod,
+          network,
           customerName,
           ...(customerName ? { accountName: customerName } : {}),
         };

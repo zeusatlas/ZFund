@@ -1,4 +1,5 @@
 import { AppDataSource } from '../config/database';
+import { describePaymentChannel, pickRelevantAttempt } from '../common/utils/payment-channel';
 import { NotFoundError } from '../common/errors/app-error';
 import { Contribution, ContributionStatus } from '../database/entities/contribution.entity';
 import { SystemRole } from '../common/types/auth';
@@ -127,6 +128,9 @@ export class ContributionService {
     query.orderBy('c.createdAt', 'DESC').skip(skip).take(limit);
 
     const [contributions, total] = await query.getManyAndCount();
+    contributions.forEach((c) => {
+      c.paymentMethodLabel = describePaymentChannel(pickRelevantAttempt(c.paymentAttempts));
+    });
     return { contributions, total, summary };
   }
 
@@ -140,6 +144,7 @@ export class ContributionService {
       throw new NotFoundError('Contribution not found');
     }
 
+    contribution.paymentMethodLabel = describePaymentChannel(pickRelevantAttempt(contribution.paymentAttempts));
     return contribution;
   }
 }

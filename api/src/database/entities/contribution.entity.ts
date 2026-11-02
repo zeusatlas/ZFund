@@ -69,6 +69,9 @@ export class Contribution {
   @Column({ type: 'jsonb', nullable: true, default: {} })
   metadata?: Record<string, unknown>;
 
+  /** How it was paid, e.g. "MTN MoMo" or "Visa card". Computed when read, not stored. */
+  paymentMethodLabel?: string | null;
+
   @ManyToOne(() => Project, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'projectId' })
   project: Project;

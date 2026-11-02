@@ -7,7 +7,7 @@ import MetricCard from "@/components/ui/MetricCard";
 import Pagination from "@/components/ui/Pagination";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { formatCount, formatMoney } from "@/lib/format";
+import { formatCount, formatMoney, formatPersonName } from "@/lib/format";
 import { useTransactions } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 
@@ -83,7 +83,8 @@ export default function AdminTransactions() {
                     <tr key={tx.id} className="text-sm">
                       <td className="px-5 py-4">
                         <p className="font-medium text-ink">{tx.reference}</p>
-                        <p className="mt-0.5 text-xs text-steel">{tx.accountName ?? tx.contributorName ?? "Anonymous contributor"}</p>
+                        <p className="mt-0.5 text-xs text-steel">{formatPersonName(tx.accountName ?? tx.contributorName) || "Anonymous contributor"}</p>
+                        {tx.paymentMethod && <p className="mt-0.5 text-xs font-medium text-navy">{tx.paymentMethod}</p>}
                       </td>
                       <td className="px-4 py-4">
                         <p className="text-ink">{tx.projectName}</p>

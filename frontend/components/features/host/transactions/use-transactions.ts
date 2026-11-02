@@ -72,7 +72,7 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
     rawStatus: c.status,
     date,
     time,
-    method,
+    method: c.paymentMethodLabel || method,
     note,
     paymentReference: firstAttempt?.reference || c.reference,
   };

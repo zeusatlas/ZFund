@@ -14,6 +14,8 @@ export interface InitializePaymentParams {
 export interface InitializePaymentResult {
   providerReference: string;
   authorizationUrl?: string;
+  /** Hosted checkout URL meant for the RobsPay pop-up; authorizationUrl is the full-page fallback. */
+  modalUrl?: string;
   accessCode?: string;
   status: string;
   rawResponse?: Record<string, unknown>;

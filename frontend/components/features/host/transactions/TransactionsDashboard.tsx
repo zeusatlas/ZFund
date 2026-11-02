@@ -19,6 +19,7 @@ import TransactionDetails from "@/components/features/host/transactions/Transact
 import { dateLabel, money } from "@/components/features/host/shared/demo";
 import { useCampaigns } from "@/components/features/host/campaigns/use-campaigns";
 import {
+  donorLabel,
   emptyFilters,
   transactionsCsv,
   type Transaction,
@@ -439,7 +440,7 @@ export default function TransactionsDashboard() {
                   id="transaction-search"
                   value={filters.query}
                   onChange={(event) => updateFilter("query", event.target.value)}
-                  placeholder="Reference or donor phone"
+                  placeholder="Donor name or phone"
                   className={controlClass + " pl-10"}
                 />
               </div>
@@ -576,18 +577,12 @@ export default function TransactionsDashboard() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <span className="font-medium text-navy">{item.id}</span>
+                        <span className="font-medium text-navy">{donorLabel(item)}</span>
                         <span className="mt-1 block text-xs text-steel">{item.phone}</span>
-                        {item.accountName && (
-                          <span className="block text-xs font-medium text-navy">{item.accountName}</span>
-                        )}
                       </div>
                       <div className="text-right">
                         <span className="font-medium tabular-nums text-navy block">
                           {money(item.amount)}
-                        </span>
-                        <span className="text-[11px] font-normal text-success">
-                          Net: {money(Math.round(item.amount * 0.86))}
                         </span>
                       </div>
                     </div>
@@ -627,12 +622,12 @@ export default function TransactionsDashboard() {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[1050px] text-left text-sm">
                   <caption className="sr-only">
-                    Filtered donation transactions. Open a reference for full payment details.
+                    Filtered donation transactions. Open a transaction for full payment details.
                   </caption>
                   <thead className="border-b border-navy/10 bg-stone/50 text-xs text-steel">
                     <tr>
                       {[
-                        "Reference/Donor",
+                        "Donor",
                         "Campaign",
                         "Amount",
                         "Payment method",
@@ -663,24 +658,20 @@ export default function TransactionsDashboard() {
                               event.stopPropagation();
                               setSelected(item);
                             }}
-                            aria-label={"View transaction " + item.reference}
+                            aria-label={"View transaction from " + donorLabel(item)}
                             className="rounded text-left font-medium text-navy underline decoration-navy/30 underline-offset-4"
                           >
-                            {item.phone}
+                            {donorLabel(item)}
                           </button>
-                          {item.accountName && (
-                            <span className="mt-1 block text-xs font-medium text-navy">{item.accountName}</span>
+                          {donorLabel(item) !== item.phone && (
+                            <span className="mt-1 block text-xs text-steel">{item.phone}</span>
                           )}
-                          <span className="mt-1 block text-xs text-steel">{item.reference}</span>
                         </td>
                         <td className="max-w-56 px-5 py-4 text-steel">
                           {campaignNames[item.campaignId] ?? item.campaignName ?? item.campaignId}
                         </td>
                         <td className="whitespace-nowrap px-5 py-4 text-right font-medium tabular-nums text-navy">
                           <div>{money(item.amount)}</div>
-                          <div className="text-[11px] font-normal text-success">
-                            Net: {money(Math.round(item.amount * 0.86))}
-                          </div>
                         </td>
                         <td className="px-5 py-4 text-steel">{item.method}</td>
                         <td className="px-5 py-4">

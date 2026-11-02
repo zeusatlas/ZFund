@@ -23,7 +23,7 @@ import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { formatCount, formatMoney } from "@/lib/format";
+import { formatCount, formatMoney, formatPersonName } from "@/lib/format";
 import { useCampaign, useCampaignContributions, useUpdateCampaignStatus } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
@@ -78,6 +78,7 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
                 <th scope="col" className="px-4 py-3">Reference</th>
                 <th scope="col" className="px-4 py-3">Donor</th>
                 <th scope="col" className="px-4 py-3">Phone</th>
+                <th scope="col" className="px-4 py-3">Method</th>
                 <th scope="col" className="px-4 py-3">Amount</th>
                 <th scope="col" className="px-4 py-3">Status</th>
                 <th scope="col" className="px-4 py-3">Date</th>
@@ -88,9 +89,10 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
                 <tr key={row.id} className="transition-colors hover:bg-stone-light/40">
                   <td className="px-4 py-3 font-mono text-xs text-navy">{row.reference}</td>
                   <td className="px-4 py-3 font-medium text-navy">
-                    {row.accountName || row.contributorName || "Anonymous"}
+                    {formatPersonName(row.accountName || row.contributorName) || "Anonymous"}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-steel">{row.msisdn}</td>
+                  <td className="px-4 py-3 text-xs text-navy">{row.paymentMethod ?? "–"}</td>
                   <td className="px-4 py-3 font-semibold text-navy">{formatMoney(row.amount)}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${contributionStatus[row.status]?.className ?? "bg-navy/8 text-steel"}`}>

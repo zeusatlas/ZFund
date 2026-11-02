@@ -118,6 +118,8 @@ export interface InitiateDonationInput {
 
 export interface InitiateDonationResult {
   authorizationUrl?: string;
+  /** RobsPay checkout URL for the on-page pop-up; authorizationUrl is the full-page fallback. */
+  modalUrl?: string;
   paymentAttempt: {
     id: string;
     reference: string;

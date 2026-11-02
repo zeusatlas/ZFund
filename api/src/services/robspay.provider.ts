@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { formatPersonName } from '../common/utils/name';
 import { CryptoUtil } from '../common/utils/crypto';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
@@ -111,7 +112,7 @@ export class RobspayProvider implements IPaymentProvider {
       });
       const name = String(data?.account_info?.account_name || '').trim();
       if (!name) return null;
-      return { accountName: name, network: detectGhanaNetwork(cleanPhone) };
+      return { accountName: formatPersonName(name), network: detectGhanaNetwork(cleanPhone) };
     } catch (err: any) {
       logger.warn(
         { error: err?.response?.data || err?.message, phone: cleanPhone },
@@ -131,10 +132,11 @@ export class RobspayProvider implements IPaymentProvider {
     returnUrl?: string;
     customerName?: string;
     customerEmail?: string;
-  }): Promise<{ authorizationUrl: string; accessCode?: string; data: any }> {
+  }): Promise<{ authorizationUrl: string; modalUrl?: string; accessCode?: string; data: any }> {
     if (this.isSimulated) {
       return {
         authorizationUrl: `https://checkout.test/${params.transactionId}`,
+        modalUrl: `https://checkout.test/modal/${params.transactionId}`,
         accessCode: params.transactionId,
         data: { status: 'success' },
       };
@@ -158,7 +160,12 @@ export class RobspayProvider implements IPaymentProvider {
       if (!checkout?.authorization_url) {
         throw new Error(data?.message || 'RobsPay did not return a checkout URL');
       }
-      return { authorizationUrl: checkout.authorization_url, accessCode: checkout.access_code, data };
+      return {
+        authorizationUrl: checkout.authorization_url,
+        modalUrl: checkout.modal_url,
+        accessCode: checkout.access_code,
+        data,
+      };
     } catch (err: any) {
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to start RobsPay checkout';
       logger.error(
@@ -280,6 +287,7 @@ export class RobspayProvider implements IPaymentProvider {
         return {
           providerReference: orderId,
           authorizationUrl: checkout.authorizationUrl,
+          modalUrl: checkout.modalUrl,
           accessCode: checkout.accessCode,
           status: 'pending',
           rawResponse: checkout.data,

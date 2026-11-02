@@ -1,3 +1,4 @@
+import { formatPersonName } from "@/lib/format";
 export type TransactionStatus = "Paid" | "Pending" | "Failed";
 export type Transaction = {
   id: string;
@@ -18,6 +19,10 @@ export type Transaction = {
   note: string;
   paymentReference?: string;
 };
+/** Who paid: the account name when known, then the name they gave, then their number. */
+export function donorLabel(item: Pick<Transaction, "accountName" | "donorName" | "phone">): string {
+  return formatPersonName(item.accountName || item.donorName) || item.phone;
+}
 export type Stats = {
   received: number;
   paidCount: number;
@@ -49,7 +54,7 @@ export function filterTransactions(items: Transaction[], filters: TransactionFil
     (filters.status === "All" || item.status === filters.status) &&
     (!filters.from || item.date >= filters.from) &&
     (!filters.to || item.date <= filters.to) &&
-    (!query || item.reference.toLowerCase().includes(query) || item.phone.includes(query) || (digits.length > 0 && item.phone.replace(/\D/g, "").includes(digits)))
+    (!query || item.reference.toLowerCase().includes(query) || donorLabel(item).toLowerCase().includes(query) || item.phone.includes(query) || (digits.length > 0 && item.phone.replace(/\D/g, "").includes(digits)))
   ).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
 }
 export function transactionSummary(items: Transaction[]) {

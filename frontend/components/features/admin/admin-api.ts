@@ -74,6 +74,7 @@ export type ContributionRow = {
   reference: string;
   contributorName: string | null;
   accountName?: string | null;
+  paymentMethod?: string | null;
   msisdn: string | null;
   amount: string;
   status: Transaction["status"];
@@ -96,6 +97,7 @@ export type Transaction = {
   hostName: string;
   contributorName: string | null;
   accountName?: string | null;
+  paymentMethod?: string | null;
   createdAt: string;
   settings?: {
     webPortalEnabled?: boolean;

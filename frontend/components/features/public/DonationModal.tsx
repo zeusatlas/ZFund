@@ -6,13 +6,12 @@ import {
   Smartphone,
   CheckCircle2,
   Loader2,
-  ShieldCheck,
   AlertCircle,
   ExternalLink,
-  Lock,
 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatPersonName } from "@/lib/format";
+import { loadRobsPayCheckout } from "@/lib/robspay-checkout";
 import {
   initiatePublicDonation,
   lookupMobileMoneyAccount,
@@ -51,6 +50,7 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
     channel: string;
   } | null>(null);
   const [waitingForMomo, setWaitingForMomo] = useState(false);
+  const [confirmingCard, setConfirmingCard] = useState(false);
 
   const finalAmount = customAmount ? customAmount : amount;
   const numAmount = parseFloat(finalAmount || "0");
@@ -95,6 +95,33 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
       clearTimeout(timer);
     };
   }, [phone, channel]);
+
+  // RobsPay reports success to the pop-up first; confirm it on our side before showing the thank-you.
+  function confirmCardPayment(ref: string, paidAmount: string) {
+    setConfirmingCard(true);
+    let attempts = 0;
+    const finish = () => {
+      setConfirmingCard(false);
+      setSuccessData({ reference: ref, amount: paidAmount, channel: "card" });
+    };
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const verification = await verifyDonationPayment(ref);
+        if (verification.status === "SUCCESSFUL" || verification.status === "success") {
+          clearInterval(interval);
+          finish();
+          return;
+        }
+      } catch {
+        // Ignore polling errors; the pop-up already reported success.
+      }
+      if (attempts >= 10) {
+        clearInterval(interval);
+        finish();
+      }
+    }, 3000);
+  }
 
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
@@ -146,15 +173,32 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
         channel,
         email: email.trim() || undefined,
         msisdn: phone.trim() || undefined,
-        name: isAnonymous ? "Anonymous" : fullName.trim() || undefined,
+        name: isAnonymous ? "Anonymous" : formatPersonName(fullName) || undefined,
         isAnonymous,
         callbackUrl,
       });
 
-      // Card: RobsPay hosted checkout collects the card details, so send the donor there
-      if (channel === "card" && result.authorizationUrl) {
-        window.location.href = result.authorizationUrl;
-        return;
+      // Card: RobsPay collects the card details. Open their form as a pop-up on this page, and fall back
+      // to the full-page checkout if the pop-up script cannot load.
+      if (channel === "card") {
+        const ref = result.paymentAttempt.reference;
+        if (result.modalUrl) {
+          try {
+            const checkout = await loadRobsPayCheckout();
+            checkout.open({
+              url: result.modalUrl,
+              onSuccess: () => confirmCardPayment(ref, numAmount.toFixed(2)),
+              onClose: () => setIsSubmitting(false),
+            });
+            return;
+          } catch {
+            // fall through to the redirect below
+          }
+        }
+        if (result.authorizationUrl) {
+          window.location.href = result.authorizationUrl;
+          return;
+        }
       }
 
       // If Mobile Money, prompt donor to check their handset for PIN approval
@@ -208,6 +252,7 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
   function handleReset() {
     setSuccessData(null);
     setWaitingForMomo(false);
+    setConfirmingCard(false);
     setErrorMessage(null);
     onClose();
   }
@@ -253,6 +298,17 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
           >
             Done
           </button>
+        </div>
+      ) : confirmingCard ? (
+        <div className="text-center py-8 space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <CheckCircle2 size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-navy">Card payment received</h3>
+          <div className="flex items-center justify-center gap-2 text-xs text-steel">
+            <Loader2 size={16} className="animate-spin" />
+            <span>Confirming your contribution...</span>
+          </div>
         </div>
       ) : waitingForMomo ? (
         <div className="text-center py-8 space-y-4">
@@ -435,7 +491,7 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
                 )}
                 {lookupState === "found" && accountName && (
                   <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-emerald-800">
-                    <CheckCircle2 size={12} /> Account name: {accountName}
+                    <CheckCircle2 size={12} /> Account name: {formatPersonName(accountName)}
                   </p>
                 )}
                 {lookupState === "notfound" && (
@@ -446,15 +502,6 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
               </div>
             )}
 
-            {channel === "card" && (
-              <div className="flex items-start gap-2 rounded-xl border border-navy/15 bg-slate-50/80 p-3.5 text-xs text-steel">
-                <Lock size={14} className="mt-0.5 shrink-0 text-emerald-700" />
-                <span>
-                  You&apos;ll be taken to RobsPay&apos;s secure checkout to enter your card details.
-                  Card details are never stored on RaiseFundz.
-                </span>
-              </div>
-            )}
           </div>
 
           {errorMessage && (
@@ -463,18 +510,6 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
               <span>{errorMessage}</span>
             </div>
           )}
-
-          {/* Secure Trust Notice */}
-          <div className="flex items-center justify-between text-[11px] text-steel pt-1">
-            <span className="inline-flex items-center gap-1">
-              <Lock size={12} className="text-emerald-700" />
-              <span>Secure Encryption</span>
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <ShieldCheck size={12} className="text-navy" />
-              <span>Powered by RobsPay</span>
-            </span>
-          </div>
 
           {/* Action Button */}
           <button
