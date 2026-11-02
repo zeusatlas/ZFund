@@ -4,6 +4,8 @@ import { AlertCircle, ArrowLeft } from "lucide-react";
 import { getPublicHost } from "@/lib/api/public";
 import PublicHostView from "@/components/features/public/PublicHostView";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{
     hostSlug: string;

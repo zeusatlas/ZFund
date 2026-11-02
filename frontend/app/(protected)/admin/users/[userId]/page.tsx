@@ -1,6 +1,6 @@
 import UserDetails from "@/components/features/admin/users/UserDetails";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export default async function UserDetailsPage({
   params,

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { getPublicCampaignByCode } from "@/lib/api/public";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{
     identifier: string;
@@ -51,4 +53,3 @@ export default async function ShortCodeRedirectPage({ params }: PageProps) {
     </div>
   );
 }
-

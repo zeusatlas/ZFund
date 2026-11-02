@@ -18,6 +18,10 @@ import ussdRuntimeRoutes from './routes/ussd-runtime.routes';
 export function createApp(): Application {
   const app = express();
 
+  // Reverse proxy configuration: trust the first hop (VPS reverse proxy) so that
+  // express-rate-limit and logger identify genuine client IP addresses without allowing spoofing
+  app.set('trust proxy', env.TRUST_PROXY);
+
   // Deduplicate CORS headers to prevent duplicate values (e.g. from multiple middlewares)
   app.use((_req: Request, res: Response, next: NextFunction) => {
     const originalWriteHead = res.writeHead.bind(res);

@@ -32,7 +32,8 @@ const envSchema = z.object({
   DB_PASSWORD: z.string().default("postgres"),
   DB_NAME: z.string().default("zfund_db"),
   DB_SSL: booleanEnv(false),
-  TYPEORM_SYNCHRONIZE: booleanEnv(true),
+  // Default to synchronizing only in development/test. In production, synchronization is disabled by default to protect schema integrity.
+  TYPEORM_SYNCHRONIZE: booleanEnv(process.env.NODE_ENV !== "production"),
   TYPEORM_LOGGING: booleanEnv(false),
 
   // Redis
@@ -58,6 +59,11 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default("http://localhost:2088"),
 
   SEED_ADMIN_PHONE: z.string().optional().default(""),
+
+  // Reverse Proxy Trust Configuration (default: 1 hop for VPS reverse proxy, e.g. Nginx or Apache)
+  TRUST_PROXY: z
+    .union([z.coerce.number(), z.string(), z.boolean()])
+    .default(1),
 
   // CORS
   CORS_ORIGIN: z.string().default("*"),
