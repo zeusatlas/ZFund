@@ -53,6 +53,8 @@ export function useVerifyOtp() {
     },
     onSuccess: (result) => {
       tokenStorage.set(result.accessToken, result.refreshToken);
+      // Query keys aren't scoped by user, so drop anything cached for a previous session.
+      queryClient.clear();
       queryClient.setQueryData(authKeys.me, result.user);
     },
   });

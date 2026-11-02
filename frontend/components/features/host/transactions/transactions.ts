@@ -6,6 +6,8 @@ export type Transaction = {
   campaignName?: string;
   contributorId?: string;
   donorName?: string;
+  /** Name on the paying mobile money or card account, as reported by the payment provider. */
+  accountName?: string;
   phone: string;
   amount: number;
   status: TransactionStatus;

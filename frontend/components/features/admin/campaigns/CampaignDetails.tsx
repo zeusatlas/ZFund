@@ -87,7 +87,9 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
               {data.items.map((row) => (
                 <tr key={row.id} className="transition-colors hover:bg-stone-light/40">
                   <td className="px-4 py-3 font-mono text-xs text-navy">{row.reference}</td>
-                  <td className="px-4 py-3 font-medium text-navy">{row.contributorName || "Anonymous"}</td>
+                  <td className="px-4 py-3 font-medium text-navy">
+                    {row.accountName || row.contributorName || "Anonymous"}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-steel">{row.msisdn}</td>
                   <td className="px-4 py-3 font-semibold text-navy">{formatMoney(row.amount)}</td>
                   <td className="px-4 py-3">
@@ -172,7 +174,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight text-navy">{campaign.name}</h1>
-              <CampaignStatusBadge status={campaign.status} />
+              <CampaignStatusBadge status={campaign.status} startDate={campaign.startDate} endDate={campaign.endDate} />
             </div>
             <p className="mt-1 text-sm text-steel">
               Created by{" "}

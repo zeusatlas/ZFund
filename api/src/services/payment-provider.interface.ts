@@ -3,6 +3,7 @@ export interface InitializePaymentParams {
   amount: string; // Major currency unit (e.g. "50.00")
   currency: string;
   email: string;
+  customerName?: string;
   phone?: string;
   channel?: 'mobile_money' | 'card';
   mobileMoneyProvider?: string; // e.g. 'mtn', 'vod', 'tgo'

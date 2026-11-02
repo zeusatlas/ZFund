@@ -28,6 +28,10 @@ export const initiatePaymentSchema = z
     }
   );
 
+export const accountLookupSchema = z.object({
+  msisdn: z.string().regex(/^(\+?233|0)?\d{9}$/, 'Enter a valid Ghana mobile money number'),
+});
+
 export const verifyPaymentSchema = z.object({
   reference: z.string().min(3),
 });

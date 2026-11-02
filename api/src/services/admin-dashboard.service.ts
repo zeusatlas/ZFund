@@ -82,6 +82,8 @@ export interface TransactionSummary {
   projectName: string;
   hostName: string;
   contributorName: string | null;
+  /** Name on the paying mobile money or card account, as reported by RobsPay. */
+  accountName: string | null;
   createdAt: Date;
   settings?: Record<string, unknown>;
 }
@@ -121,6 +123,8 @@ export interface ContributionRow {
   id: string;
   reference: string;
   contributorName: string | null;
+  /** Name on the paying mobile money or card account, as reported by RobsPay. */
+  accountName: string | null;
   msisdn: string | null;
   amount: string;
   status: ContributionStatus;
@@ -449,7 +453,7 @@ export class AdminDashboardService {
       .leftJoinAndSelect('c.contributor', 'contributor');
     if (params.status) query.andWhere('c.status = :status', { status: params.status });
     if (params.search) {
-      query.andWhere('(LOWER(c.reference) LIKE :s OR LOWER(project.name) LIKE :s)', {
+      query.andWhere('(LOWER(c.reference) LIKE :s OR LOWER(project.name) LIKE :s OR LOWER(c.accountName) LIKE :s)', {
         s: `%${params.search.toLowerCase()}%`,
       });
     }
@@ -474,6 +478,7 @@ export class AdminDashboardService {
         projectName: c.project?.name ?? 'Unknown fund',
         hostName: (c.project && ownerNames.get(c.project.ownerId)) ?? 'Unknown host',
         contributorName: c.contributor?.name ?? null,
+        accountName: c.accountName ?? null,
         createdAt: c.createdAt,
       })),
     };
@@ -518,7 +523,7 @@ export class AdminDashboardService {
     if (params.status) query.andWhere('c.status = :status', { status: params.status });
     if (params.search) {
       query.andWhere(
-        '(LOWER(c.reference) LIKE :s OR LOWER(contributor.name) LIKE :s OR contributor.msisdn LIKE :s)',
+        '(LOWER(c.reference) LIKE :s OR LOWER(contributor.name) LIKE :s OR LOWER(c.accountName) LIKE :s OR contributor.msisdn LIKE :s)',
         { s: `%${params.search.toLowerCase()}%` }
       );
     }
@@ -534,6 +539,7 @@ export class AdminDashboardService {
         id: c.id,
         reference: c.reference,
         contributorName: c.contributor?.name ?? null,
+        accountName: c.accountName ?? null,
         msisdn: c.contributor?.msisdn ?? null,
         amount: c.amount,
         status: c.status,

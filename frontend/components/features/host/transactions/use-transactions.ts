@@ -65,6 +65,7 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
     campaignName: c.project?.name,
     contributorId: c.contributorId,
     donorName: c.contributor?.name || undefined,
+    accountName: c.accountName || undefined,
     phone: formatPhone(c.contributor?.msisdn),
     amount: amountInPesewas,
     status,

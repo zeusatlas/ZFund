@@ -145,6 +145,13 @@ export async function initiatePublicDonation(input: InitiateDonationInput): Prom
   return data.data;
 }
 
+export async function lookupMobileMoneyAccount(
+  msisdn: string
+): Promise<{ found: boolean; accountName: string | null; network: string | null }> {
+  const { data } = await api.post("/payments/account-lookup", { msisdn });
+  return data.data;
+}
+
 export async function verifyDonationPayment(reference: string) {
   const { data } = await api.get(`/payments/verify/${encodeURIComponent(reference)}`);
   return data.data;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CreditCard,
   Smartphone,
@@ -15,6 +15,7 @@ import Modal from "@/components/ui/Modal";
 import { formatMoney } from "@/lib/format";
 import {
   initiatePublicDonation,
+  lookupMobileMoneyAccount,
   verifyDonationPayment,
   type PublicCampaign,
 } from "@/lib/api/public";
@@ -39,9 +40,8 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
+  const [accountName, setAccountName] = useState<string | null>(null);
+  const [lookupState, setLookupState] = useState<"idle" | "loading" | "found" | "notfound">("idle");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -66,25 +66,35 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
     setCustomAmount(cleaned);
   }
 
-  function handleCardNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
-    const parts = raw.match(/.{1,4}/g);
-    setCardNumber(parts ? parts.join(" ") : raw);
-  }
-
-  function handleExpiryChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
-    if (raw.length >= 3) {
-      setCardExpiry(`${raw.slice(0, 2)}/${raw.slice(2)}`);
-    } else {
-      setCardExpiry(raw);
+  // Name enquiry: once a full number is typed, show the name on the wallet so the donor can confirm it.
+  useEffect(() => {
+    if (channel !== "mobile_money") return;
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      setLookupState("idle");
+      setAccountName(null);
+      return;
     }
-  }
-
-  function handleCvvChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
-    setCardCvv(raw);
-  }
+    let cancelled = false;
+    setLookupState("loading");
+    const timer = setTimeout(() => {
+      lookupMobileMoneyAccount(phone.trim())
+        .then((res) => {
+          if (cancelled) return;
+          setAccountName(res.accountName);
+          setLookupState(res.found ? "found" : "notfound");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setAccountName(null);
+          setLookupState("notfound");
+        });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [phone, channel]);
 
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
@@ -114,19 +124,6 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
         setErrorMessage("Please enter a valid email address for your payment receipt.");
         return;
       }
-      const cleanCard = cardNumber.replace(/\s+/g, "");
-      if (cleanCard.length < 15) {
-        setErrorMessage("Please enter a valid 16-digit card number.");
-        return;
-      }
-      if (!cardExpiry || cardExpiry.length < 5) {
-        setErrorMessage("Please enter a valid expiry date (MM/YY).");
-        return;
-      }
-      if (!cardCvv || cardCvv.length < 3) {
-        setErrorMessage("Please enter a valid 3 or 4-digit CVV.");
-        return;
-      }
     }
 
     if (channel === "mobile_money" && (!phone || phone.trim().length < 9)) {
@@ -154,7 +151,7 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
         callbackUrl,
       });
 
-      // If Card (Paystack checkout URL returned), redirect donor to Paystack secure checkout
+      // Card: RobsPay hosted checkout collects the card details, so send the donor there
       if (channel === "card" && result.authorizationUrl) {
         window.location.href = result.authorizationUrl;
         return;
@@ -212,9 +209,6 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
     setSuccessData(null);
     setWaitingForMomo(false);
     setErrorMessage(null);
-    setCardNumber("");
-    setCardExpiry("");
-    setCardCvv("");
     onClose();
   }
 
@@ -434,72 +428,31 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
                   required
                   className="w-full rounded-xl border border-navy/20 bg-white px-3.5 py-2 text-xs text-navy placeholder:text-steel/60 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
                 />
+                {lookupState === "loading" && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-steel">
+                    <Loader2 size={12} className="animate-spin" /> Checking account name...
+                  </p>
+                )}
+                {lookupState === "found" && accountName && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-emerald-800">
+                    <CheckCircle2 size={12} /> Account name: {accountName}
+                  </p>
+                )}
+                {lookupState === "notfound" && (
+                  <p className="mt-1.5 text-[11px] text-steel">
+                    We couldn&apos;t confirm the account name. Check the number before you continue.
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Card Information (When Card / Diaspora is chosen) */}
             {channel === "card" && (
-              <div className="space-y-3 rounded-xl border border-navy/15 bg-slate-50/80 p-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-navy flex items-center gap-1.5">
-                    <CreditCard size={14} className="text-navy" />
-                    <span>Card Information</span>
-                  </span>
-                  <div className="flex items-center gap-1 text-steel">
-                    <Lock size={11} className="text-emerald-700" />
-                    <span className="text-[10px] font-medium text-emerald-800">Encrypted</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-steel uppercase mb-1">
-                    Card Number *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="1234 5678 9012 3456"
-                      value={cardNumber}
-                      onChange={handleCardNumberChange}
-                      required
-                      maxLength={19}
-                      className="w-full rounded-xl border border-navy/20 bg-white pl-9 pr-3.5 py-2 text-xs font-mono text-navy placeholder:text-steel/50 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
-                    />
-                    <CreditCard size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-steel" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-steel uppercase mb-1">
-                      Expiry Date *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="MM/YY"
-                      value={cardExpiry}
-                      onChange={handleExpiryChange}
-                      required
-                      maxLength={5}
-                      className="w-full rounded-xl border border-navy/20 bg-white px-3.5 py-2 text-xs font-mono text-navy placeholder:text-steel/50 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-steel uppercase mb-1">
-                      CVV *
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="123"
-                      value={cardCvv}
-                      onChange={handleCvvChange}
-                      required
-                      maxLength={4}
-                      className="w-full rounded-xl border border-navy/20 bg-white px-3.5 py-2 text-xs font-mono text-navy placeholder:text-steel/50 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
-                    />
-                  </div>
-                </div>
+              <div className="flex items-start gap-2 rounded-xl border border-navy/15 bg-slate-50/80 p-3.5 text-xs text-steel">
+                <Lock size={14} className="mt-0.5 shrink-0 text-emerald-700" />
+                <span>
+                  You&apos;ll be taken to RobsPay&apos;s secure checkout to enter your card details.
+                  Card details are never stored on RaiseFundz.
+                </span>
               </div>
             )}
           </div>
@@ -519,7 +472,7 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
             </span>
             <span className="inline-flex items-center gap-1">
               <ShieldCheck size={12} className="text-navy" />
-              <span>Powered by Paystack & RobsPay</span>
+              <span>Powered by RobsPay</span>
             </span>
           </div>
 

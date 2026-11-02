@@ -216,6 +216,7 @@ export default function TransactionDetails({
             {[
               ["Full reference", currentTx.reference],
               ["Campaign", campaignName],
+              ["Account name", currentTx.accountName ?? "Not available"],
               ["Donor phone", currentTx.phone],
               ["Payment method", currentTx.method],
               ["Date and time", dateLabel(currentTx.date) + ", " + currentTx.time + " GMT"],

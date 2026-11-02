@@ -18,6 +18,7 @@ export interface BackendPaymentAttempt {
   failureReason?: string | null;
   amount: string;
   currency: string;
+  metadata?: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -30,6 +31,8 @@ export interface BackendContribution {
   amount: string;
   currency: string;
   status: "INITIATED" | "PENDING" | "CONFIRMED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED";
+  /** Name on the paying account, as reported by the payment provider. */
+  accountName?: string | null;
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;

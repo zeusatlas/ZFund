@@ -21,40 +21,57 @@ function PaymentCallbackContent() {
     currency: string;
     status: string;
     projectName?: string;
+    channel?: string;
   } | null>(null);
 
   useEffect(() => {
     if (!reference) return;
 
     let isMounted = true;
-    verifyDonationPayment(reference)
-      .then((data) => {
-        if (!isMounted) return;
-        const isSuccess = data?.status === "SUCCESSFUL" || data?.status === "success";
-        if (isSuccess) {
-          setPaymentData({
-            reference: data.reference,
-            amount: data.amount,
-            currency: data.currency || "GHS",
-            status: data.status,
-            projectName: data.contribution?.project?.name,
-          });
-        } else {
-          setError("Your payment could not be confirmed. Please check your bank or card statement.");
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(
-          err?.response?.data?.message || "Failed to verify transaction. Please contact support."
-        );
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    // RobsPay confirms by server callback, which can land a few seconds after the donor returns.
+    const check = () => {
+      verifyDonationPayment(reference)
+        .then((data) => {
+          if (!isMounted) return;
+          const status = String(data?.status || "").toUpperCase();
+          if (status === "SUCCESSFUL" || status === "SUCCESS") {
+            setPaymentData({
+              reference: data.reference,
+              amount: data.amount,
+              currency: data.currency || "GHS",
+              status: data.status,
+              projectName: data.contribution?.project?.name,
+              channel: data.channel,
+            });
+            setLoading(false);
+          } else if (status === "FAILED" || attempts >= 10) {
+            setError(
+              status === "FAILED"
+                ? "Your payment was not completed. You have not been charged."
+                : "We have not received confirmation of your payment yet. If you were charged, it will show on the campaign shortly."
+            );
+            setLoading(false);
+          } else {
+            attempts += 1;
+            timer = setTimeout(check, 3000);
+          }
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          setError(
+            err?.response?.data?.message || "Failed to verify transaction. Please contact support."
+          );
+          setLoading(false);
+        });
+    };
+    check();
 
     return () => {
       isMounted = false;
+      if (timer) clearTimeout(timer);
     };
   }, [reference]);
 
@@ -62,7 +79,7 @@ function PaymentCallbackContent() {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
         <Loader2 size={36} className="animate-spin text-navy" />
-        <h2 className="text-lg font-bold text-navy">Verifying Payment with Paystack...</h2>
+        <h2 className="text-lg font-bold text-navy">Confirming your payment...</h2>
         <p className="text-xs text-steel">Please wait while we confirm your contribution.</p>
       </div>
     );
@@ -123,7 +140,7 @@ function PaymentCallbackContent() {
         </div>
         <div className="flex justify-between items-center">
           <span className="text-steel">Payment Method:</span>
-          <span className="font-medium text-navy">Paystack Card / International</span>
+          <span className="font-medium text-navy">{paymentData.channel === "mobile_money" ? "Mobile Money" : "Card"}</span>
         </div>
       </div>
 

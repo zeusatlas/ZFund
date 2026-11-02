@@ -2,12 +2,27 @@ import { NextFunction, Request, Response } from 'express';
 import { ApiResponse } from '../common/utils/response';
 import { BadRequestError } from '../common/errors/app-error';
 import { paymentService } from '../services/payment.service';
+import { robspayProvider } from '../services/robspay.provider';
 
 export class PaymentController {
   async initiatePayment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await paymentService.initiatePayment(req.body);
       ApiResponse.success(res, result, 'Payment initiated successfully', 201);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /** Name enquiry for a mobile money number, so donors can confirm the account before paying. */
+  async lookupAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const account = await robspayProvider.lookupAccount(req.body.msisdn);
+      ApiResponse.success(
+        res,
+        { found: Boolean(account), accountName: account?.accountName ?? null, network: account?.network ?? null },
+        account ? 'Account found' : 'Account name could not be resolved'
+      );
     } catch (err) {
       next(err);
     }

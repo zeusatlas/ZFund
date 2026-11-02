@@ -40,7 +40,7 @@ export class PaymentService {
    */
   async getProviderForProject(projectId?: string, channel?: PaymentChannel): Promise<IPaymentProvider> {
     if (channel === PaymentChannel.CARD) {
-      return paystackProvider;
+      return robspayProvider;
     }
     if (projectId) {
       const projectMethod = await this.paymentMethodRepo.findOne({ where: { projectId, isEnabled: true } });
@@ -155,14 +155,11 @@ export class PaymentService {
       }
     }
 
-    // Resolve Provider: Paystack for card / international, RobsPay for mobile money
-    const isCard = input.channel === PaymentChannel.CARD;
-    const provider = isCard
-      ? paystackProvider
-      : await this.getProviderForProject(project.id, input.channel);
+    // RobsPay handles both channels: hosted checkout for card, STK push for mobile money
+    const provider = await this.getProviderForProject(project.id, input.channel);
 
     const paymentRef = CryptoUtil.generateReference('ZF-PAY');
-    const orderId = isCard ? paymentRef : RobspayProvider.generateTransactionId();
+    const orderId = RobspayProvider.generateTransactionId();
 
     const paymentAttempt = this.paymentAttemptRepo.create({
       reference: paymentRef,
@@ -182,12 +179,27 @@ export class PaymentService {
       input.email ||
       (input.msisdn ? `${input.msisdn}@contributors.raisefundz.com` : `donor_${paymentRef}@raisefundz.com`);
 
+    // Best-effort name enquiry so host and admin can see who owns the wallet even before the callback lands.
+    if (input.channel !== PaymentChannel.CARD && input.msisdn && provider === robspayProvider) {
+      const lookup = await Promise.race([
+        robspayProvider.lookupAccount(input.msisdn),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+      ]).catch(() => null);
+      if (lookup?.accountName) {
+        savedAttempt.metadata = { ...savedAttempt.metadata, accountName: lookup.accountName };
+        savedContribution.accountName = lookup.accountName;
+        savedContribution.accountNameSource = 'lookup';
+        await this.contributionRepo.save(savedContribution);
+      }
+    }
+
     try {
       const initResult = await provider.initializePayment({
         reference: paymentRef,
         amount: input.amount,
         currency: project.currency,
         email: customerEmail,
+        customerName: input.isAnonymous ? undefined : input.name,
         phone: input.msisdn,
         channel: input.channel,
         callbackUrl: input.callbackUrl,
@@ -507,7 +519,7 @@ export class PaymentService {
     await this.webhookEventRepo.save(webhookRecord);
 
     const isSuccess = ['success', 'successful', 'paid', 'completed'].includes(rawStatus);
-    const isFailed = ['failed', 'declined', 'cancelled', 'timeout'].includes(rawStatus);
+    const isFailed = ['failed', 'declined', 'cancelled', 'timeout', 'reversed'].includes(rawStatus);
 
     if (isSuccess) {
       // Amount verification if amount provided in callback
@@ -548,11 +560,18 @@ export class PaymentService {
           telcoTransId,
           paymentMethod,
           customerName,
+          ...(customerName ? { accountName: customerName } : {}),
         };
         await manager.save(paymentAttempt);
 
         const contribution = paymentAttempt.contribution;
         contribution.status = ContributionStatus.CONFIRMED;
+        // Kept apart from the donor's typed name so anonymous donations stay anonymous
+        // publicly, while the host and admin still see who paid.
+        if (customerName) {
+          contribution.accountName = customerName.slice(0, 150);
+          contribution.accountNameSource = 'callback';
+        }
         await manager.save(contribution);
 
         // Update contributor name if received from telco and donor name was default

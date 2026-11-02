@@ -42,6 +42,8 @@ export type Fund = {
   commissionPercentage?: string | number;
   transactions: number;
   createdAt: string;
+  startDate?: string | null;
+  endDate?: string | null;
   settings?: {
     webPortalEnabled?: boolean;
     webPortalCommission?: string;
@@ -71,6 +73,7 @@ export type ContributionRow = {
   id: string;
   reference: string;
   contributorName: string | null;
+  accountName?: string | null;
   msisdn: string | null;
   amount: string;
   status: Transaction["status"];
@@ -92,6 +95,7 @@ export type Transaction = {
   projectName: string;
   hostName: string;
   contributorName: string | null;
+  accountName?: string | null;
   createdAt: string;
   settings?: {
     webPortalEnabled?: boolean;

@@ -83,7 +83,7 @@ export default function AdminTransactions() {
                     <tr key={tx.id} className="text-sm">
                       <td className="px-5 py-4">
                         <p className="font-medium text-ink">{tx.reference}</p>
-                        <p className="mt-0.5 text-xs text-steel">{tx.contributorName ?? "Anonymous contributor"}</p>
+                        <p className="mt-0.5 text-xs text-steel">{tx.accountName ?? tx.contributorName ?? "Anonymous contributor"}</p>
                       </td>
                       <td className="px-4 py-4">
                         <p className="text-ink">{tx.projectName}</p>

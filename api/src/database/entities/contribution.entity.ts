@@ -57,6 +57,15 @@ export class Contribution {
   })
   status: ContributionStatus;
 
+  /** Name on the paying mobile money or card account, as reported by RobsPay. Shown to hosts and admins. */
+  @Index()
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  accountName?: string | null;
+
+  /** Where accountName came from: 'lookup' (name enquiry before payment) or 'callback' (payment confirmation). */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  accountNameSource?: 'lookup' | 'callback' | null;
+
   @Column({ type: 'jsonb', nullable: true, default: {} })
   metadata?: Record<string, unknown>;
 

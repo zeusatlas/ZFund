@@ -87,7 +87,7 @@ export class ContributionService {
     if (params.search && params.search.trim()) {
       const s = params.search.trim();
       query.andWhere(
-        '(c.reference ILIKE :search OR contributor.msisdn LIKE :search OR contributor.name ILIKE :search)',
+        '(c.reference ILIKE :search OR contributor.msisdn LIKE :search OR contributor.name ILIKE :search OR c.accountName ILIKE :search)',
         { search: `%${s}%` }
       );
     }

@@ -110,7 +110,7 @@ export default function UserDetails({ userId }: { userId: string }) {
                       <p className="font-medium text-ink">{fund.name}</p>
                       <p className="mt-0.5 text-xs text-steel">Code {fund.eventCode}</p>
                     </td>
-                    <td className="px-4 py-4"><CampaignStatusBadge status={fund.status} /></td>
+                    <td className="px-4 py-4"><CampaignStatusBadge status={fund.status} startDate={fund.startDate} endDate={fund.endDate} /></td>
                     <td className="px-4 py-4 font-medium text-ink">{formatMoney(fund.raised)}</td>
                     <td className="px-4 py-4 text-ink">{formatCount(fund.transactions)}</td>
                     <td className="px-4 py-4 text-xs text-steel">{format(new Date(fund.createdAt), "MMM d, yyyy")}</td>

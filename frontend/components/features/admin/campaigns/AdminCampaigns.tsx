@@ -216,7 +216,7 @@ export default function AdminCampaigns() {
             { value: "PENDING_REVIEW", label: "Pending Review" },
             { value: "APPROVED", label: "Approved" },
             { value: "SCHEDULED", label: "Upcoming" },
-            { value: "PUBLISHED", label: "Published" },
+            { value: "PUBLISHED", label: "Active" },
             { value: "REJECTED", label: "Rejected" },
             { value: "SUSPENDED", label: "Suspended" },
           ]}
@@ -364,7 +364,7 @@ export default function AdminCampaigns() {
                         </td>
 
                         <td className="px-4 py-4">
-                          <CampaignStatusBadge status={campaign.status} />
+                          <CampaignStatusBadge status={campaign.status} startDate={campaign.startDate} endDate={campaign.endDate} />
                         </td>
 
                         <td className="px-4 py-4 text-sm text-steel">
@@ -450,7 +450,7 @@ export default function AdminCampaigns() {
                           )}
                         </div>
                       </div>
-                      <CampaignStatusBadge status={campaign.status} />
+                      <CampaignStatusBadge status={campaign.status} startDate={campaign.startDate} endDate={campaign.endDate} />
                     </div>
 
                     <p className="mt-4 flex items-center gap-2 text-sm text-ink">

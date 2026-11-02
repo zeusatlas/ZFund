@@ -578,6 +578,9 @@ export default function TransactionsDashboard() {
                       <div>
                         <span className="font-medium text-navy">{item.id}</span>
                         <span className="mt-1 block text-xs text-steel">{item.phone}</span>
+                        {item.accountName && (
+                          <span className="block text-xs font-medium text-navy">{item.accountName}</span>
+                        )}
                       </div>
                       <div className="text-right">
                         <span className="font-medium tabular-nums text-navy block">
@@ -665,6 +668,9 @@ export default function TransactionsDashboard() {
                           >
                             {item.phone}
                           </button>
+                          {item.accountName && (
+                            <span className="mt-1 block text-xs font-medium text-navy">{item.accountName}</span>
+                          )}
                           <span className="mt-1 block text-xs text-steel">{item.reference}</span>
                         </td>
                         <td className="max-w-56 px-5 py-4 text-steel">

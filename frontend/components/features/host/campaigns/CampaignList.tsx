@@ -557,14 +557,11 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                   {/* Financial Stats in Card */}
                   <div className="mt-5">
                     <div className="flex items-baseline justify-between">
+                      <p className="text-[11px] text-steel">Gross raised</p>
                       <p className="text-2xl font-bold tracking-tight text-navy">
                         {money(raised)}
                       </p>
-                      <span className="text-xs font-semibold text-success">
-                        Net: {money(Math.round(raised * 0.86))}
-                      </span>
                     </div>
-                    <p className="text-[11px] text-steel">Gross raised · 86% net payout</p>
                     <div className="mt-2">
                       <progress
                         aria-label={campaign.name + " progress"}
@@ -703,9 +700,6 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                       <div>
                         <span className="text-sm font-semibold tabular-nums text-navy">
                           {money(raised)}
-                        </span>
-                        <span className="ml-2 text-xs font-medium text-success">
-                          Net: {money(Math.round(raised * 0.86))}
                         </span>
                       </div>
                       {hasGoal && (
