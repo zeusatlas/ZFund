@@ -16,6 +16,7 @@ import { ProviderWebhookEvent } from '../database/entities/provider-webhook-even
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
 import { IPaymentProvider } from './payment-provider.interface';
 import { robspayProvider, RobspayProvider } from './robspay.provider';
+import { paystackProvider } from './paystack.provider';
 
 export interface InitiateUssdPaymentInput {
   msisdn: string;
@@ -35,13 +36,17 @@ export class PaymentService {
   private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
 
   /**
-   * Resolves the active payment provider (defaults to RobsPay)
+   * Resolves the active payment provider (defaults to RobsPay for mobile money, Paystack for card)
    */
-  async getProviderForProject(projectId?: string): Promise<IPaymentProvider> {
+  async getProviderForProject(projectId?: string, channel?: PaymentChannel): Promise<IPaymentProvider> {
+    if (channel === PaymentChannel.CARD) {
+      return paystackProvider;
+    }
     if (projectId) {
       const projectMethod = await this.paymentMethodRepo.findOne({ where: { projectId, isEnabled: true } });
       if (projectMethod?.provider) {
         if (projectMethod.provider.toUpperCase() === 'ROBSPAY') return robspayProvider;
+        if (projectMethod.provider.toUpperCase() === 'PAYSTACK') return paystackProvider;
       }
     }
     return this.currentProvider;
@@ -80,14 +85,28 @@ export class PaymentService {
     }
 
     // Find or create Contributor
-    let contributor = await this.contributorRepo.findOne({ where: { msisdn: input.msisdn } });
+    const effectiveMsisdn =
+      input.msisdn?.trim() ||
+      (input.email ? `card_${input.email.replace(/[^a-zA-Z0-9]/g, '_')}` : `card_${Date.now()}`);
+
+    let contributor: Contributor | null = null;
+    if (input.msisdn) {
+      contributor = await this.contributorRepo.findOne({ where: { msisdn: input.msisdn } });
+    }
+    if (!contributor && input.email) {
+      contributor = await this.contributorRepo.findOne({ where: { email: input.email } });
+    }
+
     if (!contributor) {
       contributor = this.contributorRepo.create({
-        msisdn: input.msisdn,
+        msisdn: effectiveMsisdn,
         name: input.name,
         email: input.email,
       });
       contributor = await this.contributorRepo.save(contributor);
+    } else if (input.name && !contributor.name) {
+      contributor.name = input.name;
+      await this.contributorRepo.save(contributor);
     }
 
     // Create Contribution
@@ -106,20 +125,51 @@ export class PaymentService {
       amount: input.amount,
       currency: project.currency,
       status: ContributionStatus.INITIATED,
+      metadata: {
+        isAnonymous: Boolean(input.isAnonymous),
+        donorName: input.name,
+        wordsOfSupport: input.wordsOfSupport || input.comment,
+      },
     });
     const savedContribution = await this.contributionRepo.save(contribution);
 
-    // Create Payment Attempt
-    const provider = this.currentProvider;
+    const supportMsg = (input.wordsOfSupport || input.comment)?.trim();
+    if (supportMsg) {
+      try {
+        const settings = (project.settings || {}) as Record<string, any>;
+        const comments = Array.isArray(settings.comments) ? settings.comments : [];
+        comments.unshift({
+          id: `cmt_${savedContribution.id}`,
+          name: input.isAnonymous ? 'Anonymous Supporter' : (input.name?.trim() || 'Generous Supporter'),
+          message: supportMsg,
+          amount: input.amount,
+          currency: project.currency,
+          createdAt: new Date().toISOString(),
+          isAnonymous: Boolean(input.isAnonymous),
+        });
+        settings.comments = comments.slice(0, 100);
+        project.settings = settings;
+        await this.projectRepo.save(project);
+      } catch (err) {
+        logger.warn({ err, projectId: project.id }, 'Failed to append words of support on contribution');
+      }
+    }
+
+    // Resolve Provider: Paystack for card / international, RobsPay for mobile money
+    const isCard = input.channel === PaymentChannel.CARD;
+    const provider = isCard
+      ? paystackProvider
+      : await this.getProviderForProject(project.id, input.channel);
+
     const paymentRef = CryptoUtil.generateReference('ZF-PAY');
-    const orderId = RobspayProvider.generateTransactionId();
+    const orderId = isCard ? paymentRef : RobspayProvider.generateTransactionId();
 
     const paymentAttempt = this.paymentAttemptRepo.create({
       reference: paymentRef,
       contributionId: savedContribution.id,
       provider: provider.code,
       channel: input.channel || PaymentChannel.MOBILE_MONEY,
-      msisdn: input.msisdn,
+      msisdn: effectiveMsisdn,
       amount: input.amount,
       currency: project.currency,
       status: PaymentStatus.INITIATED,
@@ -128,7 +178,9 @@ export class PaymentService {
     });
     const savedAttempt = await this.paymentAttemptRepo.save(paymentAttempt);
 
-    const customerEmail = input.email || `${input.msisdn}@contributors.raisefundz.com`;
+    const customerEmail =
+      input.email ||
+      (input.msisdn ? `${input.msisdn}@contributors.raisefundz.com` : `donor_${paymentRef}@raisefundz.com`);
 
     try {
       const initResult = await provider.initializePayment({
@@ -143,6 +195,7 @@ export class PaymentService {
           contributionId: savedContribution.id,
           projectId: project.id,
           transactionId: orderId,
+          isAnonymous: Boolean(input.isAnonymous),
         },
       });
 
@@ -587,6 +640,38 @@ export class PaymentService {
     }
   }
 
+  async handlePaystackCallback(eventPayload: Record<string, unknown>): Promise<void> {
+    const eventType = String(eventPayload.event || '');
+    const data = (eventPayload.data || {}) as Record<string, unknown>;
+    const eventId = String(data.id || '');
+    const reference = String(data.reference || '');
+
+    const existingEvent = await this.webhookEventRepo.findOne({
+      where: [{ eventId }, { reference, isProcessed: true }],
+    });
+
+    if (existingEvent && existingEvent.isProcessed) {
+      logger.info({ reference, eventType }, 'Paystack webhook already processed (idempotent skip)');
+      return;
+    }
+
+    const webhookRecord = this.webhookEventRepo.create({
+      provider: 'PAYSTACK',
+      eventType,
+      eventId,
+      reference,
+      rawPayload: eventPayload,
+      isProcessed: false,
+    });
+    await this.webhookEventRepo.save(webhookRecord);
+
+    if (eventType === 'charge.success') {
+      await this.processSuccessfulCharge(data, webhookRecord);
+    } else if (eventType === 'charge.failed') {
+      await this.processFailedCharge(data, webhookRecord);
+    }
+  }
+
   /**
    * Handles authenticated webhook event idempotently
    */
@@ -811,7 +896,7 @@ export class PaymentService {
       return paymentAttempt;
     }
 
-    const provider = this.currentProvider;
+    const provider = paymentAttempt.provider === 'PAYSTACK' ? paystackProvider : this.currentProvider;
     const verifyResult = await provider.verifyTransaction(paymentAttempt.providerReference || paymentAttempt.reference);
 
     if (verifyResult.status === 'success') {

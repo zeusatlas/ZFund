@@ -37,6 +37,13 @@ export class Project {
   @Column()
   name: string;
 
+  /**
+   * Unique campaign slug for public URL (e.g. 'medical-emergency' for raisefundz.com/host-slug/medical-emergency)
+   */
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  @Index('idx_project_slug')
+  slug?: string | null;
+
   @Column({ nullable: true, type: 'text' })
   description?: string;
 

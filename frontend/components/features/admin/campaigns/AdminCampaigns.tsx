@@ -15,12 +15,15 @@ import {
   List,
   SlidersHorizontal,
   Plus,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import MetricCard from "@/components/ui/MetricCard";
 import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
+import RowMenu, { type RowMenuItem } from "@/components/ui/RowMenu";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatCount, formatMoney } from "@/lib/format";
@@ -32,6 +35,7 @@ import {
   type ConfigurableCampaign,
 } from "@/components/features/host/campaigns/ConfigureStepsDrawer";
 import AdminCreateCampaignModal from "./AdminCreateCampaignModal";
+import AdminEditCampaignModal from "./AdminEditCampaignModal";
 
 /** Statuses where an admin can open the USSD steps editor. */
 const CONFIGURABLE_STATUSES = ["PENDING_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED"];
@@ -40,6 +44,7 @@ const CONFIGURABLE_STATUSES = ["PENDING_REVIEW", "APPROVED", "SCHEDULED", "PUBLI
 const CARDS_PER_PAGE = 9;
 
 export default function AdminCampaigns() {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -49,6 +54,7 @@ export default function AdminCampaigns() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewCommission, setReviewCommission] = useState<number | string>(14);
   const [configuringCampaign, setConfiguringCampaign] = useState<ConfigurableCampaign | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<Fund | null>(null);
   const [creating, setCreating] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search);
@@ -90,6 +96,58 @@ export default function AdminCampaigns() {
     } catch {
       // Error is toasted by mutation
     }
+  }
+
+  function getCampaignMenuItems(campaign: Fund): RowMenuItem[] {
+    const isPendingReview = campaign.status === "PENDING_REVIEW";
+    const items: RowMenuItem[] = [
+      {
+        label: "View details",
+        icon: <ExternalLink size={14} className="text-steel" />,
+        onSelect: () => router.push(`/admin/campaigns/${campaign.id}`),
+      },
+      {
+        label: "Edit campaign",
+        icon: <Pencil size={14} className="text-steel" />,
+        onSelect: () => setEditingCampaign(campaign),
+      },
+    ];
+
+    if (CONFIGURABLE_STATUSES.includes(campaign.status)) {
+      items.push({
+        label: "Configure steps",
+        icon: <SlidersHorizontal size={14} className="text-steel" />,
+        onSelect: () => setConfiguringCampaign(campaign),
+      });
+    }
+
+    if (isPendingReview) {
+      items.push(
+        {
+          label: "Approve campaign",
+          icon: <Check size={14} className="text-emerald-700" />,
+          onSelect: () => {
+            setReviewingCampaign(campaign);
+            setReviewAction("APPROVE");
+            setReviewNotes("");
+            setReviewCommission(campaign.commissionPercentage ? Number(campaign.commissionPercentage) : 14);
+          },
+        },
+        {
+          label: "Reject campaign",
+          icon: <X size={14} className="text-crimson" />,
+          danger: true,
+          onSelect: () => {
+            setReviewingCampaign(campaign);
+            setReviewAction("REJECT");
+            setReviewNotes("");
+            setReviewCommission(campaign.commissionPercentage ? Number(campaign.commissionPercentage) : 14);
+          },
+        }
+      );
+    }
+
+    return items;
   }
 
   return (
@@ -273,6 +331,14 @@ export default function AdminCampaigns() {
                             <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
                               {campaign.commissionPercentage ?? "14"}% fee
                             </span>
+                            {campaign.settings?.webPortalEnabled && (
+                              <span
+                                className="inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-200/60"
+                                title="Web donation portal enabled (+1% commission)"
+                              >
+                                Web (+1%)
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -331,24 +397,10 @@ export default function AdminCampaigns() {
                                 </button>
                               </>
                             )}
-                            {CONFIGURABLE_STATUSES.includes(campaign.status) && (
-                              <button
-                                type="button"
-                                onClick={() => setConfiguringCampaign(campaign)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-navy/15 bg-white px-2.5 py-1.5 text-xs font-medium text-navy hover:bg-stone transition-colors shadow-2xs"
-                                title="Configure USSD dial flow steps"
-                              >
-                                <SlidersHorizontal size={12} className="text-steel" />
-                                <span>Steps</span>
-                              </button>
-                            )}
-                            <Link
-                              href={`/admin/campaigns/${campaign.id}`}
-                              className="inline-flex items-center gap-1 rounded-lg border border-navy/15 bg-white px-2.5 py-1.5 text-xs font-medium text-steel hover:text-navy hover:bg-stone transition-colors"
-                            >
-                              <span>Details</span>
-                              <ExternalLink size={12} />
-                            </Link>
+                            <RowMenu
+                              label={`Actions for ${campaign.name}`}
+                              items={getCampaignMenuItems(campaign)}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -388,6 +440,14 @@ export default function AdminCampaigns() {
                           <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
                             {campaign.commissionPercentage ?? "14"}% fee
                           </span>
+                          {campaign.settings?.webPortalEnabled && (
+                            <span
+                              className="inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-200/60"
+                              title="Web donation portal enabled (+1% commission)"
+                            >
+                              Web (+1%)
+                            </span>
+                          )}
                         </div>
                       </div>
                       <CampaignStatusBadge status={campaign.status} />
@@ -449,25 +509,10 @@ export default function AdminCampaigns() {
 
                     <div className="mt-auto pt-4 flex items-center justify-between border-t border-navy/10 text-xs text-steel">
                       <span>{formatCount(campaign.transactions)} contributions</span>
-                      <div className="flex items-center gap-2">
-                        {CONFIGURABLE_STATUSES.includes(campaign.status) && (
-                          <button
-                            type="button"
-                            onClick={() => setConfiguringCampaign(campaign)}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-steel hover:text-navy transition-colors"
-                            title="Configure USSD dial steps"
-                          >
-                            <SlidersHorizontal size={12} />
-                            <span>Steps</span>
-                          </button>
-                        )}
-                        <Link
-                          href={`/admin/campaigns/${campaign.id}`}
-                          className="inline-flex items-center gap-1 text-steel hover:text-navy transition-colors font-medium"
-                        >
-                          Details <ExternalLink size={12} />
-                        </Link>
-                      </div>
+                      <RowMenu
+                        label={`Actions for ${campaign.name}`}
+                        items={getCampaignMenuItems(campaign)}
+                      />
                     </div>
                   </div>
                 );
@@ -591,6 +636,16 @@ export default function AdminCampaigns() {
                   {reviewingCampaign.commissionPercentage}%
                 </p>
               )}
+              <p>
+                <strong className="text-navy">Web Portal:</strong>{" "}
+                {reviewingCampaign.settings?.webPortalEnabled ? (
+                  <span className="font-semibold text-emerald-700">
+                    Enabled (+1% commission)
+                  </span>
+                ) : (
+                  <span className="text-steel">Disabled</span>
+                )}
+              </p>
             </div>
 
             {reviewAction === "APPROVE" ? (
@@ -669,6 +724,17 @@ export default function AdminCampaigns() {
           onCreated={(campaign, configureSteps) => {
             setCreating(false);
             if (configureSteps) setConfiguringCampaign(campaign);
+          }}
+        />
+      )}
+
+      {editingCampaign && (
+        <AdminEditCampaignModal
+          campaign={editingCampaign}
+          onClose={() => setEditingCampaign(null)}
+          onUpdated={() => {
+            setEditingCampaign(null);
+            refetch();
           }}
         />
       )}

@@ -35,6 +35,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
   const [requestedCode, setRequestedCode] = useState("");
   const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
   const handleCodeStatus = useCallback((status: CodeStatus) => setCodeStatus(status), []);
+  const [enableWebPortal, setEnableWebPortal] = useState(false);
 
   const { data: backendCategories = [], isLoading: categoriesLoading } = useProjectCategoriesQuery();
   const { data: existingProjects = [] } = useProjectsQuery();
@@ -85,6 +86,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
     setError("");
     setWantsSpecialCode(false);
     setRequestedCode("");
+    setEnableWebPortal(false);
     setToday(new Date().toISOString().slice(0, 10));
     nextCodeQuery.refetch();
     setOpen(true);
@@ -192,6 +194,7 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
         startDate: `${startDate}T00:00:00.000Z`,
         endDate: closing ? `${closing}T23:59:59.000Z` : undefined,
         status: "DRAFT",
+        enableWebPortal,
       };
 
       await createMutation.mutateAsync(payload);
@@ -480,6 +483,36 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                       disabled={createMutation.isPending}
                     />
                     <p className="mt-1 text-xs text-steel">Up to 2,000 characters.</p>
+                  </div>
+
+                  {/* Web Portal Opt-In */}
+                  <div className="rounded-xl border border-navy/15 bg-white p-4 transition-colors hover:border-navy/30">
+                    <label
+                      htmlFor="new-campaign-web-portal"
+                      className="flex items-start gap-3 cursor-pointer select-none"
+                    >
+                      <input
+                        type="checkbox"
+                        id="new-campaign-web-portal"
+                        checked={enableWebPortal}
+                        onChange={(e) => setEnableWebPortal(e.target.checked)}
+                        disabled={createMutation.isPending}
+                        className="mt-0.5 h-4 w-4 rounded accent-navy focus:ring-navy"
+                      />
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-navy">
+                            Enable Online Web Donation Portal
+                          </span>
+                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200">
+                            +1% commission
+                          </span>
+                        </div>
+                        <p className="text-xs text-steel leading-relaxed">
+                          Attracts an additional 1% platform commission on web contributions. Gives donors a dedicated web portal to donate via Cards, Apple Pay, and Mobile Money. The link becomes available in your campaign details once approved by administrators.
+                        </p>
+                      </div>
+                    </label>
                   </div>
 
                   {/* Status info */}

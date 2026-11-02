@@ -3,15 +3,38 @@
 import { X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 
+type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
+
 type ModalProps = {
   title: string;
   eyebrow?: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  size?: ModalSize;
+  className?: string;
 };
 
-export default function Modal({ title, eyebrow, onClose, children, footer }: Readonly<ModalProps>) {
+const SIZE_CLASSES: Record<ModalSize, string> = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+};
+
+export default function Modal({
+  title,
+  eyebrow,
+  onClose,
+  children,
+  footer,
+  size = "2xl",
+  className,
+}: Readonly<ModalProps>) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -37,7 +60,7 @@ export default function Modal({ title, eyebrow, onClose, children, footer }: Rea
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-0 bg-white shadow-2xl"
+        className={`flex max-h-[calc(100vh-2rem)] w-full ${SIZE_CLASSES[size] ?? "max-w-2xl"} flex-col overflow-hidden rounded-0 bg-white shadow-2xl ${className ?? ""}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-navy/10 px-5 py-4 sm:px-6 sm:py-5">
           <div>

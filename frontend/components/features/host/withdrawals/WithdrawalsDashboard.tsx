@@ -6,13 +6,13 @@ import {
   Clock3,
   Loader2,
   RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
   Trash2,
   Wallet,
   WalletCards,
   Percent,
-  Info,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -52,12 +52,14 @@ function WithdrawalSheet({
   campaignName,
   onClose,
   onCancel,
+  onResubmit,
   isCancelling,
 }: {
   item: Withdrawal | null;
   campaignName: string;
   onClose: () => void;
   onCancel: (item: Withdrawal) => void;
+  onResubmit: (item: Withdrawal) => void;
   isCancelling: boolean;
 }) {
   useEffect(() => {
@@ -146,8 +148,33 @@ function WithdrawalSheet({
                 : "bg-stone text-steel")
             }
           >
-            <h3 className="text-sm font-medium">Latest update</h3>
-            <p className="mt-2 text-sm leading-relaxed">{item.note}</p>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">
+                {item.status === "Rejected" ? "Rejection reason from administrator" : "Latest update"}
+              </h3>
+              {item.status === "Rejected" && (
+                <span className="text-[11px] font-semibold text-crimson uppercase tracking-wider">Rejected</span>
+              )}
+            </div>
+            <p className="mt-2 text-sm leading-relaxed font-medium text-navy">{item.note}</p>
+            {item.status === "Rejected" && (
+              <div className="mt-4 pt-3 border-t border-crimson/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p className="text-xs text-crimson/90">
+                  Reserved funds have been returned to your available balance.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onResubmit(item);
+                  }}
+                  className="inline-flex items-center gap-1.5 self-start rounded-none bg-crimson px-3.5 py-1.5 text-xs font-medium text-white hover:bg-crimson/90 transition-colors shadow-2xs"
+                >
+                  <RotateCcw size={13} />
+                  Resubmit now
+                </button>
+              </div>
+            )}
           </div>
 
           <p className="mt-6 text-xs leading-relaxed text-steel">
@@ -171,6 +198,19 @@ function WithdrawalSheet({
               Cancel request
             </button>
           )}
+          {item.status === "Rejected" && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onResubmit(item);
+              }}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-none bg-navy px-5 py-3 text-sm font-medium text-white hover:bg-steel transition-colors"
+            >
+              <RotateCcw size={16} aria-hidden="true" />
+              Resubmit request
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -190,6 +230,7 @@ export default function WithdrawalsDashboard() {
   const [status, setStatus] = useState("All");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Withdrawal | null>(null);
+  const [resubmitting, setResubmitting] = useState<Withdrawal | null>(null);
 
   const deleteMutation = useDeleteWithdrawalMutation();
 
@@ -485,6 +526,20 @@ export default function WithdrawalsDashboard() {
                           Cancel
                         </button>
                       )}
+                      {item.status === "Rejected" && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setResubmitting(item);
+                          }}
+                          className="inline-flex items-center gap-1 font-semibold text-navy hover:text-gold hover:underline"
+                          title="Resubmit this rejected withdrawal request"
+                        >
+                          <RotateCcw size={12} />
+                          Resubmit
+                        </button>
+                      )}
                       <span className="text-steel">View details →</span>
                     </div>
                   </div>
@@ -535,8 +590,27 @@ export default function WithdrawalsDashboard() {
         }
         onClose={() => setSelected(null)}
         onCancel={handleCancelRequest}
+        onResubmit={(item) => setResubmitting(item)}
         isCancelling={deleteMutation.isPending}
       />
+
+      {/* Resubmit Withdrawal Drawer */}
+      {resubmitting && (
+        <WithdrawalRequest
+          campaigns={campaigns}
+          withdrawals={withdrawals}
+          resubmitItem={resubmitting}
+          open={Boolean(resubmitting)}
+          onClose={() => setResubmitting(null)}
+          onRequested={() => {
+            setResubmitting(null);
+            setQuery("");
+            setStatus("All");
+            setPage(1);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }

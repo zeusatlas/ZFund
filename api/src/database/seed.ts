@@ -4,6 +4,7 @@ import { logger } from '../config/logger';
 import { PermissionCode, SystemRole } from '../common/types/auth';
 import { normalizePhone } from '../common/utils/phone';
 import { CryptoUtil } from '../common/utils/crypto';
+import { slugify } from '../common/utils/slug';
 import {
   ContributionPurpose,
   NotificationChannel,
@@ -100,8 +101,45 @@ export async function runSeeds(): Promise<void> {
   } else {
     existingAdmin.phone = adminPhone;
     existingAdmin.status = UserStatus.ACTIVE;
+    if (!existingAdmin.slug) existingAdmin.slug = 'admin-team';
     await userRepo.save(existingAdmin);
     logger.info(`Ensured Super Admin phone: ${adminEmail} (${adminPhone})`);
+  }
+
+  // 3b. Seed Demo Host Koranteng Kessie
+  const hostEmail = 'host@raisefundz.com';
+  const hostPhone = normalizePhone('0551234567');
+  let hostUser = await userRepo.findOne({ where: { email: hostEmail } });
+  if (!hostUser) {
+    const passwordHash = await CryptoUtil.hashPassword('Host@2026!');
+    hostUser = await userRepo.save(
+      userRepo.create({
+        email: hostEmail,
+        passwordHash,
+        firstName: 'Koranteng',
+        lastName: 'Kessie',
+        slug: 'koranteng-kessie',
+        phone: hostPhone,
+        role: SystemRole.ACCOUNT_OWNER,
+        status: UserStatus.ACTIVE,
+        isEmailVerified: true,
+      })
+    );
+    logger.info(`Seeded Demo Host: Koranteng Kessie (@koranteng-kessie)`);
+  } else {
+    let hostChanged = false;
+    if (!hostUser.slug) {
+      hostUser.slug = 'koranteng-kessie';
+      hostChanged = true;
+    }
+    if (!hostUser.phone) {
+      hostUser.phone = hostPhone;
+      hostChanged = true;
+    }
+    if (hostChanged) {
+      await userRepo.save(hostUser);
+      logger.info(`Updated Demo Host phone/slug: ${hostEmail} (${hostPhone})`);
+    }
   }
 
   // 4. Seed Project Categories
@@ -145,7 +183,7 @@ export async function runSeeds(): Promise<void> {
       channel: NotificationChannel.SMS,
       eventType: 'PAYMENT_SUCCESS',
       title: 'Contribution Confirmation',
-      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through Raise-Fundz.',
+      messageTemplate: 'Payment of {currency} {amount} to {projectName} was successful. Ref: {reference}. Thank you for contributing through Raise-Fundz. Visit: https://raisefundz.com',
       approvedPlaceholders: ['currency', 'amount', 'projectName', 'reference'],
     },
     {
@@ -300,7 +338,13 @@ export async function runSeeds(): Promise<void> {
 
   // 8. Seed Demo Church Project (*920*969*1001#)
   const existingProject1001 = await projectRepo.findOne({ where: { eventCode: '1001' } });
-  if (!existingProject1001) {
+  if (existingProject1001) {
+    existingProject1001.slug = 'holy-trinity-church';
+    existingProject1001.status = ProjectStatus.PUBLISHED;
+    existingProject1001.acceptsContributions = true;
+    await projectRepo.save(existingProject1001);
+    logger.info('Updated Demo Church Project (*920*969*1001#) slug and status');
+  } else {
     let org = await orgRepo.findOne({ where: { slug: 'holy-trinity-parish' } });
     if (!org) {
       org = await orgRepo.save(
@@ -318,12 +362,14 @@ export async function runSeeds(): Promise<void> {
     const project1001 = await projectRepo.save(
       projectRepo.create({
         name: 'Holy Trinity Church Project',
+        slug: 'holy-trinity-church',
         description: 'Contributions for Holy Trinity Cathedral harvest and community outreach.',
         organizationId: org.id,
         ownerId: admin ? admin.id : undefined,
         categoryId: churchCategory ? churchCategory.id : undefined,
         eventCode: '1001',
         currency: 'GHS',
+        targetAmount: '50000.00',
         minAmount: '1.00',
         maxAmount: '10000.00',
         status: ProjectStatus.PUBLISHED,
@@ -331,14 +377,20 @@ export async function runSeeds(): Promise<void> {
       })
     );
 
-    await paymentMethodRepo.save(
+    await paymentMethodRepo.save([
       paymentMethodRepo.create({
         projectId: project1001.id,
         method: PaymentMethodType.MOBILE_MONEY,
         provider: 'ROBSPAY',
         isEnabled: true,
-      })
-    );
+      }),
+      paymentMethodRepo.create({
+        projectId: project1001.id,
+        method: PaymentMethodType.CARD,
+        provider: 'PAYSTACK',
+        isEnabled: true,
+      }),
+    ]);
 
     const projectFlow = await flowRepo.save(
       flowRepo.create({
@@ -462,6 +514,73 @@ export async function runSeeds(): Promise<void> {
     );
 
     logger.info('Seeded Demo Church Project (*920*969*1001#)');
+  }
+
+  // 9. Seed Demo Campaign for Koranteng Kessie (*920*969*1002#)
+  const existingProject1002 = await projectRepo.findOne({ where: { eventCode: '1002' } });
+  if (existingProject1002) {
+    existingProject1002.slug = 'emergency-surgery';
+    existingProject1002.status = ProjectStatus.PUBLISHED;
+    existingProject1002.acceptsContributions = true;
+    if (hostUser) {
+      existingProject1002.ownerId = hostUser.id;
+    }
+    await projectRepo.save(existingProject1002);
+    logger.info('Updated Demo Campaign for Koranteng Kessie: /koranteng-kessie/emergency-surgery');
+  } else if (hostUser) {
+    const healthCategory = await categoryRepo.findOne({ where: { slug: 'fundraising' } });
+    const project1002 = await projectRepo.save(
+      projectRepo.create({
+        name: 'Emergency Surgery for Baby Kofi',
+        slug: 'emergency-surgery',
+        description: 'Raising funds to support life-saving pediatric heart surgery and post-operative intensive care at the Korle-Bu Teaching Hospital for 3-year-old Kofi. Every donation brings him closer to a healthy, pain-free childhood. Thank you for your kindness.',
+        ownerId: hostUser.id,
+        categoryId: healthCategory ? healthCategory.id : undefined,
+        eventCode: '1002',
+        currency: 'GHS',
+        targetAmount: '60000.00',
+        minAmount: '5.00',
+        maxAmount: '50000.00',
+        welcomeMessage: 'Thank you for standing with Baby Kofi and family. Every cedi counts.',
+        status: ProjectStatus.PUBLISHED,
+        acceptsContributions: true,
+      })
+    );
+
+    await paymentMethodRepo.save([
+      paymentMethodRepo.create({
+        projectId: project1002.id,
+        method: PaymentMethodType.MOBILE_MONEY,
+        provider: 'ROBSPAY',
+        isEnabled: true,
+      }),
+      paymentMethodRepo.create({
+        projectId: project1002.id,
+        method: PaymentMethodType.CARD,
+        provider: 'PAYSTACK',
+        isEnabled: true,
+      }),
+    ]);
+    logger.info('Seeded Demo Campaign for Koranteng Kessie: /koranteng-kessie/emergency-surgery');
+  }
+
+  // 10. Auto-backfill any remaining users or projects missing slugs
+  const allProjects = await projectRepo.find();
+  for (const p of allProjects) {
+    if (!p.slug) {
+      p.slug = slugify(p.name);
+      await projectRepo.save(p);
+      logger.info(`Auto-backfilled slug for project '${p.name}': ${p.slug}`);
+    }
+  }
+
+  const allUsers = await userRepo.find();
+  for (const u of allUsers) {
+    if (!u.slug) {
+      u.slug = slugify(`${u.firstName} ${u.lastName}`);
+      await userRepo.save(u);
+      logger.info(`Auto-backfilled slug for user '${u.firstName} ${u.lastName}': ${u.slug}`);
+    }
   }
 
   logger.info('Database seeding completed successfully.');

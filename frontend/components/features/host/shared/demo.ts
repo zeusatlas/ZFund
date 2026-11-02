@@ -9,6 +9,7 @@ export type Campaign = {
   status: CampaignStatus;
   created: string;
   closing: string;
+  slug?: string;
   startDate?: string;
   welcomeMessage?: string;
   eventCode?: string;
@@ -18,6 +19,11 @@ export type Campaign = {
   raised?: number;
   contributors?: number;
   commissionPercentage?: number;
+  settings?: {
+    webPortalEnabled?: boolean;
+    webPortalCommission?: string;
+    [key: string]: unknown;
+  };
 };
 // Illustrative data. All amounts are in pesewas.
 export const campaigns: Campaign[] = [

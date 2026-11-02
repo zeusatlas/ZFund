@@ -6,12 +6,16 @@ import {
   CircleDollarSign,
   ReceiptText,
   TrendingUp,
-  Users,
   Check,
   X,
   Loader2,
   SlidersHorizontal,
+  Pencil,
+  Globe,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { useState } from "react";
 import MetricCard from "@/components/ui/MetricCard";
@@ -24,6 +28,7 @@ import { useCampaign, useCampaignContributions, useUpdateCampaignStatus } from "
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
 import { ConfigureStepsDrawer } from "@/components/features/host/campaigns/ConfigureStepsDrawer";
+import AdminEditCampaignModal from "./AdminEditCampaignModal";
 
 type Tab = "overview" | "contributions";
 
@@ -114,6 +119,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
   const [commissionRate, setCommissionRate] = useState<number | string>(14);
   const [approveNotes, setApproveNotes] = useState("");
   const [configuringFlow, setConfiguringFlow] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const back = (
     <Link href="/admin/campaigns" className="inline-flex items-center gap-2 text-sm font-medium text-steel hover:text-navy">
@@ -150,6 +156,7 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
     ["Host", campaign.hostName],
     ["Event code", campaign.eventCode],
     ["Commission fee", `${campaign.commissionPercentage ?? "14.00"}%`],
+    ["Web Portal", campaign.settings?.webPortalEnabled ? "Enabled (+1% commission)" : "Disabled"],
     ["Created", format(new Date(campaign.createdAt), "MMM d, yyyy, HH:mm")],
     ...(campaign.startDate ? ([["Starts", format(new Date(campaign.startDate), "MMM d, yyyy")]] as [string, string][]) : []),
     ...(campaign.endDate ? ([["Ends", format(new Date(campaign.endDate), "MMM d, yyyy")]] as [string, string][]) : []),
@@ -175,6 +182,14 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
 
           {campaign.status === "PENDING_REVIEW" ? (
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-navy/15 bg-white px-3.5 py-2 text-xs font-medium text-navy hover:bg-stone hover:border-navy/30 transition-colors shadow-2xs"
+              >
+                <Pencil size={13} className="text-steel" />
+                Edit
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -221,6 +236,14 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-navy/15 bg-white px-3.5 py-2 text-xs font-medium text-navy hover:bg-stone hover:border-navy/30 transition-colors shadow-2xs"
+              >
+                <Pencil size={13} className="text-steel" />
+                Edit campaign
+              </button>
+              <button
+                type="button"
                 onClick={() => setConfiguringFlow(true)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-navy/15 bg-white px-3.5 py-2 text-xs font-medium text-navy hover:bg-stone hover:border-navy/30 transition-colors shadow-2xs"
               >
@@ -237,6 +260,70 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
           </div>
         )}
       </section>
+
+      {/* Public Web Portal Link for Donors Abroad & Online */}
+      {(() => {
+        const isApproved = campaign.status === "PUBLISHED" || campaign.status === "APPROVED";
+        const hasWebPortal = Boolean(campaign.settings?.webPortalEnabled);
+
+        if (hasWebPortal && isApproved) {
+          return (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600/20 bg-emerald-50/50 p-4 text-xs surface-card shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Globe size={15} className="text-emerald-700" />
+                <span className="font-semibold text-emerald-950">Public Web Portal:</span>
+                <span className="font-mono font-bold text-navy">
+                  /c/{campaign.eventCode}
+                </span>
+                <span className="inline-flex items-center rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                  Live (+1% fee)
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}/c/${campaign.eventCode}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("Public donation link copied!");
+                  }}
+                  className="inline-flex items-center gap-1 font-semibold text-navy hover:text-gold transition-colors"
+                >
+                  <Copy size={13} />
+                  <span>Copy Link</span>
+                </button>
+                <a
+                  href={`/c/${campaign.eventCode}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:text-navy transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  <span>Open Portal</span>
+                </a>
+              </div>
+            </div>
+          );
+        }
+
+        if (hasWebPortal && !isApproved) {
+          return (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/80 bg-amber-50/60 p-4 text-xs surface-card shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Globe size={15} className="text-amber-700 shrink-0" />
+                <div>
+                  <span className="font-semibold text-amber-950">Web Portal Enabled (+1% commission):</span>{" "}
+                  <span className="text-amber-800">
+                    The online web portal link will be activated once this campaign is approved.
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Total raised" value={formatMoney(campaign.raised)} icon={CircleDollarSign} accent="green" />
@@ -335,6 +422,16 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
                   <strong className="text-navy">Target:</strong> {formatMoney(campaign.targetAmount)}
                 </p>
               )}
+              <p>
+                <strong className="text-navy">Web Portal:</strong>{" "}
+                {campaign.settings?.webPortalEnabled ? (
+                  <span className="font-semibold text-emerald-700">
+                    Enabled (+1% commission)
+                  </span>
+                ) : (
+                  <span className="text-steel">Disabled</span>
+                )}
+              </p>
             </div>
 
             <div>
@@ -450,6 +547,17 @@ export default function CampaignDetails({ campaignId }: Readonly<{ campaignId: s
         open={configuringFlow}
         onClose={() => setConfiguringFlow(false)}
       />
+
+      {editing && (
+        <AdminEditCampaignModal
+          campaign={campaign}
+          onClose={() => setEditing(false)}
+          onUpdated={() => {
+            setEditing(false);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }
