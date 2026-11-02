@@ -10,7 +10,11 @@
     "seed": "ts-node src/database/seed.ts",
     "test": "jest --runInBand --detectOpenHandles --forceExit",
     "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "typeorm": "typeorm-ts-node-commonjs -d src/config/database.ts",
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.ts",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/database.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.ts"
   },
   "keywords": [
     "zfund",

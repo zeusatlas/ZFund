@@ -4,6 +4,8 @@ import { AlertCircle, ArrowLeft } from "lucide-react";
 import { getPublicCampaign } from "@/lib/api/public";
 import PublicCampaignView from "@/components/features/public/PublicCampaignView";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{
     hostSlug: string;

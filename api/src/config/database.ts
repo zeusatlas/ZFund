@@ -1,9 +1,9 @@
 import 'reflect-metadata';
+import path from 'path';
 import { DataSource } from 'typeorm';
 import { allEntities } from '../database/entities';
 import { env } from './env';
 import { logger } from './logger';
-
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -14,7 +14,9 @@ export const AppDataSource = new DataSource({
   database: env.DB_NAME,
   ssl: env.DB_SSL ? { rejectUnauthorized: false } : false,
   entities: allEntities,
-  synchronize: true,
+  synchronize: env.NODE_ENV === 'production' ? Boolean(process.env.TYPEORM_SYNCHRONIZE === 'true') : env.TYPEORM_SYNCHRONIZE,
+  migrations: [path.join(__dirname, '../database/migrations/*.{ts,js}')],
+  migrationsTableName: 'typeorm_migrations',
   logging: env.TYPEORM_LOGGING,
   dropSchema: false,
   extra: {
@@ -36,7 +38,7 @@ export async function initializeDatabase(): Promise<DataSource> {
         entitiesCount: allEntities.length,
         synchronize: AppDataSource.options.synchronize,
       },
-      'PostgreSQL Database connection initialized successfully with TypeORM entity synchronization'
+      'PostgreSQL Database connection initialized successfully'
     );
     return AppDataSource;
   } catch (error: any) {
