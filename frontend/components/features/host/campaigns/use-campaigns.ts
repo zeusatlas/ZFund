@@ -21,6 +21,14 @@ import {
 
 export type { ProjectStats } from "@/lib/api/projects";
 
+/**
+ * Commission is only a real figure once an administrator has set it and approved the campaign.
+ * Before that (draft, in review, rejected) the stored default must not be shown to the host.
+ */
+export function isCommissionConfirmed(rawStatus?: string): boolean {
+  return ["APPROVED", "SCHEDULED", "PUBLISHED", "SUSPENDED", "COMPLETED", "ARCHIVED"].includes(rawStatus ?? "");
+}
+
 export function projectToCampaign(project: BackendProject): Campaign {
   const goalInPesewas = project.targetAmount
     ? Math.round(parseFloat(project.targetAmount) * 100)

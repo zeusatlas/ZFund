@@ -10,10 +10,11 @@ import {
   useNextCampaignCodeQuery,
   computeNextCampaignCode,
 } from "@/components/features/host/campaigns/use-campaigns";
-import type { CreateProjectInput } from "@/lib/api/projects";
+import { uploadProjectCoverImage, type CreateProjectInput } from "@/lib/api/projects";
 import Select from "react-select";
 import { getSelectStyles } from "@/components/ui/selectStyles";
 import { SpecialCodeField, type CodeStatus } from "./SpecialCodeField";
+import WebPortalOptions from "./WebPortalOptions";
 
 type Props = { onCreated: (name: string) => void };
 const inputClass =
@@ -36,6 +37,9 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
   const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
   const handleCodeStatus = useCallback((status: CodeStatus) => setCodeStatus(status), []);
   const [enableWebPortal, setEnableWebPortal] = useState(false);
+  const [showPublicTransactions, setShowPublicTransactions] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
   const { data: backendCategories = [], isLoading: categoriesLoading } = useProjectCategoriesQuery();
   const { data: existingProjects = [] } = useProjectsQuery();
@@ -87,6 +91,8 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
     setWantsSpecialCode(false);
     setRequestedCode("");
     setEnableWebPortal(false);
+    setShowPublicTransactions(false);
+    setCoverFile(null);
     setToday(new Date().toISOString().slice(0, 10));
     nextCodeQuery.refetch();
     setOpen(true);
@@ -195,9 +201,18 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
         endDate: closing ? `${closing}T23:59:59.000Z` : undefined,
         status: "DRAFT",
         enableWebPortal,
+        showPublicTransactions: enableWebPortal && showPublicTransactions,
       };
 
-      await createMutation.mutateAsync(payload);
+      const created = await createMutation.mutateAsync(payload);
+      if (enableWebPortal && coverFile) {
+        // The campaign already exists, so a failed upload must not undo the creation.
+        try {
+          await uploadProjectCoverImage(created.id, coverFile);
+        } catch {
+          toast.warning("Campaign created, but the image could not be uploaded. You can try again later.");
+        }
+      }
       toast.success(
         `Campaign "${name}" created in Draft. You can now configure steps and submit for admin review!`
       );
@@ -513,6 +528,17 @@ export function CreateCampaignDrawer({ onCreated }: Props) {
                         </p>
                       </div>
                     </label>
+
+                    {enableWebPortal && (
+                      <WebPortalOptions
+                        idPrefix="new-campaign"
+                        file={coverFile}
+                        onFileChange={setCoverFile}
+                        showPublicTransactions={showPublicTransactions}
+                        onShowPublicTransactionsChange={setShowPublicTransactions}
+                        disabled={createMutation.isPending}
+                      />
+                    )}
                   </div>
 
                   {/* Status info */}

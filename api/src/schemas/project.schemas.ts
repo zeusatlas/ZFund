@@ -28,6 +28,8 @@ export const createProjectSchema = z.object({
   endDate: z.string().datetime().optional(),
   acceptsContributions: z.boolean().default(true),
   enableWebPortal: z.boolean().default(false).optional(),
+  /** Show the donors wall (recent contributions) on the public campaign page. Needs the web portal. */
+  showPublicTransactions: z.boolean().optional(),
   commissionPercentage: z
     .union([z.number(), z.string()])
     .transform((val) => String(Number(val).toFixed(2)))

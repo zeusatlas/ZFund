@@ -33,6 +33,7 @@ import {
   useCampaignsList,
   useUpdateProjectStatusMutation,
   useDeleteProjectMutation,
+  isCommissionConfirmed,
 } from "@/components/features/host/campaigns/use-campaigns";
 import CreateCampaignModal from "@/components/features/host/campaigns/CreateCampaignModal";
 import EditCampaignDrawer from "@/components/features/host/campaigns/EditCampaignModal";
@@ -530,9 +531,11 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                         <PhoneCall size={12} className="text-gold" />
                         *920*969*{campaign.eventCode}#
                       </span>
-                      <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
-                        {campaign.commissionPercentage ?? 14}% fee
-                      </span>
+                      {isCommissionConfirmed(campaign.rawStatus) && (
+                        <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
+                          {campaign.commissionPercentage ?? 14}% fee
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={(e) =>
@@ -661,9 +664,11 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                             <PhoneCall size={12} className="text-gold" />
                             *920*969*{campaign.eventCode}#
                           </span>
-                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
-                            {campaign.commissionPercentage ?? 14}% fee
-                          </span>
+                          {isCommissionConfirmed(campaign.rawStatus) && (
+                            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200/60">
+                              {campaign.commissionPercentage ?? 14}% fee
+                            </span>
+                          )}
                           <button
                             type="button"
                             onClick={(e) =>
@@ -952,23 +957,28 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                 </p>
               </div>
               {(() => {
+                const commissionConfirmed = isCommissionConfirmed(viewingCampaign.rawStatus);
                 const commPercent = viewingCampaign.commissionPercentage ?? 14;
                 const commAmount = Math.round((viewingCampaign.raised ?? 0) * (commPercent / 100));
                 const netAmount = (viewingCampaign.raised ?? 0) - commAmount;
                 return (
                   <>
-                    <div className="rounded-none bg-stone-light p-3 border border-navy/10">
-                      <p className="text-xs text-warning">Platform Fee ({commPercent}%)</p>
-                      <p className="mt-1 text-lg font-semibold text-warning">
-                        - {money(commAmount)}
-                      </p>
-                    </div>
-                    <div className="rounded-none bg-stone-light p-3 border border-navy/10">
-                      <p className="text-xs text-success">Net Proceeds ({Number((100 - commPercent).toFixed(2))}%)</p>
-                      <p className="mt-1 text-lg font-semibold text-success">
-                        {money(netAmount)}
-                      </p>
-                    </div>
+                    {commissionConfirmed && (
+                      <>
+                        <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                          <p className="text-xs text-warning">Platform Fee ({commPercent}%)</p>
+                          <p className="mt-1 text-lg font-semibold text-warning">
+                            - {money(commAmount)}
+                          </p>
+                        </div>
+                        <div className="rounded-none bg-stone-light p-3 border border-navy/10">
+                          <p className="text-xs text-success">Net Proceeds ({Number((100 - commPercent).toFixed(2))}%)</p>
+                          <p className="mt-1 text-lg font-semibold text-success">
+                            {money(netAmount)}
+                          </p>
+                        </div>
+                      </>
+                    )}
                     <div className="rounded-none bg-stone-light p-3 border border-navy/10">
                       <p className="text-xs text-steel">Target Goal</p>
                       <p className="mt-1 text-lg font-semibold text-navy">
@@ -985,7 +995,9 @@ export default function CampaignList({ compact = false }: { compact?: boolean })
                     </div>
                     <div className="rounded-none bg-stone-light p-3 border border-navy/10 flex items-center">
                       <p className="text-[11px] leading-relaxed text-steel">
-                        A {commPercent}% platform commission applies to this campaign to maintain USSD routing.
+                        {commissionConfirmed
+                          ? `A ${commPercent}% platform commission applies to this campaign to maintain USSD routing.`
+                          : "The platform commission is set by an administrator when your campaign is approved."}
                       </p>
                     </div>
                   </>

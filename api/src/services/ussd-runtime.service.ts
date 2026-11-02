@@ -594,7 +594,9 @@ export class UssdRuntimeService {
       order: { createdAt: 'DESC' },
     });
 
+    const now = new Date();
     const validProjects = projects.filter((p) => {
+      if (p.endDate && new Date(p.endDate) < now) return false;
       const isOwnerActive = p.owner && p.owner.status === UserStatus.ACTIVE;
       const isOrgValid = !p.organization || p.organization.verificationStatus === OrgVerificationStatus.VERIFIED;
       return isOwnerActive && isOrgValid;

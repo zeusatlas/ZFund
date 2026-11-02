@@ -64,6 +64,9 @@ export class PaymentService {
     if (project.status !== ProjectStatus.PUBLISHED || !project.acceptsContributions) {
       throw new BadRequestError('This project is not currently accepting contributions.');
     }
+    if (project.endDate && new Date(project.endDate) < new Date()) {
+      throw new BadRequestError('This campaign has ended and is no longer accepting contributions.');
+    }
 
     // Validate min and max amount
     if (MoneyUtil.compare(input.amount, project.minAmount) < 0) {
@@ -240,6 +243,9 @@ export class PaymentService {
 
     if (project.status !== ProjectStatus.PUBLISHED || !project.acceptsContributions) {
       throw new BadRequestError('This project is not currently accepting contributions.');
+    }
+    if (project.endDate && new Date(project.endDate) < new Date()) {
+      throw new BadRequestError('This campaign has ended and is no longer accepting contributions.');
     }
 
     if (MoneyUtil.compare(input.amount, project.minAmount) < 0) {

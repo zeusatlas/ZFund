@@ -49,6 +49,24 @@ html {
   scroll-padding-top: 88px;
 }
 
+/* Tailwind v4 resets buttons to the default cursor; restore the pointer for everything clickable.
+   In the base layer so utilities such as cursor-default or cursor-not-allowed still win. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="file"]):not(:disabled),
+  label:has(input:is([type="checkbox"], [type="radio"]):not(:disabled)) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 body {
   background: var(--color-stone);
   color: var(--color-ink);

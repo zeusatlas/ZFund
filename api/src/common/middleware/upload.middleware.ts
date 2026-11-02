@@ -39,3 +39,30 @@ export const documentUpload = multer({
     fileSize: env.MAX_FILE_SIZE_MB * 1024 * 1024,
   },
 });
+
+// Campaign cover images: images only, served publicly from their own directory.
+export const CAMPAIGN_IMAGE_DIR = path.resolve(process.cwd(), 'storage/campaign-images');
+if (!fs.existsSync(CAMPAIGN_IMAGE_DIR)) {
+  fs.mkdirSync(CAMPAIGN_IMAGE_DIR, { recursive: true });
+}
+
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
+
+export const campaignImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, CAMPAIGN_IMAGE_DIR),
+    // The extension comes from the verified mime type, not from the client filename.
+    filename: (_req, file, cb) => cb(null, `${Date.now()}-${uuidv4()}${IMAGE_EXTENSIONS[file.mimetype] ?? '.jpg'}`),
+  }),
+  fileFilter: (_req, file, cb) => {
+    if (!IMAGE_EXTENSIONS[file.mimetype]) {
+      return cb(new BadRequestError('Cover image must be a JPG, PNG or WebP file.'));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});

@@ -2,7 +2,10 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect } from "react";
-import { dashboardByRole, type UserRole } from "@/lib/navigation";
+import { adminRoles, useMe } from "@/lib/auth/auth";
+import type { ApiError } from "@/lib/api/client";
+import { tokenStorage } from "@/lib/api/token-storage";
+import type { UserRole } from "@/lib/navigation";
 
 type RoleContextValue = {
   role: UserRole;
@@ -27,22 +30,47 @@ export function useRole() {
   return context;
 }
 
-/** Demo-only route protection. Replace this with server auth when available. */
+/**
+ * Protects every dashboard route. Signed-out visitors go to /login, and signed-in users are
+ * kept on the dashboard that matches their role (hosts cannot open /admin and vice versa).
+ */
 export function RoleRouteGuard({ children }: { children: React.ReactNode }) {
-  const { role } = useRole();
   const pathname = usePathname();
   const router = useRouter();
+  const { data: user, error, refetch } = useMe();
 
   const isAdminRoute = pathname.startsWith("/admin");
   const isHostRoute = pathname.startsWith("/host");
-  const canAccess = (role === "admin" && isAdminRoute) || (role === "host" && isHostRoute);
+  const status = (error as Partial<ApiError> | null)?.status;
+  const authFailed = status === 401 || status === 403;
+  const isAdmin = user ? adminRoles.includes(user.role) : false;
+  const wrongDashboard = Boolean(user) && ((isAdminRoute && !isAdmin) || (isHostRoute && isAdmin));
 
   useEffect(() => {
-    if ((isAdminRoute || isHostRoute) && !canAccess) {
-      router.replace(dashboardByRole[role]);
+    if (!tokenStorage.getAccess() || authFailed) {
+      tokenStorage.clear();
+      router.replace("/login");
+      return;
     }
-  }, [canAccess, isAdminRoute, isHostRoute, role, router]);
+    if (wrongDashboard) router.replace(isAdmin ? "/admin" : "/host");
+  }, [authFailed, wrongDashboard, isAdmin, router]);
 
-  if ((isAdminRoute || isHostRoute) && !canAccess) return null;
+  if (error && !authFailed) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-stone-light text-sm text-steel">
+        <p>We couldn&apos;t load your account. Check your connection and try again.</p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="rounded-xl bg-navy px-4 py-2 text-xs font-semibold text-white"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Render nothing until we know who is signed in, so protected content never flashes.
+  if (!user || wrongDashboard) return <div className="min-h-screen bg-stone-light" />;
   return <>{children}</>;
 }

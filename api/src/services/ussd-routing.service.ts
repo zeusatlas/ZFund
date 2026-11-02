@@ -21,8 +21,14 @@ export class UssdRoutingService {
     // 1. Direct Project Entry via event code suffix (*920*969*<EVENT_CODE>#)
     if (request.eventCodeExtracted) {
       const rawProject = await projectService.getProjectByEventCodeRaw(request.eventCodeExtracted);
-      if (rawProject) {
-        const now = new Date();
+      const now = new Date();
+      // Suspended, completed or ended campaigns no longer have a dedicated entry:
+      // their code drops the caller at the general menu (*920*969#) instead.
+      const isRetired =
+        !!rawProject &&
+        ([ProjectStatus.SUSPENDED, ProjectStatus.COMPLETED, ProjectStatus.ARCHIVED].includes(rawProject.status) ||
+          (!!rawProject.endDate && new Date(rawProject.endDate) < now));
+      if (rawProject && !isRetired) {
         if (rawProject.startDate && new Date(rawProject.startDate) > now) {
           const startDateStr = new Date(rawProject.startDate).toLocaleDateString('en-GB', {
             day: 'numeric',

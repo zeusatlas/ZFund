@@ -1,4 +1,7 @@
+import fs from 'fs';
+import path from 'path';
 import { Router } from 'express';
+import { CAMPAIGN_IMAGE_DIR } from '../common/middleware/upload.middleware';
 import { publicController } from '../controllers/public.controller';
 
 const router = Router();
@@ -34,6 +37,22 @@ router.get('/hosts/:hostSlug', (req, res, next) =>
 router.post('/campaigns/:projectId/support-words', (req, res, next) =>
   publicController.addWordOfSupport(req, res, next)
 );
+
+/**
+ * GET /api/v1/public/campaign-images/:filename
+ * Campaign cover images shown on public campaign pages
+ */
+router.get('/campaign-images/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const file = path.join(CAMPAIGN_IMAGE_DIR, filename);
+  if (!/^[\w.-]+$/.test(filename) || !fs.existsSync(file)) {
+    res.sendStatus(404);
+    return;
+  }
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.sendFile(file);
+});
 
 export default router;
 

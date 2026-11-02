@@ -16,6 +16,8 @@ import {
   SlidersHorizontal,
   Plus,
   Pencil,
+  Ban,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -98,6 +100,21 @@ export default function AdminCampaigns() {
     }
   }
 
+  async function handleSuspendToggle(campaign: Fund, suspend: boolean) {
+    const message = suspend
+      ? `Suspend "${campaign.name}"? Its USSD code (${campaign.eventCode}) will stop opening the campaign and callers will land on the main *920*969# menu. Web donations will also stop.`
+      : `Reactivate "${campaign.name}"? Its USSD code will open the campaign again.`;
+    if (!window.confirm(message)) return;
+    try {
+      await updateStatusMutation.mutateAsync({
+        id: campaign.id,
+        status: suspend ? "SUSPENDED" : "PUBLISHED",
+      });
+    } catch {
+      // Error is toasted by mutation
+    }
+  }
+
   function getCampaignMenuItems(campaign: Fund): RowMenuItem[] {
     const isPendingReview = campaign.status === "PENDING_REVIEW";
     const items: RowMenuItem[] = [
@@ -118,6 +135,21 @@ export default function AdminCampaigns() {
         label: "Configure steps",
         icon: <SlidersHorizontal size={14} className="text-steel" />,
         onSelect: () => setConfiguringCampaign(campaign),
+      });
+    }
+
+    if (campaign.status === "PUBLISHED" || campaign.status === "SCHEDULED") {
+      items.push({
+        label: "Suspend campaign",
+        icon: <Ban size={14} className="text-crimson" />,
+        danger: true,
+        onSelect: () => handleSuspendToggle(campaign, true),
+      });
+    } else if (campaign.status === "SUSPENDED") {
+      items.push({
+        label: "Reactivate campaign",
+        icon: <RotateCcw size={14} className="text-emerald-700" />,
+        onSelect: () => handleSuspendToggle(campaign, false),
       });
     }
 

@@ -1,4 +1,9 @@
-import { api } from "./client";
+import { api, API_BASE_URL } from "./client";
+
+/** Absolute URL for a campaign cover image path returned by the API. */
+export function campaignImageSrc(path?: string | null): string | null {
+  return path ? `${API_BASE_URL}${path}` : null;
+}
 
 export interface PublicCampaign {
   id: string;
@@ -55,6 +60,10 @@ export interface PublicCampaign {
     createdAt: string;
     purpose?: string;
   }>;
+  /** True when the host chose to show contributions publicly. */
+  showPublicTransactions?: boolean;
+  /** Path on the API (e.g. /public/campaign-images/abc.jpg); null when the host added no image. */
+  coverImageUrl?: string | null;
   wordsOfSupport?: WordOfSupport[];
 }
 
@@ -89,6 +98,7 @@ export interface PublicHostProfile {
     totalRaised: string;
     percentFunded: number;
     contributorsCount: number;
+    showPublicTransactions?: boolean;
   }>;
 }
 

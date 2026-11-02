@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { BadRequestError } from '../common/errors/app-error';
 import { ApiResponse } from '../common/utils/response';
 import { projectService } from '../services/project.service';
 
@@ -111,6 +112,21 @@ export class ProjectController {
         req.user!.role
       );
       ApiResponse.success(res, project, 'Project updated');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async uploadCoverImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.file) throw new BadRequestError('Choose an image to upload.');
+      const result = await projectService.setCoverImage(
+        req.params.id,
+        req.file.filename,
+        req.user!.id,
+        req.user!.role
+      );
+      ApiResponse.success(res, result, 'Cover image saved');
     } catch (err) {
       next(err);
     }

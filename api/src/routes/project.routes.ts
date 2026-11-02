@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { campaignImageUpload } from '../common/middleware/upload.middleware';
 import { authenticate, optionalAuthenticate } from '../common/middleware/auth.middleware';
 import { validate } from '../common/middleware/validate.middleware';
 import { projectController } from '../controllers/project.controller';
@@ -52,6 +53,13 @@ router.put(
   authenticate,
   validate({ body: updateProjectSchema }),
   (req, res, next) => projectController.updateProject(req, res, next)
+);
+
+router.post(
+  '/:id/cover-image',
+  authenticate,
+  campaignImageUpload.single('file'),
+  (req, res, next) => projectController.uploadCoverImage(req, res, next)
 );
 
 router.delete('/:id', authenticate, (req, res, next) =>

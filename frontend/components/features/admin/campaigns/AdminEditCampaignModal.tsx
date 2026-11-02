@@ -7,7 +7,16 @@ import { toast } from "sonner";
 import Modal from "@/components/ui/Modal";
 import { getSelectStyles } from "@/components/ui/selectStyles";
 import { useProjectCategoriesQuery } from "@/components/features/host/campaigns/use-campaigns";
-import { getProjectById, updateProject, type BackendProject, type ProjectStatus, type UpdateProjectInput } from "@/lib/api/projects";
+import {
+  getProjectById,
+  updateProject,
+  uploadProjectCoverImage,
+  type BackendProject,
+  type ProjectStatus,
+  type UpdateProjectInput,
+} from "@/lib/api/projects";
+import { campaignImageSrc } from "@/lib/api/public";
+import WebPortalOptions from "@/components/features/host/campaigns/WebPortalOptions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminRoot, type Fund } from "../admin-api";
 
@@ -44,6 +53,8 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
   const [userCategory, setUserCategory] = useState<Option | null>(null);
   const [userStatus, setUserStatus] = useState<Option | null>(null);
   const [userWebPortal, setUserWebPortal] = useState<boolean | null>(null);
+  const [userShowPublic, setUserShowPublic] = useState<boolean | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
 
   const { data: categories = [], isLoading: categoriesLoading } = useProjectCategoriesQuery();
 
@@ -78,6 +89,16 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
     if (userWebPortal !== null) return userWebPortal;
     return Boolean(projectData?.settings?.webPortalEnabled ?? campaign.settings?.webPortalEnabled);
   }, [userWebPortal, projectData?.settings?.webPortalEnabled, campaign.settings?.webPortalEnabled]);
+
+  const showPublicTransactions = useMemo(() => {
+    if (userShowPublic !== null) return userShowPublic;
+    return Boolean(projectData?.settings?.showPublicTransactions ?? campaign.settings?.showPublicTransactions);
+  }, [userShowPublic, projectData?.settings?.showPublicTransactions, campaign.settings?.showPublicTransactions]);
+
+  const savedCoverImage = (projectData?.settings?.coverImage ?? campaign.settings?.coverImage) as string | undefined;
+  const currentImageUrl = savedCoverImage
+    ? campaignImageSrc(`/public/campaign-images/${savedCoverImage}`)
+    : null;
 
   function fail(message: string) {
     setError(message);
@@ -128,11 +149,20 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
       status: (selectedStatus?.value as ProjectStatus) || undefined,
       acceptsContributions,
       enableWebPortal,
+      showPublicTransactions: enableWebPortal && showPublicTransactions,
     };
 
     setSaving(true);
     try {
       const updated = await updateProject(campaign.id, payload);
+      if (enableWebPortal && coverFile) {
+        // The edit is already saved, so a failed upload is reported without undoing it.
+        try {
+          await uploadProjectCoverImage(campaign.id, coverFile);
+        } catch {
+          toast.warning("Changes saved, but the image could not be uploaded. Please try again.");
+        }
+      }
       queryClient.invalidateQueries({ queryKey: adminRoot });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["campaign", campaign.id] });
@@ -448,6 +478,18 @@ export default function AdminEditCampaignModal({ campaign, onClose, onUpdated }:
                 </p>
               </div>
             </label>
+
+            {enableWebPortal && (
+              <WebPortalOptions
+                idPrefix="edit-campaign"
+                currentImageUrl={currentImageUrl}
+                file={coverFile}
+                onFileChange={setCoverFile}
+                showPublicTransactions={showPublicTransactions}
+                onShowPublicTransactionsChange={setUserShowPublic}
+                disabled={saving}
+              />
+            )}
           </div>
         </form>
       )}

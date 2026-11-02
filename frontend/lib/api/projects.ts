@@ -86,6 +86,8 @@ export interface CreateProjectInput {
   organizationId?: string;
   commissionPercentage?: string | number;
   enableWebPortal?: boolean;
+  /** Show the donors wall on the public campaign page. Only applies with the web portal. */
+  showPublicTransactions?: boolean;
   status?: ProjectStatus;
 }
 
@@ -134,6 +136,16 @@ export async function getProjectById(id: string): Promise<BackendProject> {
 
 export async function createProject(input: CreateProjectInput): Promise<BackendProject> {
   const { data } = await api.post<SingleProjectResponse>("/projects", input);
+  return data.data;
+}
+
+export async function uploadProjectCoverImage(id: string, file: File): Promise<{ coverImage: string }> {
+  const body = new FormData();
+  body.append("file", file);
+  // The shared client defaults to JSON, which axios would use to flatten the FormData and drop the file.
+  const { data } = await api.post<{ data: { coverImage: string } }>(`/projects/${id}/cover-image`, body, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return data.data;
 }
 

@@ -12,7 +12,6 @@ import {
   Users,
   ArrowRight,
   QrCode,
-  Layers,
   HeartHandshake,
   MessageSquarePlus,
   Loader2,
@@ -25,7 +24,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney, formatCount, timeAgo } from "@/lib/format";
-import { type PublicCampaign, type WordOfSupport, addWordOfSupport } from "@/lib/api/public";
+import {
+  type PublicCampaign,
+  type WordOfSupport,
+  addWordOfSupport,
+  campaignImageSrc,
+} from "@/lib/api/public";
 import DonationModal from "./DonationModal";
 import Modal from "@/components/ui/Modal";
 
@@ -321,6 +325,7 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
   const targetNum = parseFloat(campaign.targetAmount || "0");
   const raisedNum = parseFloat(campaign.totalRaised || "0");
   const percent = targetNum > 0 ? Math.min(Math.round((raisedNum / targetNum) * 100), 100) : 0;
+  const coverImage = campaignImageSrc(campaign.coverImageUrl);
 
   return (
     <div className="min-h-screen bg-slate-50 text-navy font-sans antialiased">
@@ -351,7 +356,7 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
               href="/login"
               className="inline-flex items-center justify-center rounded-xl border border-navy/15 bg-white px-3.5 py-2 text-xs font-bold text-navy hover:bg-navy/5 shadow-2xs transition-all"
             >
-              Host Sign In
+              Sign In
             </Link>
             <button
               type="button"
@@ -367,27 +372,34 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
 
       {/* Main Campaign Container */}
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 sm:py-8">
+        <h1 className="mb-5 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl md:text-4xl leading-tight">
+          {campaign.name}
+        </h1>
+
         <div className="grid gap-6 lg:gap-8 lg:grid-cols-12">
           {/* Left Column: Story, Host, Tiers, Words of Support & Supporters (7 cols) */}
           <div className="space-y-6 lg:col-span-7">
             {/* Category Pill & Host Info */}
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                {campaign.category && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-navy/5 px-2.5 py-0.5 text-xs font-semibold text-navy">
-                    <Layers size={11} />
-                    {campaign.category.name}
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                  <ShieldCheck size={12} className="text-emerald-700" />
-                  Verified Campaign
-                </span>
-              </div>
-
-              <h1 className="text-2xl font-extrabold tracking-tight text-navy sm:text-3xl md:text-4xl leading-tight">
-                {campaign.name}
-              </h1>
+              {coverImage && (
+                <div className="relative h-72 overflow-hidden rounded-3xl bg-navy/10 sm:h-[26rem]">
+                  {/* Host-supplied image served by the API, so next/image remote config is not needed.
+                      A blurred copy fills the frame so portrait and landscape photos both look intentional. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverImage}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-80"
+                  />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverImage}
+                    alt={campaign.name}
+                    className="relative h-full w-full object-contain"
+                  />
+                </div>
+              )}
 
               {/* Host Card */}
               <div className="mt-4 flex items-center gap-3 rounded-xl border border-navy/10 bg-white p-3.5 shadow-xs">
@@ -696,7 +708,8 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
             {/* Sticky Donation Card */}
             <div className="sticky top-20 space-y-6">
               <div className="rounded-2xl border border-navy/15 bg-white p-6 shadow-md space-y-6">
-                {/* Financial Progress */}
+                {/* Financial Progress: only when the host opted to show contributions publicly */}
+                {campaign.showPublicTransactions && (
                 <div>
                   <div className="flex items-baseline justify-between">
                     <span className="text-2xl font-black text-navy sm:text-3xl">
@@ -723,6 +736,7 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Big Donation CTA */}
                 <button
@@ -746,7 +760,8 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
                 </button>
               </div>
 
-              {/* Supporters Wall (Recent 5 with "See All" button triggering Drawer) */}
+              {/* Supporters Wall: only when the host opted to show contributions publicly */}
+              {campaign.showPublicTransactions && (
               <div className="rounded-2xl border border-navy/10 bg-white p-5 sm:p-6 shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-navy/10 pb-3">
                   <div className="flex items-center gap-2">
@@ -817,6 +832,7 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
                   </button>
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -1100,8 +1116,7 @@ export default function PublicCampaignView({ campaign }: PublicCampaignViewProps
               <AtMoneyLogo />
               <VisaLogo />
               <MastercardLogo />
-              <ApplePayLogo />
-              <PayPalBadge />
+          
             </div>
           </div>
 

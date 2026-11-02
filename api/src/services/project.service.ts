@@ -1,4 +1,7 @@
+import fs from 'fs';
+import path from 'path';
 import { AppDataSource } from '../config/database';
+import { CAMPAIGN_IMAGE_DIR } from '../common/middleware/upload.middleware';
 import { logger } from '../config/logger';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../common/errors/app-error';
 import { SystemRole } from '../common/types/auth';
@@ -81,6 +84,9 @@ export interface PublicCampaignDto {
     createdAt: Date;
     purpose?: string;
   }>;
+  /** True when the host opted to show contributions on the public page. */
+  showPublicTransactions: boolean;
+  coverImageUrl: string | null;
   wordsOfSupport: Array<{
     id: string;
     name: string;
@@ -225,6 +231,7 @@ export class ProjectService {
       settings: {
         webPortalEnabled: Boolean(input.enableWebPortal),
         webPortalCommission: input.enableWebPortal ? '1.00' : '0.00',
+        showPublicTransactions: Boolean(input.enableWebPortal && input.showPublicTransactions),
       },
     });
 
@@ -535,6 +542,31 @@ export class ProjectService {
     return project;
   }
 
+  /**
+   * Stores the uploaded cover image for a campaign. Only the owner, a project member or platform
+   * staff may change it; the previous file is removed.
+   */
+  async setCoverImage(id: string, filename: string, userId: string, userRole: string): Promise<{ coverImage: string }> {
+    const project = await this.projectRepo.findOne({ where: { id }, relations: ['members'] });
+    if (!project) throw new NotFoundError('Project not found');
+
+    const isPlatformAdmin = [SystemRole.SUPER_ADMIN, SystemRole.PLATFORM_ADMIN].includes(userRole as SystemRole);
+    const isMember = project.ownerId === userId || project.members.some((m) => m.userId === userId);
+    if (!isPlatformAdmin && !isMember) {
+      throw new ForbiddenError('You do not have permission to change this campaign');
+    }
+
+    const settings = (project.settings || {}) as Record<string, any>;
+    const previous = typeof settings.coverImage === 'string' ? settings.coverImage : null;
+    project.settings = { ...settings, coverImage: filename };
+    await this.projectRepo.save(project);
+
+    if (previous && previous !== filename) {
+      await fs.promises.unlink(path.join(CAMPAIGN_IMAGE_DIR, path.basename(previous))).catch(() => undefined);
+    }
+    return { coverImage: filename };
+  }
+
   async getProjectByEventCodeRaw(eventCode: string): Promise<Project | null> {
     return this.projectRepo.findOne({
       where: { eventCode },
@@ -577,11 +609,20 @@ export class ProjectService {
     if (input.commissionPercentage !== undefined && isPlatformAdmin) {
       project.commissionPercentage = Number(input.commissionPercentage).toFixed(2);
     }
-    if (input.enableWebPortal !== undefined) {
+    if (input.enableWebPortal !== undefined || input.showPublicTransactions !== undefined) {
+      const current = (project.settings || {}) as Record<string, any>;
+      const webPortalEnabled =
+        input.enableWebPortal !== undefined ? Boolean(input.enableWebPortal) : Boolean(current.webPortalEnabled);
       project.settings = {
-        ...(project.settings || {}),
-        webPortalEnabled: Boolean(input.enableWebPortal),
-        webPortalCommission: input.enableWebPortal ? '1.00' : '0.00',
+        ...current,
+        webPortalEnabled,
+        webPortalCommission: webPortalEnabled ? '1.00' : '0.00',
+        showPublicTransactions: Boolean(
+          webPortalEnabled &&
+            (input.showPublicTransactions !== undefined
+              ? input.showPublicTransactions
+              : current.showPublicTransactions)
+        ),
       };
     }
 
@@ -1017,6 +1058,7 @@ export class ProjectService {
       totalRaised: string;
       percentFunded: number;
       contributorsCount: number;
+      showPublicTransactions: boolean;
     }>;
   }> {
     const cleanHostSlug = hostSlug.toLowerCase().trim();
@@ -1078,6 +1120,8 @@ export class ProjectService {
         const totalRaised = parseFloat(stats?.totalRaised || '0').toFixed(2);
         const target = parseFloat(p.targetAmount || '0');
         const percentFunded = target > 0 ? Math.min(Math.round((parseFloat(totalRaised) / target) * 100), 100) : 0;
+        const cardSettings = (p.settings || {}) as Record<string, any>;
+        const isPublic = Boolean(cardSettings.webPortalEnabled && cardSettings.showPublicTransactions);
 
         return {
           id: p.id,
@@ -1087,9 +1131,11 @@ export class ProjectService {
           eventCode: p.eventCode,
           category: p.category?.name,
           targetAmount: p.targetAmount,
-          totalRaised,
-          percentFunded,
-          contributorsCount: parseInt(stats?.contributorsCount || '0', 10),
+          // Hosts who keep contributions private expose no amounts here either.
+          totalRaised: isPublic ? totalRaised : '0.00',
+          percentFunded: isPublic ? percentFunded : 0,
+          contributorsCount: isPublic ? parseInt(stats?.contributorsCount || '0', 10) : 0,
+          showPublicTransactions: isPublic,
         };
       })
     );
@@ -1167,7 +1213,15 @@ export class ProjectService {
       .take(8)
       .getMany();
 
-    const recentDonations = recentContributions.map((c) => {
+    const publicSettings = (project.settings || {}) as Record<string, any>;
+    const showPublicTransactions = Boolean(publicSettings.webPortalEnabled && publicSettings.showPublicTransactions);
+    const coverImageUrl =
+      typeof publicSettings.coverImage === 'string' && publicSettings.coverImage
+        ? `/public/campaign-images/${path.basename(publicSettings.coverImage)}`
+        : null;
+
+    // The donors wall is opt-in: without it nothing about individual contributions is exposed.
+    const recentDonations = (showPublicTransactions ? recentContributions : []).map((c) => {
       const isAnon = Boolean((c.metadata as any)?.isAnonymous);
       const name = isAnon
         ? 'Anonymous Supporter'
@@ -1268,9 +1322,10 @@ export class ProjectService {
         phone: host.phone || hostPhone,
         email: host.email || hostEmail,
       },
-      totalRaised,
-      contributorsCount,
-      percentFunded,
+      // Amounts raised are part of what the host chose to keep private, so they are not sent at all.
+      totalRaised: showPublicTransactions ? totalRaised : '0.00',
+      contributorsCount: showPublicTransactions ? contributorsCount : 0,
+      percentFunded: showPublicTransactions ? percentFunded : 0,
       purposes: (project.purposes || []).map((p) => ({
         id: p.id,
         name: p.purpose?.name || p.customName || 'General',
@@ -1285,6 +1340,8 @@ export class ProjectService {
           provider: pm.provider,
         })),
       recentDonations,
+      showPublicTransactions,
+      coverImageUrl,
       wordsOfSupport,
     };
   }
