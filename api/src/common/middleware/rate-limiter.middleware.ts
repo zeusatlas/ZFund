@@ -6,6 +6,7 @@ export const globalRateLimiter = rateLimit({
   max: env.RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
@@ -17,6 +18,7 @@ export const authRateLimiter = rateLimit({
   max: env.AUTH_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again in 15 minutes.',
@@ -28,6 +30,7 @@ export const contactRateLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'You have sent several messages recently. Please try again later or email us directly.',
@@ -39,6 +42,7 @@ export const ussdRateLimiter = rateLimit({
   max: 30, // USSD interactive session burst tolerance
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
   message: {
     success: false,
     message: 'USSD session rate limit exceeded',

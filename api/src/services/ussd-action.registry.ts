@@ -5,6 +5,7 @@ import { UssdSession } from "../database/entities/ussd-session.entity";
 import { env } from "../config/env";
 import { logger } from "../config/logger";
 import { paymentService } from "./payment.service";
+import { PaymentStatus } from "../database/entities/payment-attempt.entity";
 
 export interface UssdActionContext {
   session: UssdSession;
@@ -178,42 +179,28 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
     };
   }
 
-  // Paystack experiment: end the USSD session first, charge afterwards (opt-in via USSD_PAYMENT_PROVIDER=paystack).
-  if (env.USSD_PAYMENT_PROVIDER === "paystack") {
-    try {
-      const { paymentAttempt } = await paymentService.prepareUssdPaystackPayment({
-        msisdn,
-        amount,
-        projectId,
-        purposeId: ctx.session.contextData.selectedPurposeId as
-          | string
-          | undefined,
-      });
+  // Idempotency check: prevent duplicate charge if already initiated for this session
+  if (ctx.session.contextData.paymentInitiated && ctx.session.contextData.paymentReference) {
+    const existingAttempt = await paymentService
+      .verifyPayment(ctx.session.contextData.paymentReference as string)
+      .catch(() => null);
 
-      // The USSD response (continueSession:false) is returned right after this action; the delay lets the
-      // gateway release the session before Paystack asks the telco to push the MoMo PIN prompt.
-      setTimeout(() => {
-        paymentService
-          .dispatchPaystackUssdCharge(paymentAttempt.id)
-          .catch((err) =>
-            logger.error({ err, paymentAttemptId: paymentAttempt.id }, "Deferred Paystack USSD charge crashed"),
-          );
-      }, env.PAYSTACK_USSD_CHARGE_DELAY_MS);
-
+    if (existingAttempt) {
+      if (existingAttempt.status === PaymentStatus.SUCCESSFUL) {
+        return {
+          customMessage: `Payment of ${currency} ${amount} received successfully! Thank you for supporting ${ctx.project?.name || "RaiseFunds"}.`,
+          terminate: true,
+        };
+      }
+      if (existingAttempt.providerStatus === "OTP_REQUIRED" || existingAttempt.metadata?.requiresOtp) {
+        return {
+          customMessage: "Please enter the OTP sent to your phone via SMS (or 0 to cancel):",
+          nextMenuKey: "ENTER_PAYMENT_OTP",
+          terminate: false,
+        };
+      }
       return {
-        customMessage: `Thank you! A prompt for ${currency} ${amount} will be sent to ${msisdn} shortly. Approve it with your Mobile Money PIN to support ${ctx.project?.name || "RaiseFunds"}.`,
-        terminate: true,
-        contextUpdates: {
-          paymentReference: paymentAttempt.reference,
-          paymentInitiated: true,
-          paymentInitiatedAt: new Date().toISOString(),
-          paymentProvider: "PAYSTACK",
-        },
-      };
-    } catch (err: any) {
-      return {
-        customMessage:
-          err?.message || "Payment initiation error. Please try again.",
+        customMessage: `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN.`,
         terminate: true,
       };
     }
@@ -224,9 +211,7 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
       msisdn,
       amount,
       projectId,
-      purposeId: ctx.session.contextData.selectedPurposeId as
-        | string
-        | undefined,
+      purposeId: ctx.session.contextData.selectedPurposeId as string | undefined,
     });
 
     const { chargeResult, paymentAttempt } = paymentResult;
@@ -245,6 +230,11 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
         contextUpdates: {
           paymentReference: paymentAttempt.reference,
           waitingForPaymentOtp: true,
+          paymentInitiated: true,
+          paymentInitiatedAt: new Date().toISOString(),
+          paymentProvider: paymentAttempt.provider,
+          paymentStatus: "PENDING",
+          authorizationState: "OTP_REQUIRED",
         },
       };
     }
@@ -256,6 +246,8 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
         contextUpdates: {
           paymentReference: paymentAttempt.reference,
           paymentConfirmed: true,
+          paymentInitiated: true,
+          paymentProvider: paymentAttempt.provider,
         },
       };
     }
@@ -274,7 +266,21 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
       };
     }
 
-    // Default 'pay_offline' -> Direct network prompt
+    if (chargeResult.status === "timeout") {
+      return {
+        customMessage: "Payment authorization is in progress. Please check your phone for prompts or redial to check status.",
+        terminate: true,
+        contextUpdates: {
+          paymentReference: paymentAttempt.reference,
+          paymentInitiated: true,
+          paymentProvider: paymentAttempt.provider,
+          paymentStatus: "PENDING",
+          providerStatus: "TIMEOUT_PENDING",
+        },
+      };
+    }
+
+    // Default 'pay_offline' / 'pending' -> session terminates so MoMo STK prompt can land on phone
     const offlineMsg = `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN. Thank you for supporting ${ctx.project?.name || "RaiseFunds"}!`;
 
     return {
@@ -284,12 +290,13 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
         paymentReference: paymentAttempt.reference,
         paymentInitiated: true,
         paymentInitiatedAt: new Date().toISOString(),
+        paymentProvider: paymentAttempt.provider,
+        paymentStatus: "PENDING",
       },
     };
   } catch (err: any) {
     return {
-      customMessage:
-        err?.message || "Payment initiation error. Please try again.",
+      customMessage: err?.message || "Payment initiation error. Please try again.",
       terminate: true,
     };
   }
@@ -297,11 +304,14 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
 
 UssdActionRegistry.register("SUBMIT_PAYMENT_OTP", async (ctx) => {
   const userInput = ctx.userInput.trim();
-  const paymentReference = ctx.session.contextData.paymentReference as string;
+  const paymentReference =
+    (ctx.session.contextData.paymentReference as string) ||
+    (ctx.session.contextData.pendingPaymentReference as string);
+  const msisdn = ctx.session.msisdn;
 
   if (userInput === "0") {
     return {
-      customMessage: "Payment cancelled.",
+      customMessage: "Payment cancelled. You can redial anytime to continue or start a new transaction.",
       terminate: true,
       contextUpdates: {
         waitingForPaymentOtp: false,
@@ -312,8 +322,17 @@ UssdActionRegistry.register("SUBMIT_PAYMENT_OTP", async (ctx) => {
 
   if (!paymentReference) {
     return {
-      customMessage: "Payment session expired. Please start again.",
+      customMessage: "Payment session expired. Please dial again.",
       terminate: true,
+    };
+  }
+
+  // Validate OTP format: 4 to 10 alphanumeric characters
+  if (!/^[0-9a-zA-Z]{4,10}$/.test(userInput)) {
+    return {
+      customMessage: "Invalid OTP format. Please enter a valid code (or 0 to cancel):",
+      nextMenuKey: "ENTER_PAYMENT_OTP",
+      terminate: false,
     };
   }
 
@@ -321,6 +340,7 @@ UssdActionRegistry.register("SUBMIT_PAYMENT_OTP", async (ctx) => {
     const result = await paymentService.submitUssdPaymentOtp({
       reference: paymentReference,
       otp: userInput,
+      msisdn,
     });
 
     if (result.status === "success") {
@@ -341,10 +361,21 @@ UssdActionRegistry.register("SUBMIT_PAYMENT_OTP", async (ctx) => {
         customMessage:
           result.displayText ||
           result.message ||
-          "OTP verified. Please approve the MoMo prompt on your phone to complete.",
+          "OTP verified. Please approve the Mobile Money prompt on your phone to complete.",
         terminate: true,
         contextUpdates: {
           waitingForPaymentOtp: false,
+        },
+      };
+    }
+
+    if (result.paymentAttempt?.status === PaymentStatus.FAILED) {
+      return {
+        customMessage: result.displayText || result.message || "Payment authorization failed.",
+        terminate: true,
+        contextUpdates: {
+          waitingForPaymentOtp: false,
+          paymentFailed: true,
         },
       };
     }

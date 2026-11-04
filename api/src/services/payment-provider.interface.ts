@@ -62,7 +62,7 @@ export interface ChargeMobileMoneyParams {
 
 export interface ChargeMobileMoneyResult {
   reference: string;
-  status: 'success' | 'send_otp' | 'pay_offline' | 'pending' | 'failed';
+  status: 'success' | 'send_otp' | 'pay_offline' | 'pending' | 'failed' | 'timeout';
   requiresOtp: boolean;
   message: string;
   displayText?: string;
@@ -77,7 +77,7 @@ export interface SubmitOtpParams {
 
 export interface SubmitOtpResult {
   reference: string;
-  status: 'success' | 'pay_offline' | 'pending' | 'failed';
+  status: 'success' | 'pay_offline' | 'pending' | 'failed' | 'send_otp';
   message: string;
   displayText?: string;
   rawResponse?: Record<string, unknown>;

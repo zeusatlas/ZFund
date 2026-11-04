@@ -6,6 +6,8 @@ import { Project, ProjectStatus } from '../database/entities/project.entity';
 import { UserStatus } from '../database/entities/user.entity';
 import { auditService } from './audit.service';
 import { projectService } from './project.service';
+import { paymentService } from './payment.service';
+import { PaymentStatus } from '../database/entities/payment-attempt.entity';
 import { UssdFlowVersion } from '../database/entities/ussd-flow-version.entity';
 import { UssdMenuOption, UssdOptionType } from '../database/entities/ussd-menu-option.entity';
 import { UssdMenu, UssdMenuType } from '../database/entities/ussd-menu.entity';
@@ -87,6 +89,9 @@ export class UssdRuntimeService {
     await this.recordCaller(request.msisdn);
 
     // Audit log every incoming dial or turn
+    const isOtpInput = session?.currentMenuKey === 'ENTER_PAYMENT_OTP';
+    const safeUserInput = isOtpInput ? '******' : request.userInput;
+
     auditService.log({
       entityType: 'USSD_DIAL',
       entityId: request.sessionId || `ussd_${request.msisdn}_${Date.now()}`,
@@ -94,7 +99,7 @@ export class UssdRuntimeService {
       newValues: {
         msisdn: request.msisdn,
         network: request.network,
-        userInput: request.userInput,
+        userInput: safeUserInput,
         provider: request.provider,
         sessionId: request.sessionId,
         isInitial,
@@ -113,6 +118,148 @@ export class UssdRuntimeService {
     try {
       // Handle Initial Request (New Session)
       if (isInitial) {
+        // -------------------------------------------------------------
+        // Payment Recovery Check: Identify outstanding pending payments
+        // -------------------------------------------------------------
+        const pendingPayments = await paymentService.getPendingPaymentsForMsisdn(request.msisdn);
+
+        if (pendingPayments.length > 0) {
+          const newSessionId = request.sessionId || `nalo_${request.msisdn}_${Date.now()}`;
+
+          if (pendingPayments.length === 1) {
+            const pending = pendingPayments[0];
+            const isOtpRequired =
+              pending.providerStatus === 'OTP_REQUIRED' ||
+              pending.metadata?.authorizationState === 'OTP_REQUIRED';
+            const projectName = pending.contribution?.project?.name || 'this campaign';
+            const currency = pending.currency || 'GHS';
+            const amount = pending.amount;
+
+            let promptText = '';
+            if (isOtpRequired) {
+              promptText = `You have a pending payment of ${currency} ${amount} for ${projectName}.\n1. Enter OTP to authorize\n2. Check payment status\n3. Start new transaction`;
+            } else {
+              promptText = `You have a pending payment of ${currency} ${amount} for ${projectName}.\n1. Check payment status\n2. Start new transaction`;
+            }
+
+            session = await ussdSessionService.createSession({
+              sessionId: newSessionId,
+              msisdn: request.msisdn,
+              network: request.network,
+              provider: request.provider,
+              projectId: pending.contribution?.projectId,
+              initialMenuKey: 'PENDING_PAYMENT_MENU',
+              contextData: {
+                pendingPaymentId: pending.id,
+                paymentReference: pending.reference,
+                pendingPaymentReference: pending.reference,
+                pendingAmount: amount,
+                pendingCurrency: currency,
+                pendingProjectName: projectName,
+                pendingProviderStatus: pending.providerStatus,
+                isOtpRequired,
+                dialedCode: request.userInput,
+              },
+            });
+
+            await ussdSessionService.recordEvent({
+              ussdSessionId: session.id,
+              msisdn: request.msisdn,
+              stepNumber: 1,
+              menuKey: 'PENDING_PAYMENT_MENU',
+              userInput: request.userInput,
+              renderedMessage: promptText,
+              msgType: true,
+            });
+
+            return {
+              message: promptText,
+              continueSession: true,
+            };
+          } else {
+            // Multiple pending payments: present selection so customer can select which to manage
+            const lines = pendingPayments
+              .map((p, idx) => `${idx + 1}. ${p.currency} ${p.amount} (${p.contribution?.project?.name || 'Campaign'})`)
+              .join('\n');
+            const promptText = `You have multiple pending payments:\n${lines}\nSelect payment (or 0 to start new):`;
+
+            session = await ussdSessionService.createSession({
+              sessionId: newSessionId,
+              msisdn: request.msisdn,
+              network: request.network,
+              provider: request.provider,
+              initialMenuKey: 'SELECT_PENDING_PAYMENT',
+              contextData: {
+                pendingPaymentList: pendingPayments.map((p) => ({
+                  id: p.id,
+                  reference: p.reference,
+                  amount: p.amount,
+                  currency: p.currency,
+                  projectName: p.contribution?.project?.name || 'RaiseFunds',
+                  providerStatus: p.providerStatus,
+                  isOtpRequired:
+                    p.providerStatus === 'OTP_REQUIRED' ||
+                    p.metadata?.authorizationState === 'OTP_REQUIRED',
+                  projectId: p.contribution?.projectId,
+                })),
+                dialedCode: request.userInput,
+              },
+            });
+
+            await ussdSessionService.recordEvent({
+              ussdSessionId: session.id,
+              msisdn: request.msisdn,
+              stepNumber: 1,
+              menuKey: 'SELECT_PENDING_PAYMENT',
+              userInput: request.userInput,
+              renderedMessage: promptText,
+              msgType: true,
+            });
+
+            return {
+              message: promptText,
+              continueSession: true,
+            };
+          }
+        }
+
+        // Check for recent successful payment confirmation on redial (e.g. within 5 minutes)
+        if (!request.eventCodeExtracted) {
+          const recentSuccess = await paymentService.getRecentSuccessfulPaymentForMsisdn(request.msisdn, 5);
+          if (recentSuccess) {
+            const newSessionId = request.sessionId || `nalo_${request.msisdn}_${Date.now()}`;
+            const projName = recentSuccess.contribution?.project?.name || 'RaiseFunds';
+            const promptText = `Your payment of ${recentSuccess.currency} ${recentSuccess.amount} for ${projName} was successful!\nRef: ${recentSuccess.reference}\n1. Start new transaction\n2. Exit`;
+
+            session = await ussdSessionService.createSession({
+              sessionId: newSessionId,
+              msisdn: request.msisdn,
+              network: request.network,
+              provider: request.provider,
+              projectId: recentSuccess.contribution?.projectId,
+              initialMenuKey: 'RECENT_PAYMENT_CONFIRMATION',
+              contextData: {
+                recentPaymentRef: recentSuccess.reference,
+                dialedCode: request.userInput,
+              },
+            });
+
+            await ussdSessionService.recordEvent({
+              ussdSessionId: session.id,
+              msisdn: request.msisdn,
+              stepNumber: 1,
+              menuKey: 'RECENT_PAYMENT_CONFIRMATION',
+              userInput: request.userInput,
+              renderedMessage: promptText,
+              msgType: true,
+            });
+
+            return {
+              message: promptText,
+              continueSession: true,
+            };
+          }
+        }
         const resolved = await ussdRoutingService.resolveFlow(request);
         if (resolved.rejectionMessage) {
           // Log rejected dial in ussd_sessions and ussd_session_events so there is a permanent record
@@ -245,6 +392,139 @@ export class UssdRuntimeService {
       const project = session!.projectId ? await projectService.getProjectById(session!.projectId) : null;
       const userInput = request.userInput.trim();
 
+      // -------------------------------------------------------------
+      // Special Handler: Pending Payment Continuation (SELECT_PENDING_PAYMENT)
+      // -------------------------------------------------------------
+      if (session!.currentMenuKey === 'SELECT_PENDING_PAYMENT') {
+        const userInput = request.userInput.trim();
+        if (userInput === '0') {
+          return await this.renderNormalInitialFlow(session!, request);
+        }
+
+        const idx = parseInt(userInput, 10) - 1;
+        const list = (session!.contextData.pendingPaymentList as any[]) || [];
+        const chosen = list[idx];
+
+        if (!chosen) {
+          const lines = list
+            .map((p, i) => `${i + 1}. ${p.currency} ${p.amount} (${p.projectName})`)
+            .join('\n');
+          return {
+            message: `Invalid choice.\nPending payments:\n${lines}\nSelect payment (or 0 to start new):`,
+            continueSession: true,
+          };
+        }
+
+        session!.contextData = {
+          ...session!.contextData,
+          pendingPaymentId: chosen.id,
+          paymentReference: chosen.reference,
+          pendingPaymentReference: chosen.reference,
+          pendingAmount: chosen.amount,
+          pendingCurrency: chosen.currency,
+          pendingProjectName: chosen.projectName,
+          pendingProviderStatus: chosen.providerStatus,
+          isOtpRequired: chosen.isOtpRequired,
+          projectId: chosen.projectId,
+        };
+        session!.currentMenuKey = 'PENDING_PAYMENT_MENU';
+        await ussdSessionService.updateSession(session!);
+
+        let promptText = '';
+        if (chosen.isOtpRequired) {
+          promptText = `Pending payment: ${chosen.currency} ${chosen.amount} (${chosen.projectName})\n1. Enter OTP to authorize\n2. Check payment status\n3. Start new transaction`;
+        } else {
+          promptText = `Pending payment: ${chosen.currency} ${chosen.amount} (${chosen.projectName})\n1. Check payment status\n2. Start new transaction`;
+        }
+
+        await ussdSessionService.recordEvent({
+          ussdSessionId: session!.id,
+          msisdn: request.msisdn,
+          stepNumber: (session!.navigationHistory?.length || 0) + 1,
+          menuKey: 'PENDING_PAYMENT_MENU',
+          userInput: request.userInput,
+          renderedMessage: promptText,
+          msgType: true,
+        });
+
+        return { message: promptText, continueSession: true };
+      }
+
+      // -------------------------------------------------------------
+      // Special Handler: Pending Payment Menu (PENDING_PAYMENT_MENU)
+      // -------------------------------------------------------------
+      if (session!.currentMenuKey === 'PENDING_PAYMENT_MENU') {
+        const userInput = request.userInput.trim();
+        const isOtpRequired = Boolean(session!.contextData.isOtpRequired);
+        const paymentRef =
+          (session!.contextData.paymentReference as string) ||
+          (session!.contextData.pendingPaymentReference as string);
+        const amount = session!.contextData.pendingAmount || '0.00';
+        const currency = session!.contextData.pendingCurrency || 'GHS';
+        const projectName = session!.contextData.pendingProjectName || 'RaiseFunds';
+
+        if (isOtpRequired) {
+          if (userInput === '1') {
+            // Option 1: Enter OTP to authorize
+            session!.currentMenuKey = 'ENTER_PAYMENT_OTP';
+            await ussdSessionService.updateSession(session!);
+
+            const promptMsg = 'Please enter the OTP sent to your phone via SMS (or 0 to cancel):';
+            await ussdSessionService.recordEvent({
+              ussdSessionId: session!.id,
+              msisdn: request.msisdn,
+              stepNumber: (session!.navigationHistory?.length || 0) + 1,
+              menuKey: 'ENTER_PAYMENT_OTP',
+              userInput: request.userInput,
+              renderedMessage: promptMsg,
+              msgType: true,
+            });
+
+            return { message: promptMsg, continueSession: true };
+          } else if (userInput === '2') {
+            // Option 2: Check payment status
+            return await this.handleCheckPaymentStatus(session!, paymentRef, amount, currency, projectName);
+          } else if (userInput === '3' || userInput === '0') {
+            // Option 3: Start new transaction
+            return await this.renderNormalInitialFlow(session!, request);
+          } else {
+            return {
+              message: `Invalid choice.\nPending payment of ${currency} ${amount} for ${projectName}.\n1. Enter OTP to authorize\n2. Check payment status\n3. Start new transaction`,
+              continueSession: true,
+            };
+          }
+        } else {
+          // Normal pending Mobile Money authorization
+          if (userInput === '1') {
+            // Option 1: Check payment status
+            return await this.handleCheckPaymentStatus(session!, paymentRef, amount, currency, projectName);
+          } else if (userInput === '2' || userInput === '0') {
+            // Option 2: Start new transaction
+            return await this.renderNormalInitialFlow(session!, request);
+          } else {
+            return {
+              message: `Invalid choice.\nPending payment of ${currency} ${amount} for ${projectName}.\n1. Check payment status\n2. Start new transaction`,
+              continueSession: true,
+            };
+          }
+        }
+      }
+
+      // -------------------------------------------------------------
+      // Special Handler: Recent Successful Payment Confirmation
+      // -------------------------------------------------------------
+      if (session!.currentMenuKey === 'RECENT_PAYMENT_CONFIRMATION') {
+        const userInput = request.userInput.trim();
+        if (userInput === '1') {
+          return await this.renderNormalInitialFlow(session!, request);
+        }
+        await ussdSessionService.endSession(session!.sessionId, UssdSessionStatus.COMPLETED);
+        return {
+          message: 'Thank you for using RaiseFunds.',
+          continueSession: false,
+        };
+      }
+
       // Special Interceptor: Contributor is entering payment OTP/voucher
       if (session!.currentMenuKey === 'ENTER_PAYMENT_OTP') {
         const actionResult = await UssdActionRegistry.execute('SUBMIT_PAYMENT_OTP', {
@@ -274,7 +554,7 @@ export class UssdRuntimeService {
           msisdn: request.msisdn,
           stepNumber: (session!.navigationHistory?.length || 0) + 1,
           menuKey: session!.currentMenuKey,
-          userInput: request.userInput,
+          userInput: '******',
           renderedMessage: msg,
           msgType: true,
         });
@@ -662,6 +942,89 @@ export class UssdRuntimeService {
   /**
    * Dynamically renders prompt and active options loaded directly from the database
    */
+  private async handleCheckPaymentStatus(
+    session: UssdSession,
+    paymentRef: string,
+    amount: any,
+    currency: any,
+    projectName: any
+  ): Promise<InternalUssdResponse> {
+    try {
+      const verified = await paymentService.verifyPayment(paymentRef);
+      if (verified.status === PaymentStatus.SUCCESSFUL) {
+        await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.COMPLETED);
+        return {
+          message: `Payment of ${currency} ${amount} for ${projectName} is confirmed! Thank you for your contribution.\nRef: ${paymentRef}`,
+          continueSession: false,
+        };
+      }
+      if (verified.status === PaymentStatus.FAILED) {
+        await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.COMPLETED);
+        return {
+          message: `Payment of ${currency} ${amount} was not completed (${verified.providerStatus || 'Failed'}). You may start a new transaction.`,
+          continueSession: false,
+        };
+      }
+      // Still pending
+      await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.COMPLETED);
+      return {
+        message: `Payment of ${currency} ${amount} is pending. Please authorize with your Mobile Money PIN on your phone or check back shortly.`,
+        continueSession: false,
+      };
+    } catch (err: any) {
+      await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.COMPLETED);
+      return {
+        message: `Payment of ${currency} ${amount} is currently being processed. Please check back shortly.`,
+        continueSession: false,
+      };
+    }
+  }
+
+  private async renderNormalInitialFlow(session: UssdSession, request: InternalUssdRequest): Promise<InternalUssdResponse> {
+    const resolved = await ussdRoutingService.resolveFlow(request);
+    if (resolved.rejectionMessage) {
+      await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.FAILED);
+      return { message: resolved.rejectionMessage, continueSession: false };
+    }
+    if (!resolved.flow || !resolved.version) {
+      await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.FAILED);
+      return {
+        message: 'Welcome to RaiseFunds. No active USSD service is currently available. Please contact support.',
+        continueSession: false,
+      };
+    }
+
+    session.projectId = resolved.project?.id;
+    session.flowId = resolved.flow.id;
+    session.flowVersionId = resolved.version.id;
+    session.currentMenuKey = 'WELCOME';
+    session.navigationHistory = [];
+    session.contextData = {
+      dialedCode: request.userInput,
+      eventCode: resolved.directEventCodeUsed,
+    };
+    await ussdSessionService.updateSession(session);
+
+    const welcomeMenu = resolved.version.menus.find((m) => m.menuKey === 'WELCOME');
+    if (!welcomeMenu) {
+      await ussdSessionService.endSession(session.sessionId, UssdSessionStatus.FAILED);
+      return { message: 'Menu configuration error. Initial menu not found.', continueSession: false };
+    }
+
+    const rendered = this.renderMenu(welcomeMenu, resolved.project, session);
+    await ussdSessionService.recordEvent({
+      ussdSessionId: session.id,
+      msisdn: request.msisdn,
+      stepNumber: 1,
+      menuKey: 'WELCOME',
+      userInput: request.userInput,
+      renderedMessage: rendered,
+      msgType: true,
+    });
+
+    return { message: rendered, continueSession: true };
+  }
+
   private renderMenu(menu: UssdMenu, project: Project | null, session: UssdSession): string {
     let prompt = menu.prompt;
 

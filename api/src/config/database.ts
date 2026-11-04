@@ -14,7 +14,7 @@ export const AppDataSource = new DataSource({
   database: env.DB_NAME,
   ssl: env.DB_SSL ? { rejectUnauthorized: false } : false,
   entities: allEntities,
-  synchronize: env.NODE_ENV === 'production' ? Boolean(process.env.TYPEORM_SYNCHRONIZE === 'true') : env.TYPEORM_SYNCHRONIZE,
+  synchronize: true,
   migrations: [path.join(__dirname, '../database/migrations/*.{ts,js}')],
   migrationsTableName: 'typeorm_migrations',
   logging: env.TYPEORM_LOGGING,

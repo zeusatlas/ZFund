@@ -75,7 +75,7 @@ const envSchema = z.object({
   NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(160),
 
   // Payment Provider Configuration (RobsPay)
-  PAYMENT_PROVIDER: z.literal("robspay").default("robspay"),
+  PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("paystack"),
 
   // RobsPay
   ROBSPAY_API_URL: z
@@ -92,7 +92,7 @@ const envSchema = z.object({
 
   // Paystack (USSD mobile money experiment; RobsPay stays the default)
   // Set USSD_PAYMENT_PROVIDER=paystack to route USSD payments through Paystack.
-  USSD_PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("robspay"),
+  USSD_PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("paystack"),
   PAYSTACK_SECRET_KEY: z.string().default("sk_test_mock_paystack_secret_key"),
   PAYSTACK_API_URL: z.string().default("https://api.paystack.co"),
   // Delay after the USSD response is sent before charging, so the telco session is released first.

@@ -1,5 +1,6 @@
 import { AppDataSource } from '../config/database';
 import { formatPersonName } from '../common/utils/name';
+import { normalizeGhanaPhone } from '../common/utils/phone';
 import { BadRequestError, NotFoundError } from '../common/errors/app-error';
 import { CryptoUtil } from '../common/utils/crypto';
 import { MoneyUtil } from '../common/utils/decimal';
@@ -35,16 +36,49 @@ export class PaymentService {
   private get projectRepo() { return AppDataSource.getRepository(Project); }
   private get webhookEventRepo() { return AppDataSource.getRepository(ProviderWebhookEvent); }
   private get paymentMethodRepo() { return AppDataSource.getRepository(ProjectPaymentMethod); }
+  private get providerTxRepo() { return AppDataSource.getRepository(ProviderTransaction); }
+
+  async recordProviderTransaction(params: {
+    paymentAttemptId: string;
+    provider: string;
+    providerTransactionId?: string;
+    reference: string;
+    amount: string;
+    currency: string;
+    fee?: string;
+    status: string;
+    gatewayResponse?: string;
+    rawPayload?: Record<string, unknown>;
+  }): Promise<ProviderTransaction | null> {
+    try {
+      const tx = this.providerTxRepo.create({
+        paymentAttemptId: params.paymentAttemptId,
+        provider: params.provider,
+        providerTransactionId: params.providerTransactionId || params.reference,
+        reference: params.reference,
+        amount: params.amount,
+        currency: params.currency,
+        fee: params.fee || '0.00',
+        status: params.status,
+        gatewayResponse: params.gatewayResponse,
+        rawPayload: params.rawPayload || {},
+      });
+      return await this.providerTxRepo.save(tx);
+    } catch (err) {
+      logger.error({ err, reference: params.reference }, 'Failed to record ProviderTransaction');
+      return null;
+    }
+  }
 
   /**
    * RobsPay handles every channel: hosted checkout for card, STK push for mobile money.
    */
   async getProviderForProject(_projectId?: string, _channel?: PaymentChannel): Promise<IPaymentProvider> {
-    return this.currentProvider;
+    return env.PAYMENT_PROVIDER === 'paystack' ? paystackProvider : robspayProvider;
   }
 
   get currentProvider(): IPaymentProvider {
-    return robspayProvider;
+    return env.USSD_PAYMENT_PROVIDER === 'paystack' ? paystackProvider : robspayProvider;
   }
 
   /**
@@ -154,7 +188,7 @@ export class PaymentService {
     const provider = await this.getProviderForProject(project.id, input.channel);
 
     const paymentRef = CryptoUtil.generateReference('ZF-PAY');
-    const orderId = RobspayProvider.generateTransactionId();
+    const orderId = provider === paystackProvider ? paymentRef : RobspayProvider.generateTransactionId();
 
     const paymentAttempt = this.paymentAttemptRepo.create({
       reference: paymentRef,
@@ -292,7 +326,7 @@ export class PaymentService {
     // Create Payment Attempt
     const provider = this.currentProvider;
     const paymentRef = CryptoUtil.generateReference('ZF-PAY');
-    const orderId = RobspayProvider.generateTransactionId();
+    const orderId = provider === paystackProvider ? paymentRef : RobspayProvider.generateTransactionId();
 
     const paymentAttempt = this.paymentAttemptRepo.create({
       reference: paymentRef,
@@ -341,8 +375,22 @@ export class PaymentService {
         chargeStatus: chargeResult.status,
       };
 
+      // Record ProviderTransaction for initial charge attempt
+      await this.recordProviderTransaction({
+        paymentAttemptId: savedAttempt.id,
+        provider: provider.code,
+        providerTransactionId: String((chargeResult as any).reference || (chargeResult as any).providerReference || orderId),
+        reference: savedAttempt.reference,
+        amount: savedAttempt.amount,
+        currency: savedAttempt.currency,
+        status: chargeResult.status,
+        gatewayResponse: (chargeResult as any).displayText || (chargeResult as any).message || chargeResult.status,
+        rawPayload: (chargeResult as any).rawResponse,
+      });
+
       if (chargeResult.status === 'success') {
         savedAttempt.status = PaymentStatus.SUCCESSFUL;
+        savedAttempt.providerStatus = 'success';
         savedAttempt.completedAt = new Date();
         await this.paymentAttemptRepo.save(savedAttempt);
 
@@ -371,9 +419,37 @@ export class PaymentService {
 
         savedContribution.status = ContributionStatus.FAILED;
         await this.contributionRepo.save(savedContribution);
-      } else {
-        // 'send_otp' or 'pay_offline'
+      } else if (chargeResult.status === 'send_otp') {
         savedAttempt.status = PaymentStatus.PENDING;
+        savedAttempt.providerStatus = 'OTP_REQUIRED';
+        savedAttempt.metadata = {
+          ...savedAttempt.metadata,
+          authorizationState: 'OTP_REQUIRED',
+          requiresOtp: true,
+        };
+        await this.paymentAttemptRepo.save(savedAttempt);
+
+        savedContribution.status = ContributionStatus.PENDING;
+        await this.contributionRepo.save(savedContribution);
+      } else if (chargeResult.status === 'timeout') {
+        savedAttempt.status = PaymentStatus.PENDING;
+        savedAttempt.providerStatus = 'TIMEOUT_PENDING';
+        savedAttempt.metadata = {
+          ...savedAttempt.metadata,
+          authorizationState: 'TIMEOUT_PENDING',
+        };
+        await this.paymentAttemptRepo.save(savedAttempt);
+
+        savedContribution.status = ContributionStatus.PENDING;
+        await this.contributionRepo.save(savedContribution);
+      } else {
+        // 'pay_offline' or 'pending'
+        savedAttempt.status = PaymentStatus.PENDING;
+        savedAttempt.providerStatus = chargeResult.status === 'pay_offline' ? 'pay_offline' : 'pending';
+        savedAttempt.metadata = {
+          ...savedAttempt.metadata,
+          chargeStatus: chargeResult.status,
+        };
         await this.paymentAttemptRepo.save(savedAttempt);
 
         savedContribution.status = ContributionStatus.PENDING;
@@ -385,8 +461,41 @@ export class PaymentService {
         contribution: savedContribution,
         chargeResult,
       };
-    } catch (err) {
+    } catch (err: any) {
+      const isTimeout = err?.code === 'ECONNABORTED' || err?.message?.toLowerCase().includes('timeout');
+      if (isTimeout) {
+        logger.warn({ err, reference: paymentRef }, 'Payment charge timed out during initiation; preserving as pending');
+        savedAttempt.status = PaymentStatus.PENDING;
+        savedAttempt.providerStatus = 'TIMEOUT_PENDING';
+        await this.paymentAttemptRepo.save(savedAttempt);
+        savedContribution.status = ContributionStatus.PENDING;
+        await this.contributionRepo.save(savedContribution);
+
+        await this.recordProviderTransaction({
+          paymentAttemptId: savedAttempt.id,
+          provider: provider.code,
+          providerTransactionId: orderId,
+          reference: savedAttempt.reference,
+          amount: savedAttempt.amount,
+          currency: savedAttempt.currency,
+          status: 'timeout',
+          gatewayResponse: 'Payment request timed out. Status will be verified.',
+        });
+
+        return {
+          paymentAttempt: savedAttempt,
+          contribution: savedContribution,
+          chargeResult: {
+            status: 'timeout',
+            requiresOtp: false,
+            message: 'Payment request timed out. Status will be verified.',
+            displayText: 'Payment authorization in progress. Please check your phone for prompts or redial to check status.',
+          },
+        };
+      }
+
       savedAttempt.status = PaymentStatus.FAILED;
+      savedAttempt.providerStatus = err?.message || 'Charge failed';
       await this.paymentAttemptRepo.save(savedAttempt);
       savedContribution.status = ContributionStatus.FAILED;
       await this.contributionRepo.save(savedContribution);
@@ -531,7 +640,16 @@ export class PaymentService {
       attempt.status = PaymentStatus.PENDING;
       await this.paymentAttemptRepo.save(attempt);
       if (result.status === 'send_otp') {
-        logger.warn({ reference: attempt.reference }, 'Paystack requested OTP for a deferred USSD charge; cannot collect it after session end');
+        attempt.status = PaymentStatus.PENDING;
+        attempt.providerStatus = 'OTP_REQUIRED';
+        attempt.metadata = {
+          ...attempt.metadata,
+          authorizationState: 'OTP_REQUIRED',
+          requiresOtp: true,
+        };
+        await this.paymentAttemptRepo.save(attempt);
+        logger.info({ reference: attempt.reference }, 'Paystack requested OTP for deferred charge; stored as OTP_REQUIRED for redial recovery');
+        return;
       }
       if (result.status === 'success') {
         await this.verifyPayment(attempt.reference);
@@ -588,10 +706,71 @@ export class PaymentService {
   }
 
   /**
+   * Retrieves active pending payments for an MSISDN within recent window.
+   * Auto-expires attempts older than cutoff window.
+   */
+  async getPendingPaymentsForMsisdn(msisdn: string, windowMinutes = 15): Promise<PaymentAttempt[]> {
+    const raw = msisdn.trim();
+    const normalized = normalizeGhanaPhone(raw);
+    const msisdnList = Array.from(new Set([raw, normalized])).filter(Boolean);
+
+    const attempts = await this.paymentAttemptRepo.find({
+      where: msisdnList.map((m) => ({ msisdn: m, status: PaymentStatus.PENDING })),
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
+      order: { createdAt: 'DESC' },
+    });
+
+    const now = Date.now();
+    const cutoff = windowMinutes * 60 * 1000;
+    const active: PaymentAttempt[] = [];
+
+    for (const attempt of attempts) {
+      const age = now - new Date(attempt.createdAt).getTime();
+      if (age > cutoff) {
+        attempt.status = PaymentStatus.EXPIRED;
+        attempt.providerStatus = 'EXPIRED';
+        await this.paymentAttemptRepo.save(attempt);
+        if (attempt.contribution && attempt.contribution.status === ContributionStatus.PENDING) {
+          attempt.contribution.status = ContributionStatus.FAILED;
+          await this.contributionRepo.save(attempt.contribution);
+        }
+      } else {
+        active.push(attempt);
+      }
+    }
+
+    return active;
+  }
+
+  /**
+   * Retrieves the most recent successful payment for this MSISDN within recent window (e.g. 5 mins)
+   */
+  async getRecentSuccessfulPaymentForMsisdn(msisdn: string, windowMinutes = 5): Promise<PaymentAttempt | null> {
+    const raw = msisdn.trim();
+    const normalized = normalizeGhanaPhone(raw);
+    const msisdnList = Array.from(new Set([raw, normalized])).filter(Boolean);
+
+    const attempts = await this.paymentAttemptRepo.find({
+      where: msisdnList.map((m) => ({ msisdn: m, status: PaymentStatus.SUCCESSFUL })),
+      relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
+      order: { completedAt: 'DESC', createdAt: 'DESC' },
+      take: 1,
+    });
+
+    if (attempts.length === 0) return null;
+    const latest = attempts[0];
+    const timestamp = latest.completedAt ? new Date(latest.completedAt).getTime() : new Date(latest.createdAt).getTime();
+    if (Date.now() - timestamp > windowMinutes * 60 * 1000) {
+      return null;
+    }
+    return latest;
+  }
+
+  /**
    * Submits OTP received from contributor via USSD
    */
-  async submitUssdPaymentOtp(params: { reference: string; otp: string }): Promise<{
-    status: 'success' | 'pay_offline' | 'pending' | 'failed';
+  async submitUssdPaymentOtp(params: { reference: string; otp: string; msisdn?: string }): Promise<{
+    status: 'success' | 'pay_offline' | 'pending' | 'failed' | 'send_otp';
     displayText?: string;
     message: string;
     paymentAttempt: PaymentAttempt;
@@ -603,6 +782,19 @@ export class PaymentService {
 
     if (!paymentAttempt) {
       throw new NotFoundError(`Payment attempt with reference '${params.reference}' not found`);
+    }
+
+    const currentFailedAttempts = (paymentAttempt.metadata?.failedOtpAttempts as number) || 0;
+    if (currentFailedAttempts >= 5) {
+      paymentAttempt.status = PaymentStatus.FAILED;
+      paymentAttempt.providerStatus = 'MAX_OTP_ATTEMPTS_EXCEEDED';
+      await this.paymentAttemptRepo.save(paymentAttempt);
+      return {
+        status: 'failed',
+        displayText: 'Too many failed attempts. Payment cancelled for your security.',
+        message: 'Too many failed attempts.',
+        paymentAttempt,
+      };
     }
 
     const provider = this.currentProvider;
@@ -635,10 +827,23 @@ export class PaymentService {
 
       await this.processSuccessfulCharge(chargeData, webhookRecord);
     } else if (otpResult.status === 'failed') {
+      const newFailedAttempts = currentFailedAttempts + 1;
       paymentAttempt.metadata = {
         ...paymentAttempt.metadata,
+        failedOtpAttempts: newFailedAttempts,
         lastOtpFailure: otpResult.message,
       };
+      if (newFailedAttempts >= 5) {
+        paymentAttempt.status = PaymentStatus.FAILED;
+        paymentAttempt.providerStatus = 'MAX_OTP_ATTEMPTS_EXCEEDED';
+        await this.paymentAttemptRepo.save(paymentAttempt);
+        return {
+          status: 'failed',
+          displayText: 'Too many failed attempts. Payment cancelled for your security.',
+          message: 'Too many failed attempts.',
+          paymentAttempt,
+        };
+      }
       await this.paymentAttemptRepo.save(paymentAttempt);
     }
 
@@ -931,6 +1136,25 @@ export class PaymentService {
     }
 
     // Amount & Currency Verification
+    if (paymentAttempt.currency && currency && paymentAttempt.currency.toUpperCase() !== currency.toUpperCase()) {
+      logger.error(
+        { expected: paymentAttempt.currency, received: currency, reference },
+        'Payment currency discrepancy detected'
+      );
+      paymentAttempt.status = PaymentStatus.FAILED;
+      paymentAttempt.metadata = {
+        ...paymentAttempt.metadata,
+        discrepancy: `Currency mismatch: Expected ${paymentAttempt.currency}, received ${currency}`,
+      };
+      await this.paymentAttemptRepo.save(paymentAttempt);
+      if (webhookRecord && webhookRecord.eventType) {
+        webhookRecord.isProcessed = true;
+        webhookRecord.processingResult = 'Currency discrepancy';
+        await this.webhookEventRepo.save(webhookRecord);
+      }
+      return;
+    }
+
     if (MoneyUtil.compare(paymentAttempt.amount, amountInMajor) !== 0) {
       logger.error(
         {
@@ -969,7 +1193,7 @@ export class PaymentService {
       // Create ProviderTransaction record
       const providerTx = manager.create(ProviderTransaction, {
         paymentAttemptId: paymentAttempt.id,
-        provider: paymentAttempt.provider || 'ROBSPAY',
+        provider: paymentAttempt.provider || 'PAYSTACK',
         providerTransactionId: String(data.id),
         reference,
         amount: amountInMajor,

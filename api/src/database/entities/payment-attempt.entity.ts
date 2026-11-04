@@ -26,6 +26,7 @@ export enum PaymentChannel {
   CARD = 'card',
 }
 
+@Index('idx_payment_attempt_msisdn_status', ['msisdn', 'status'])
 @Entity('payment_attempts')
 export class PaymentAttempt {
   @PrimaryGeneratedColumn('uuid')
@@ -53,6 +54,7 @@ export class PaymentAttempt {
   channel: PaymentChannel;
 
   @Column()
+  @Index('idx_payment_attempt_msisdn')
   msisdn: string;
 
   @Column({ type: 'numeric', precision: 14, scale: 2 })
