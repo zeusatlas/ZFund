@@ -200,7 +200,48 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
         };
       }
       return {
-        customMessage: `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN.`,
+        customMessage: `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN (or dial *170# -> 6 -> 3 to approve).`,
+        terminate: true,
+      };
+    }
+  }
+
+  // Paystack production flow: end the USSD session first so the phone's radio channel is idle,
+  // then dispatch the charge so MTN's Mobile Money STK prompt can pop up directly on the handset.
+  if (env.USSD_PAYMENT_PROVIDER === "paystack" && env.NODE_ENV !== "test") {
+    try {
+      const { paymentAttempt } = await paymentService.prepareUssdPaystackPayment({
+        msisdn,
+        amount,
+        projectId,
+        purposeId: ctx.session.contextData.selectedPurposeId as string | undefined,
+      });
+
+      const delayMs = env.PAYSTACK_USSD_CHARGE_DELAY_MS || 2500;
+      setTimeout(() => {
+        paymentService
+          .dispatchPaystackUssdCharge(paymentAttempt.id)
+          .catch((err) =>
+            logger.error({ err, paymentAttemptId: paymentAttempt.id }, "Deferred Paystack USSD charge failed"),
+          );
+      }, delayMs);
+
+      const offlineMsg = `Payment prompt of ${currency} ${amount} has been sent to your phone (${msisdn}). Please authorize with your Mobile Money PIN (or dial *170# -> 6 -> 3 to approve). Thank you for supporting ${ctx.project?.name || "RaiseFunds"}!`;
+
+      return {
+        customMessage: offlineMsg,
+        terminate: true,
+        contextUpdates: {
+          paymentReference: paymentAttempt.reference,
+          paymentInitiated: true,
+          paymentInitiatedAt: new Date().toISOString(),
+          paymentProvider: "PAYSTACK",
+          paymentStatus: "PENDING",
+        },
+      };
+    } catch (err: any) {
+      return {
+        customMessage: err?.message || "Payment initiation error. Please try again.",
         terminate: true,
       };
     }

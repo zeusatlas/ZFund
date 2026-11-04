@@ -624,6 +624,27 @@ export class PaymentService {
         chargeDispatchedAt: new Date().toISOString(),
       };
 
+      await this.recordProviderTransaction({
+        paymentAttemptId: attempt.id,
+        provider: attempt.provider || 'PAYSTACK',
+        reference: attempt.reference,
+        amount: attempt.amount,
+        currency: attempt.currency,
+        status: result.status,
+        providerTransactionId: (result.rawResponse?.data as Record<string, unknown> | undefined)?.id
+          ? String((result.rawResponse!.data as Record<string, unknown>).id)
+          : attempt.reference,
+        gatewayResponse: result.displayText || result.message || 'Charge attempted',
+        rawPayload: result.rawResponse,
+      });
+
+      if (result.status === 'timeout') {
+        attempt.status = PaymentStatus.PENDING;
+        attempt.providerStatus = 'TIMEOUT_PENDING';
+        await this.paymentAttemptRepo.save(attempt);
+        return;
+      }
+
       if (result.status === 'failed') {
         attempt.status = PaymentStatus.FAILED;
         attempt.providerStatus = result.message || 'Charge failed';
@@ -715,7 +736,10 @@ export class PaymentService {
     const msisdnList = Array.from(new Set([raw, normalized])).filter(Boolean);
 
     const attempts = await this.paymentAttemptRepo.find({
-      where: msisdnList.map((m) => ({ msisdn: m, status: PaymentStatus.PENDING })),
+      where: msisdnList.flatMap((m) => [
+        { msisdn: m, status: PaymentStatus.PENDING },
+        { msisdn: m, status: PaymentStatus.INITIATED },
+      ]),
       relations: ['contribution', 'contribution.project', 'contribution.project.owner', 'contribution.contributor'],
       order: { createdAt: 'DESC' },
     });
