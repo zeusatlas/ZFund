@@ -90,6 +90,14 @@ const envSchema = z.object({
     ),
   ROBSPAY_CALLBACK_URL: z.string().optional().default(""),
 
+  // Paystack (USSD mobile money experiment; RobsPay stays the default)
+  // Set USSD_PAYMENT_PROVIDER=paystack to route USSD payments through Paystack.
+  USSD_PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("robspay"),
+  PAYSTACK_SECRET_KEY: z.string().default("sk_test_mock_paystack_secret_key"),
+  PAYSTACK_API_URL: z.string().default("https://api.paystack.co"),
+  // Delay after the USSD response is sent before charging, so the telco session is released first.
+  PAYSTACK_USSD_CHARGE_DELAY_MS: z.coerce.number().default(3000),
+
   // SMS
   SMS_PROVIDER: z
     .enum(["mock", "mnotify", "arkesel", "nalo"])

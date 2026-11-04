@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { logger } from '../config/logger';
 import { paymentService } from '../services/payment.service';
+import { paystackProvider } from '../services/paystack.provider';
 
 export class WebhookController {
   /**
@@ -32,6 +33,30 @@ export class WebhookController {
     }
   }
 
+  /**
+   * Handles Paystack webhooks (charge.success / charge.failed) for the USSD experiment
+   */
+  async handlePaystackWebhook(req: Request, res: Response, _next?: NextFunction): Promise<void> {
+    try {
+      const signature = req.headers['x-paystack-signature'] as string | undefined;
+      const rawBody = req.rawBody;
+      if (!rawBody || !signature || !paystackProvider.verifyWebhookSignature(rawBody, signature)) {
+        logger.warn('Rejected Paystack webhook with missing or invalid signature');
+        res.sendStatus(401);
+        return;
+      }
+
+      logger.info(
+        { event: req.body?.event, reference: req.body?.data?.reference, status: req.body?.data?.status },
+        'Received Paystack webhook'
+      );
+      await paymentService.handlePaystackCallback(req.body);
+      res.sendStatus(200);
+    } catch (err: any) {
+      logger.error({ error: err?.message, stack: err?.stack }, 'Error handling Paystack webhook');
+      res.sendStatus(500);
+    }
+  }
 }
 
 export const webhookController = new WebhookController();

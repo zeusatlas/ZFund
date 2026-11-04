@@ -17,6 +17,7 @@ import { ProviderWebhookEvent } from '../database/entities/provider-webhook-even
 import { InitiatePaymentInput } from '../schemas/payment.schemas';
 import { IPaymentProvider } from './payment-provider.interface';
 import { robspayProvider, RobspayProvider } from './robspay.provider';
+import { paystackProvider } from './paystack.provider';
 
 export interface InitiateUssdPaymentInput {
   msisdn: string;
@@ -390,6 +391,199 @@ export class PaymentService {
       savedContribution.status = ContributionStatus.FAILED;
       await this.contributionRepo.save(savedContribution);
       throw err;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Paystack USSD experiment (separate from the RobsPay flow above)
+  //
+  // Hypothesis: Paystack's MoMo PIN prompt is not delivered while the donor's USSD session is still open,
+  // because the charge was fired inside the USSD request. Here we only create the records during the
+  // session, let the USSD response (continueSession:false) go out first, and charge afterwards.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Validates and records the contribution + payment attempt for a Paystack USSD payment.
+   * Does NOT call Paystack; call dispatchPaystackUssdCharge after the USSD session has been ended.
+   */
+  async prepareUssdPaystackPayment(input: InitiateUssdPaymentInput): Promise<{
+    paymentAttempt: PaymentAttempt;
+    contribution: Contribution;
+  }> {
+    const project = await this.projectRepo.findOne({ where: { id: input.projectId } });
+    if (!project) throw new NotFoundError('Project not found');
+    if (project.status !== ProjectStatus.PUBLISHED || !project.acceptsContributions) {
+      throw new BadRequestError('This project is not currently accepting contributions.');
+    }
+    if (project.endDate && new Date(project.endDate) < new Date()) {
+      throw new BadRequestError('This campaign has ended and is no longer accepting contributions.');
+    }
+    if (MoneyUtil.compare(input.amount, project.minAmount) < 0) {
+      throw new BadRequestError(`Amount cannot be less than minimum of ${project.currency} ${project.minAmount}`);
+    }
+    if (MoneyUtil.compare(input.amount, project.maxAmount) > 0) {
+      throw new BadRequestError(`Amount cannot exceed maximum of ${project.currency} ${project.maxAmount}`);
+    }
+
+    let contributor = await this.contributorRepo.findOne({ where: { msisdn: input.msisdn } });
+    if (!contributor) {
+      contributor = await this.contributorRepo.save(
+        this.contributorRepo.create({
+          msisdn: input.msisdn,
+          name: input.name || `Donor ${input.msisdn.slice(-4)}`,
+          email: input.email,
+        })
+      );
+    }
+
+    const validPurposeId =
+      input.purposeId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.purposeId)
+        ? input.purposeId
+        : undefined;
+
+    const contribution = await this.contributionRepo.save(
+      this.contributionRepo.create({
+        reference: CryptoUtil.generateReference('ZF-CON'),
+        projectId: project.id,
+        purposeId: validPurposeId,
+        contributorId: contributor.id,
+        amount: input.amount,
+        currency: project.currency,
+        status: ContributionStatus.PENDING,
+      })
+    );
+
+    const paymentRef = CryptoUtil.generateReference('ZF-PAY');
+    const paymentAttempt = await this.paymentAttemptRepo.save(
+      this.paymentAttemptRepo.create({
+        reference: paymentRef,
+        contributionId: contribution.id,
+        provider: paystackProvider.code,
+        channel: PaymentChannel.MOBILE_MONEY,
+        msisdn: input.msisdn,
+        amount: input.amount,
+        currency: project.currency,
+        status: PaymentStatus.INITIATED,
+        fee: '0.00',
+        // Paystack uses the reference we send, so it doubles as the provider reference.
+        providerReference: paymentRef,
+        metadata: { channel: 'USSD', ussdFlow: 'paystack-deferred' },
+      })
+    );
+
+    return { paymentAttempt, contribution };
+  }
+
+  /**
+   * Fires the Paystack mobile money charge for a prepared attempt. Call after the USSD response is sent.
+   * Results arrive via the Paystack webhook (charge.success / charge.failed); failures here mark the attempt failed.
+   */
+  async dispatchPaystackUssdCharge(paymentAttemptId: string): Promise<void> {
+    const attempt = await this.paymentAttemptRepo.findOne({
+      where: { id: paymentAttemptId },
+      relations: ['contribution', 'contribution.project', 'contribution.contributor'],
+    });
+    if (!attempt) {
+      logger.error({ paymentAttemptId }, 'Paystack USSD charge: payment attempt not found');
+      return;
+    }
+    if (attempt.status !== PaymentStatus.INITIATED) {
+      logger.warn({ paymentAttemptId, status: attempt.status }, 'Paystack USSD charge skipped: attempt not in INITIATED state');
+      return;
+    }
+
+    try {
+      const result = await paystackProvider.chargeMobileMoney({
+        reference: attempt.reference,
+        amount: attempt.amount,
+        currency: attempt.currency,
+        phone: attempt.msisdn,
+        email: attempt.contribution?.contributor?.email || `${attempt.msisdn}@contributors.raisefundz.com`,
+        metadata: {
+          contributionId: attempt.contributionId,
+          projectId: attempt.contribution?.projectId,
+          channel: 'USSD',
+        },
+      });
+
+      attempt.metadata = {
+        ...attempt.metadata,
+        chargeStatus: result.status,
+        displayText: result.displayText,
+        requiresOtp: result.requiresOtp,
+        chargeDispatchedAt: new Date().toISOString(),
+      };
+
+      if (result.status === 'failed') {
+        attempt.status = PaymentStatus.FAILED;
+        attempt.providerStatus = result.message || 'Charge failed';
+        await this.paymentAttemptRepo.save(attempt);
+        if (attempt.contribution) {
+          attempt.contribution.status = ContributionStatus.FAILED;
+          await this.contributionRepo.save(attempt.contribution);
+        }
+        return;
+      }
+
+      // pay_offline / pending / send_otp: the donor's session is already closed, so an OTP/voucher can't be
+      // collected interactively. It stays pending and is resolved by the webhook or verifyPayment.
+      attempt.status = PaymentStatus.PENDING;
+      await this.paymentAttemptRepo.save(attempt);
+      if (result.status === 'send_otp') {
+        logger.warn({ reference: attempt.reference }, 'Paystack requested OTP for a deferred USSD charge; cannot collect it after session end');
+      }
+      if (result.status === 'success') {
+        await this.verifyPayment(attempt.reference);
+      }
+    } catch (err: any) {
+      logger.error({ error: err?.message, reference: attempt.reference }, 'Paystack USSD charge dispatch failed');
+      attempt.status = PaymentStatus.FAILED;
+      attempt.providerStatus = err?.message || 'Charge dispatch failed';
+      await this.paymentAttemptRepo.save(attempt);
+      if (attempt.contribution) {
+        attempt.contribution.status = ContributionStatus.FAILED;
+        await this.contributionRepo.save(attempt.contribution);
+      }
+    }
+  }
+
+  /**
+   * Handles a Paystack webhook (charge.success / charge.failed) for payments created by the USSD experiment.
+   */
+  async handlePaystackCallback(eventPayload: Record<string, unknown>): Promise<void> {
+    const eventType = String(eventPayload.event || '');
+    const data = (eventPayload.data || {}) as Record<string, unknown>;
+    const eventId = String(data.id || '');
+    const reference = String(data.reference || '');
+
+    const existing = await this.webhookEventRepo.findOne({
+      where: [{ provider: 'PAYSTACK', eventId, eventType }],
+    });
+    if (existing?.isProcessed) {
+      logger.info({ reference, eventType }, 'Paystack webhook already processed (idempotent skip)');
+      return;
+    }
+
+    const webhookRecord = await this.webhookEventRepo.save(
+      this.webhookEventRepo.create({
+        provider: 'PAYSTACK',
+        eventType,
+        eventId,
+        reference,
+        rawPayload: eventPayload,
+        isProcessed: false,
+      })
+    );
+
+    if (eventType === 'charge.success') {
+      await this.processSuccessfulCharge(data, webhookRecord);
+    } else if (eventType === 'charge.failed') {
+      await this.processFailedCharge(data, webhookRecord);
+    } else {
+      webhookRecord.isProcessed = true;
+      webhookRecord.processingResult = 'Ignored event type';
+      await this.webhookEventRepo.save(webhookRecord);
     }
   }
 
@@ -883,7 +1077,8 @@ export class PaymentService {
       return paymentAttempt;
     }
 
-    const provider = this.currentProvider;
+    // Attempts created by the Paystack USSD experiment verify against Paystack; everything else stays on RobsPay.
+    const provider = paymentAttempt.provider === paystackProvider.code ? paystackProvider : this.currentProvider;
     const verifyResult = await provider.verifyTransaction(paymentAttempt.providerReference || paymentAttempt.reference);
 
     if (verifyResult.status === 'success') {

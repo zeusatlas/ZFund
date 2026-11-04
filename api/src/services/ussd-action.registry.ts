@@ -2,6 +2,8 @@ import { MoneyUtil } from "../common/utils/decimal";
 import { Project } from "../database/entities/project.entity";
 import { UssdMenuOption } from "../database/entities/ussd-menu-option.entity";
 import { UssdSession } from "../database/entities/ussd-session.entity";
+import { env } from "../config/env";
+import { logger } from "../config/logger";
 import { paymentService } from "./payment.service";
 
 export interface UssdActionContext {
@@ -174,6 +176,47 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
       customMessage: "Invalid project session. Payment cannot be initiated.",
       terminate: true,
     };
+  }
+
+  // Paystack experiment: end the USSD session first, charge afterwards (opt-in via USSD_PAYMENT_PROVIDER=paystack).
+  if (env.USSD_PAYMENT_PROVIDER === "paystack") {
+    try {
+      const { paymentAttempt } = await paymentService.prepareUssdPaystackPayment({
+        msisdn,
+        amount,
+        projectId,
+        purposeId: ctx.session.contextData.selectedPurposeId as
+          | string
+          | undefined,
+      });
+
+      // The USSD response (continueSession:false) is returned right after this action; the delay lets the
+      // gateway release the session before Paystack asks the telco to push the MoMo PIN prompt.
+      setTimeout(() => {
+        paymentService
+          .dispatchPaystackUssdCharge(paymentAttempt.id)
+          .catch((err) =>
+            logger.error({ err, paymentAttemptId: paymentAttempt.id }, "Deferred Paystack USSD charge crashed"),
+          );
+      }, env.PAYSTACK_USSD_CHARGE_DELAY_MS);
+
+      return {
+        customMessage: `Thank you! A prompt for ${currency} ${amount} will be sent to ${msisdn} shortly. Approve it with your Mobile Money PIN to support ${ctx.project?.name || "RaiseFunds"}.`,
+        terminate: true,
+        contextUpdates: {
+          paymentReference: paymentAttempt.reference,
+          paymentInitiated: true,
+          paymentInitiatedAt: new Date().toISOString(),
+          paymentProvider: "PAYSTACK",
+        },
+      };
+    } catch (err: any) {
+      return {
+        customMessage:
+          err?.message || "Payment initiation error. Please try again.",
+        terminate: true,
+      };
+    }
   }
 
   try {
