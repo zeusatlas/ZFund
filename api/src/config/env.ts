@@ -74,10 +74,7 @@ const envSchema = z.object({
   NALO_DEFAULT_CODE: z.string().default("*920*969#"),
   NALO_MAX_MESSAGE_LENGTH: z.coerce.number().default(160),
 
-  // Payment Provider Configuration (RobsPay)
-  PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("paystack"),
-
-  // RobsPay
+  // RobsPay: legacy. Kept only so historical payments and the optional USSD fallback keep working.
   ROBSPAY_API_URL: z
     .string()
     .default("https://robspay.robsamtechnologies.com/apis/v1/collect-payment"),
@@ -90,8 +87,7 @@ const envSchema = z.object({
     ),
   ROBSPAY_CALLBACK_URL: z.string().optional().default(""),
 
-  // Paystack (USSD mobile money experiment; RobsPay stays the default)
-  // Set USSD_PAYMENT_PROVIDER=paystack to route USSD payments through Paystack.
+  // Paystack: all web payments (Inline) and USSD mobile money when USSD_PAYMENT_PROVIDER=paystack.
   USSD_PAYMENT_PROVIDER: z.enum(["robspay", "paystack"]).default("paystack"),
   PAYSTACK_SECRET_KEY: z.string().default("sk_test_mock_paystack_secret_key"),
   PAYSTACK_API_URL: z.string().default("https://api.paystack.co"),

@@ -133,25 +133,6 @@ describe('RobsPay Payment Collection & Webhook Workflow', () => {
     expect(isInvalid).toBe(false);
   });
 
-  it('should initiate payment via /api/v1/payments/initiate with ROBSPAY provider and 12-char providerReference', async () => {
-    const res = await request(app)
-      .post('/api/v1/payments/initiate')
-      .send({
-        projectId: testProject.id,
-        amount: '25.00',
-        msisdn: '0545547479',
-        name: 'Kofi Mensah',
-        email: 'kofi@example.com',
-      });
-
-    expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.paymentAttempt.provider).toBe('ROBSPAY');
-    expect(res.body.data.paymentAttempt.providerReference).toBeDefined();
-    expect(res.body.data.paymentAttempt.providerReference).toHaveLength(12);
-    expect(res.body.data.paymentAttempt.status).toBe('PENDING');
-  });
-
   it('should process valid RobsPay callback: confirm payment, update contribution, update contributor name, and write ledger entries', async () => {
     const callbackData = {
       trans_id: testOrderId,

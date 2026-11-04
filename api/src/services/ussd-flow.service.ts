@@ -526,6 +526,22 @@ export class UssdFlowService {
       })
     );
 
+    // 2b. Optional donor name step (host opt-in), asked right after the amount
+    if (input?.collectDonorName) {
+      const donorNamePrompt = input.donorNamePrompt?.trim() || 'Enter your name (or 1 to skip):';
+      await this.menuRepo.save(
+        this.menuRepo.create({
+          flowVersionId: version.id,
+          menuKey: 'DONOR_NAME',
+          title: 'Donor Name',
+          prompt: donorNamePrompt.slice(0, 120),
+          menuType: UssdMenuType.INPUT,
+          displayOrder: 3,
+          isActive: true,
+        })
+      );
+    }
+
     // 3. Confirm Payment Menu
     const confirmPrompt =
       input?.confirmPrompt ||

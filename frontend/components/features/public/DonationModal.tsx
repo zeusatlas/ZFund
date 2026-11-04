@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   CreditCard,
   Smartphone,
@@ -11,10 +11,9 @@ import {
 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { formatMoney, formatPersonName } from "@/lib/format";
-import { loadRobsPayCheckout } from "@/lib/robspay-checkout";
+import { openPaystackInline } from "@/lib/paystack-inline";
 import {
   initiatePublicDonation,
-  lookupMobileMoneyAccount,
   verifyDonationPayment,
   type PublicCampaign,
 } from "@/lib/api/public";
@@ -39,18 +38,18 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [accountName, setAccountName] = useState<string | null>(null);
-  const [lookupState, setLookupState] = useState<"idle" | "loading" | "found" | "notfound">("idle");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{
     reference: string;
     amount: string;
     channel: string;
   } | null>(null);
-  const [waitingForMomo, setWaitingForMomo] = useState(false);
-  const [confirmingCard, setConfirmingCard] = useState(false);
+  // True while Paystack Inline is on screen: our modal is hidden, but the donor's entries are kept.
+  const [paystackOpen, setPaystackOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const finalAmount = customAmount ? customAmount : amount;
   const numAmount = parseFloat(finalAmount || "0");
@@ -66,66 +65,50 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
     setCustomAmount(cleaned);
   }
 
-  // Name enquiry: once a full number is typed, show the name on the wallet so the donor can confirm it.
-  useEffect(() => {
-    if (channel !== "mobile_money") return;
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 10) {
-      setLookupState("idle");
-      setAccountName(null);
-      return;
-    }
-    let cancelled = false;
-    setLookupState("loading");
-    const timer = setTimeout(() => {
-      lookupMobileMoneyAccount(phone.trim())
-        .then((res) => {
-          if (cancelled) return;
-          setAccountName(res.accountName);
-          setLookupState(res.found ? "found" : "notfound");
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setAccountName(null);
-          setLookupState("notfound");
-        });
-    }, 500);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [phone, channel]);
-
-  // RobsPay reports success to the pop-up first; confirm it on our side before showing the thank-you.
-  function confirmCardPayment(ref: string, paidAmount: string) {
-    setConfirmingCard(true);
+  // Paystack Inline reports back first; the backend re-checks the transaction with Paystack before we
+  // call it a success. Mobile money can take a moment to settle, so keep checking briefly.
+  function confirmPayment(ref: string, paidAmount: string, paidChannel: "card" | "mobile_money") {
+    setConfirming(true);
     let attempts = 0;
-    const finish = () => {
-      setConfirmingCard(false);
-      setSuccessData({ reference: ref, amount: paidAmount, channel: "card" });
+    const stop = () => {
+      clearInterval(interval);
+      setConfirming(false);
     };
-    const interval = setInterval(async () => {
+    const check = async () => {
       attempts++;
       try {
         const verification = await verifyDonationPayment(ref);
-        if (verification.status === "SUCCESSFUL" || verification.status === "success") {
-          clearInterval(interval);
-          finish();
+        const status = String(verification?.status || "").toUpperCase();
+        if (status === "SUCCESSFUL" || status === "SUCCESS") {
+          stop();
+          setSuccessData({ reference: ref, amount: paidAmount, channel: paidChannel });
+          return;
+        }
+        if (status === "FAILED" || status === "EXPIRED") {
+          stop();
+          setErrorMessage("Your payment was not completed and you have not been charged. Please try again.");
           return;
         }
       } catch {
-        // Ignore polling errors; the pop-up already reported success.
+        // Ignore transient verification errors and try again.
       }
       if (attempts >= 10) {
-        clearInterval(interval);
-        finish();
+        stop();
+        setNoticeMessage(
+          "We have not received confirmation of your payment yet. If you were charged, it will appear on the campaign shortly. Your reference is " +
+            ref +
+            "."
+        );
       }
-    }, 3000);
+    };
+    const interval = setInterval(check, 3000);
+    check();
   }
 
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
     setErrorMessage(null);
+    setNoticeMessage(null);
 
     if (!numAmount || numAmount <= 0) {
       setErrorMessage("Please enter a valid donation amount.");
@@ -146,6 +129,11 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
       return;
     }
 
+    if (!isAnonymous && !fullName.trim()) {
+      setErrorMessage("Please enter your name, or tick the anonymous option if you prefer not to share it.");
+      return;
+    }
+
     if (channel === "card") {
       if (!email || !email.includes("@")) {
         setErrorMessage("Please enter a valid email address for your payment receipt.");
@@ -153,8 +141,8 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
       }
     }
 
-    if (channel === "mobile_money" && (!phone || phone.trim().length < 9)) {
-      setErrorMessage("Please enter a valid 10-digit Ghana Mobile Money phone number.");
+    if (channel === "mobile_money" && phone.trim() && phone.trim().length < 9) {
+      setErrorMessage("Please enter a valid 10-digit Ghana Mobile Money phone number, or leave it blank.");
       return;
     }
 
@@ -173,72 +161,46 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
         channel,
         email: email.trim() || undefined,
         msisdn: phone.trim() || undefined,
-        name: isAnonymous ? "Anonymous" : formatPersonName(fullName) || undefined,
+        // The name is only a public display name; anonymity is applied by the server.
+        name: formatPersonName(fullName) || undefined,
         isAnonymous,
         callbackUrl,
       });
 
-      // Card: RobsPay collects the card details. Open their form as a pop-up on this page, and fall back
-      // to the full-page checkout if the pop-up script cannot load.
-      if (channel === "card") {
-        const ref = result.paymentAttempt.reference;
-        if (result.modalUrl) {
-          try {
-            const checkout = await loadRobsPayCheckout();
-            checkout.open({
-              url: result.modalUrl,
-              onSuccess: () => confirmCardPayment(ref, numAmount.toFixed(2)),
-              onClose: () => setIsSubmitting(false),
-            });
-            return;
-          } catch {
-            // fall through to the redirect below
-          }
+      const ref = result.paymentAttempt.reference;
+      const paidAmount = numAmount.toFixed(2);
+
+      if (result.accessCode) {
+        // Hide our modal and open Paystack Inline on this page with the chosen channel already selected.
+        setPaystackOpen(true);
+        try {
+          await openPaystackInline(result.accessCode, {
+            onSuccess: () => {
+              setPaystackOpen(false);
+              confirmPayment(ref, paidAmount, channel);
+            },
+            onCancel: () => {
+              setPaystackOpen(false);
+              setNoticeMessage("Payment cancelled. You have not been charged. You can try again whenever you are ready.");
+            },
+            onError: (error) => {
+              setPaystackOpen(false);
+              setErrorMessage(error?.message || "The payment could not be completed. Please try again.");
+            },
+          });
+        } catch {
+          setPaystackOpen(false);
+          setErrorMessage("We could not open the secure payment window. Please check your connection and try again.");
         }
-        if (result.authorizationUrl) {
-          window.location.href = result.authorizationUrl;
-          return;
-        }
+        return;
       }
 
-      // If Mobile Money, prompt donor to check their handset for PIN approval
-      if (channel === "mobile_money") {
-        setWaitingForMomo(true);
-        // Start polling payment status for 45 seconds
-        const ref = result.paymentAttempt.reference;
-        let attempts = 0;
-        const interval = setInterval(async () => {
-          attempts++;
-          try {
-            const verification = await verifyDonationPayment(ref);
-            if (verification.status === "SUCCESSFUL" || verification.status === "success") {
-              clearInterval(interval);
-              setWaitingForMomo(false);
-              setSuccessData({
-                reference: ref,
-                amount: numAmount.toFixed(2),
-                channel: "mobile_money",
-              });
-            } else if (verification.status === "FAILED") {
-              clearInterval(interval);
-              setWaitingForMomo(false);
-              setErrorMessage("The transaction was declined or timed out. Please try again.");
-            }
-          } catch {
-            // Ignore polling errors
-          }
-
-          if (attempts >= 15) {
-            clearInterval(interval);
-            setWaitingForMomo(false);
-            setSuccessData({
-              reference: ref,
-              amount: numAmount.toFixed(2),
-              channel: "mobile_money",
-            });
-          }
-        }, 3000);
+      // Only reachable when Paystack returns no access code (e.g. a simulated/test setup).
+      if (result.authorizationUrl) {
+        window.location.href = result.authorizationUrl;
+        return;
       }
+      setErrorMessage("Payment could not be started. Please try again.");
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -251,13 +213,14 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
 
   function handleReset() {
     setSuccessData(null);
-    setWaitingForMomo(false);
-    setConfirmingCard(false);
+    setPaystackOpen(false);
+    setConfirming(false);
     setErrorMessage(null);
+    setNoticeMessage(null);
     onClose();
   }
 
-  if (!open) return null;
+  if (!open || paystackOpen) return null;
 
   return (
     <Modal onClose={handleReset} title={successData ? "Donation Confirmed" : `Support ${campaign.name}`}>
@@ -299,30 +262,15 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
             Done
           </button>
         </div>
-      ) : confirmingCard ? (
+      ) : confirming ? (
         <div className="text-center py-8 space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <CheckCircle2 size={32} />
           </div>
-          <h3 className="text-lg font-bold text-navy">Card payment received</h3>
+          <h3 className="text-lg font-bold text-navy">Payment received</h3>
           <div className="flex items-center justify-center gap-2 text-xs text-steel">
             <Loader2 size={16} className="animate-spin" />
             <span>Confirming your contribution...</span>
-          </div>
-        </div>
-      ) : waitingForMomo ? (
-        <div className="text-center py-8 space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-700 animate-pulse">
-            <Smartphone size={32} />
-          </div>
-          <h3 className="text-lg font-bold text-navy">Authorise on Your Phone</h3>
-          <p className="text-sm text-steel max-w-sm mx-auto">
-            A prompt has been sent to <span className="font-semibold text-navy">{phone}</span>.
-            Please approve the transaction with your Mobile Money PIN.
-          </p>
-          <div className="flex items-center justify-center gap-2 text-xs text-amber-800">
-            <Loader2 size={16} className="animate-spin" />
-            <span>Waiting for payment confirmation...</span>
           </div>
         </div>
       ) : (
@@ -434,13 +382,14 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
           <div className="space-y-3 pt-1">
             <div>
               <label className="block text-xs font-medium text-steel mb-1">
-                Your Full Name (optional)
+                Your name (required unless anonymous)
               </label>
               <input
                 type="text"
                 placeholder="e.g. Kwame Mensah"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                required={!isAnonymous}
                 disabled={isAnonymous}
                 className="w-full rounded-xl border border-navy/20 bg-white px-3.5 py-2 text-xs text-navy placeholder:text-steel/60 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy disabled:bg-navy/5 disabled:opacity-50"
               />
@@ -450,10 +399,13 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
               <input
                 type="checkbox"
                 checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
+                onChange={(e) => {
+                  setIsAnonymous(e.target.checked);
+                  if (e.target.checked) setFullName("");
+                }}
                 className="rounded border-navy/30 text-navy focus:ring-navy"
               />
-              <span>Keep my donation anonymous on the supporter wall</span>
+              <span>Keep my donation anonymous on the supporter wall (shown as &quot;Anonymous&quot;)</span>
             </label>
 
             <div>
@@ -474,31 +426,18 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
             {channel === "mobile_money" && (
               <div>
                 <label className="block text-xs font-medium text-steel mb-1">
-                  Ghana Mobile Money Phone Number (required)
+                  Mobile Money Phone Number (optional)
                 </label>
                 <input
                   type="tel"
                   placeholder="0244123456"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  required
                   className="w-full rounded-xl border border-navy/20 bg-white px-3.5 py-2 text-xs text-navy placeholder:text-steel/60 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
                 />
-                {lookupState === "loading" && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-steel">
-                    <Loader2 size={12} className="animate-spin" /> Checking account name...
-                  </p>
-                )}
-                {lookupState === "found" && accountName && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-emerald-800">
-                    <CheckCircle2 size={12} /> Account name: {formatPersonName(accountName)}
-                  </p>
-                )}
-                {lookupState === "notfound" && (
-                  <p className="mt-1.5 text-[11px] text-steel">
-                    We couldn&apos;t confirm the account name. Check the number before you continue.
-                  </p>
-                )}
+                <p className="mt-1.5 text-[11px] text-steel">
+                  You will choose your network and confirm your number securely on Paystack.
+                </p>
               </div>
             )}
 
@@ -508,6 +447,13 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
             <div className="flex items-start gap-2 rounded-xl border border-crimson/30 bg-crimson/5 p-3 text-xs text-crimson">
               <AlertCircle size={15} className="shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {noticeMessage && !errorMessage && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <span>{noticeMessage}</span>
             </div>
           )}
 
@@ -525,7 +471,7 @@ export default function DonationModal({ campaign, open, onClose }: DonationModal
             ) : (
               <>
                 <span>
-                  Donate {campaign.currency} {finalAmount || "0"}
+                  Proceed to Payment · {campaign.currency} {finalAmount || "0"}
                 </span>
                 <ExternalLink size={14} />
               </>

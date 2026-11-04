@@ -663,9 +663,7 @@ export default function TransactionsDashboard() {
                           >
                             {donorLabel(item)}
                           </button>
-                          {donorLabel(item) !== item.phone && (
-                            <span className="mt-1 block text-xs text-steel">{item.phone}</span>
-                          )}
+                          <span className="mt-1 block text-xs text-steel">{item.phone}</span>
                         </td>
                         <td className="max-w-56 px-5 py-4 text-steel">
                           {campaignNames[item.campaignId] ?? item.campaignName ?? item.campaignId}

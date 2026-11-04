@@ -57,7 +57,7 @@ export class Contribution {
   })
   status: ContributionStatus;
 
-  /** Name on the paying mobile money or card account, as reported by RobsPay. Shown to hosts and admins. */
+  /** Name on the paying mobile money or card account, as reported by the payment provider. Shown to hosts and admins only. */
   @Index()
   @Column({ type: 'varchar', length: 150, nullable: true })
   accountName?: string | null;

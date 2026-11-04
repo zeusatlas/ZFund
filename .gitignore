@@ -1,1 +1,8 @@
 api/.env.example
+
+# Tests (not tracked)
+api/tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx

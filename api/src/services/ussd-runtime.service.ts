@@ -717,7 +717,8 @@ export class UssdRuntimeService {
         targetMenuKey = session!.navigationHistory.pop()!;
       } else if (currentMenu.menuType === UssdMenuType.INPUT) {
         // Execute input handler (e.g. ENTER_AMOUNT)
-        const actionResult = await UssdActionRegistry.execute('ENTER_AMOUNT', {
+        const inputAction = currentMenu.menuKey === 'DONOR_NAME' ? 'ENTER_DONOR_NAME' : 'ENTER_AMOUNT';
+        const actionResult = await UssdActionRegistry.execute(inputAction, {
           session: session!,
           project,
           userInput,
@@ -733,6 +734,14 @@ export class UssdRuntimeService {
         } else {
           session!.navigationHistory.push(currentMenu.menuKey);
           targetMenuKey = actionResult.nextMenuKey || 'CONFIRM_PAYMENT';
+          // Hosts can opt in to asking for the donor's name right after the amount.
+          if (
+            inputAction === 'ENTER_AMOUNT' &&
+            targetMenuKey === 'CONFIRM_PAYMENT' &&
+            version.menus.some((m) => m.menuKey === 'DONOR_NAME' && m.isActive)
+          ) {
+            targetMenuKey = 'DONOR_NAME';
+          }
         }
       } else {
         // SELECT menu type: match userInput against active options

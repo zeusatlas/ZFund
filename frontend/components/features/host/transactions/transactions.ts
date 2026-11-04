@@ -6,9 +6,13 @@ export type Transaction = {
   campaignId: string;
   campaignName?: string;
   contributorId?: string;
+  /** Public display name the donor typed. */
   donorName?: string;
+  isAnonymous?: boolean;
   /** Name on the paying mobile money or card account, as reported by the payment provider. */
   accountName?: string;
+  /** Payment provider that processed the payment, e.g. PAYSTACK. */
+  provider?: string;
   phone: string;
   amount: number;
   status: TransactionStatus;
@@ -19,9 +23,16 @@ export type Transaction = {
   note: string;
   paymentReference?: string;
 };
-/** Who paid: the account name when known, then the name they gave, then their number. */
-export function donorLabel(item: Pick<Transaction, "accountName" | "donorName" | "phone">): string {
-  return formatPersonName(item.accountName || item.donorName) || item.phone;
+/** Dashboards show the real name: the payer name from the provider, else the name the donor typed. */
+export function donorLabel(item: Pick<Transaction, "accountName" | "donorName">): string {
+  return formatPersonName(item.accountName || item.donorName) || "Anonymous";
+}
+/** Provider names for display; historical Robs Pay payments keep their original label. */
+export function providerLabel(provider?: string): string {
+  if (!provider) return "Not available";
+  if (provider === "PAYSTACK") return "Paystack";
+  if (provider === "ROBSPAY") return "Robs Pay";
+  return provider;
 }
 export type Stats = {
   received: number;

@@ -151,6 +151,24 @@ UssdActionRegistry.register("ENTER_AMOUNT", async (ctx) => {
   };
 });
 
+UssdActionRegistry.register("ENTER_DONOR_NAME", async (ctx) => {
+  const raw = ctx.userInput.trim().replace(/\s+/g, " ");
+
+  // "1" (or "skip") leaves the name blank; the donation then shows as Anonymous publicly.
+  if (raw === "1" || raw.toLowerCase() === "skip") {
+    return { nextMenuKey: "CONFIRM_PAYMENT", contextUpdates: { donorName: "" } };
+  }
+
+  if (raw.length < 2 || raw.length > 60 || !/^[\p{L}][\p{L}\s.'-]*$/u.test(raw)) {
+    return {
+      customMessage: "Invalid name. Enter your name using letters only (or 1 to skip):",
+      nextMenuKey: "DONOR_NAME",
+    };
+  }
+
+  return { nextMenuKey: "CONFIRM_PAYMENT", contextUpdates: { donorName: raw } };
+});
+
 UssdActionRegistry.register("CONFIRM_CONTRIBUTION", async (ctx) => {
   const amount = ctx.session.contextData.amount || "0.00";
   const currency = ctx.project?.currency || "GHS";
@@ -215,6 +233,7 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
         amount,
         projectId,
         purposeId: ctx.session.contextData.selectedPurposeId as string | undefined,
+        name: (ctx.session.contextData.donorName as string | undefined) || undefined,
       });
 
       const delayMs = env.PAYSTACK_USSD_CHARGE_DELAY_MS || 2500;
@@ -253,6 +272,7 @@ UssdActionRegistry.register("INITIATE_PAYMENT", async (ctx) => {
       amount,
       projectId,
       purposeId: ctx.session.contextData.selectedPurposeId as string | undefined,
+        name: (ctx.session.contextData.donorName as string | undefined) || undefined,
     });
 
     const { chargeResult, paymentAttempt } = paymentResult;

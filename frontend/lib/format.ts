@@ -30,3 +30,16 @@ export function formatPersonName(name?: string | null): string {
   if (trimmed !== trimmed.toUpperCase() && trimmed !== trimmed.toLowerCase()) return trimmed;
   return trimmed.toLowerCase().replace(/(^|[\s\-'’.])(\p{L})/gu, (_m, sep: string, letter: string) => sep + letter.toUpperCase());
 }
+
+/**
+ * The real name to show on host and admin dashboards: the first usable name from the payment provider,
+ * or the donor's own entry for that donation. Placeholders ("Anonymous", "Donor 1234") are skipped.
+ * Returns "" when none is usable, so callers can choose their own fallback.
+ */
+export function pickDonorName(...names: Array<string | null | undefined>): string {
+  for (const name of names) {
+    const cleaned = formatPersonName(name);
+    if (cleaned && !/^(anonymous( supporter)?|donor \d*|kind supporter|generous supporter)$/i.test(cleaned)) return cleaned;
+  }
+  return "";
+}

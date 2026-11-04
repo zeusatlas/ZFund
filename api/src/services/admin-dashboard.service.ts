@@ -74,6 +74,12 @@ export interface FundSummary {
   settings?: Record<string, unknown>;
 }
 
+/** The display name the donor typed on the donation form, if any. */
+function donorNameOf(c: { metadata?: Record<string, unknown> }): string | null {
+  const name = c.metadata?.donorName;
+  return typeof name === 'string' && name.trim() ? name.trim() : null;
+}
+
 export interface TransactionSummary {
   id: string;
   reference: string;
@@ -83,10 +89,17 @@ export interface TransactionSummary {
   projectName: string;
   hostName: string;
   contributorName: string | null;
-  /** Name on the paying mobile money or card account, as reported by RobsPay. */
+  /** Public display name the donor typed (before any anonymity is applied). */
+  donorName: string | null;
+  isAnonymous: boolean;
+  /** Donor's phone, or their email for web donors who have no phone. */
+  contact: string | null;
+  /** Name on the paying mobile money or card account, as reported by the payment provider. */
   accountName: string | null;
   /** How it was paid, e.g. "MTN MoMo" or "Visa card". */
   paymentMethod: string | null;
+  /** Payment provider that processed it, e.g. PAYSTACK or ROBSPAY (historical). */
+  provider: string | null;
   createdAt: Date;
   settings?: Record<string, unknown>;
 }
@@ -126,9 +139,13 @@ export interface ContributionRow {
   id: string;
   reference: string;
   contributorName: string | null;
-  /** Name on the paying mobile money or card account, as reported by RobsPay. */
+  /** Public display name the donor typed (before any anonymity is applied). */
+  donorName: string | null;
+  isAnonymous: boolean;
+  /** Name on the paying mobile money or card account, as reported by the payment provider. */
   accountName: string | null;
   paymentMethod: string | null;
+  provider: string | null;
   msisdn: string | null;
   amount: string;
   status: ContributionStatus;
@@ -483,8 +500,14 @@ export class AdminDashboardService {
         projectName: c.project?.name ?? 'Unknown fund',
         hostName: (c.project && ownerNames.get(c.project.ownerId)) ?? 'Unknown host',
         contributorName: c.contributor?.name ?? null,
+        donorName: donorNameOf(c),
+        isAnonymous: Boolean((c.metadata as Record<string, unknown> | undefined)?.isAnonymous),
+        contact: c.contributor?.msisdn?.startsWith('card_')
+          ? (c.contributor?.email ?? null)
+          : (c.contributor?.msisdn ?? null),
         accountName: c.accountName ?? null,
         paymentMethod: describePaymentChannel(pickRelevantAttempt(c.paymentAttempts)),
+        provider: pickRelevantAttempt(c.paymentAttempts)?.provider ?? null,
         createdAt: c.createdAt,
       })),
     };
@@ -546,9 +569,12 @@ export class AdminDashboardService {
         id: c.id,
         reference: c.reference,
         contributorName: c.contributor?.name ?? null,
+        donorName: donorNameOf(c),
+        isAnonymous: Boolean((c.metadata as Record<string, unknown> | undefined)?.isAnonymous),
         accountName: c.accountName ?? null,
         paymentMethod: describePaymentChannel(pickRelevantAttempt(c.paymentAttempts)),
-        msisdn: c.contributor?.msisdn ?? null,
+        provider: pickRelevantAttempt(c.paymentAttempts)?.provider ?? null,
+        msisdn: c.contributor?.msisdn?.startsWith('card_') ? (c.contributor?.email ?? null) : (c.contributor?.msisdn ?? null),
         amount: c.amount,
         status: c.status,
         purposeName: c.purpose?.name ?? null,

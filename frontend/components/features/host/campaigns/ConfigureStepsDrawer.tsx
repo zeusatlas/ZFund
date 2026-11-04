@@ -243,6 +243,15 @@ function ConfigureStepsForm({
     return amountMenu?.prompt ?? `Enter Amount in ${campaign.currency || "GHS"} (e.g. 50):`;
   });
 
+  // Optional step after the amount: ask donors for the name to display
+  const [collectDonorName, setCollectDonorName] = useState(() =>
+    Boolean(flowData?.version?.menus?.some((m: UssdMenu) => m.menuKey === "DONOR_NAME" && m.isActive !== false))
+  );
+  const [donorNamePrompt, setDonorNamePrompt] = useState(() => {
+    const nameMenu = flowData?.version?.menus?.find((m: UssdMenu) => m.menuKey === "DONOR_NAME");
+    return nameMenu?.prompt ?? "Enter your name (or 1 to skip):";
+  });
+
   // Step 3: Confirmation Prompt
   const [confirmPrompt, setConfirmPrompt] = useState(() => {
     const confirmMenu = flowData?.version?.menus?.find((m: UssdMenu) => m.menuKey === "CONFIRM_PAYMENT");
@@ -412,6 +421,13 @@ function ConfigureStepsForm({
       }
       setSimAmount(num.toFixed(2));
       setSimInput("");
+      setSimStep(collectDonorName ? 2.5 : 3);
+    } else if (simStep === 2.5) {
+      if (val !== "1" && !/^[\p{L}][\p{L}\s.'-]{1,59}$/u.test(val)) {
+        toast.error("Enter a name using letters only, or 1 to skip");
+        return;
+      }
+      setSimInput("");
       setSimStep(3);
     } else if (simStep === 3) {
       if (val === "1") {
@@ -459,6 +475,8 @@ function ConfigureStepsForm({
         input: {
           welcomePrompt: welcomePrompt.trim(),
           amountPrompt: amountPrompt.trim(),
+          collectDonorName,
+          donorNamePrompt: donorNamePrompt.trim() || undefined,
           confirmPrompt: confirmPrompt.trim(),
           otpPrompt: otpPrompt.trim(),
           currency: campaign.currency || "GHS",
@@ -793,6 +811,49 @@ function ConfigureStepsForm({
               </div>
             </section>
 
+            {/* Optional step: Donor name */}
+            <section className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm space-y-4">
+              <div>
+                <span className="inline-block rounded-md bg-gold/20 px-2 py-0.5 text-[11px] font-semibold text-navy uppercase tracking-wider">
+                  Optional step
+                </span>
+                <h3 className="mt-1 text-base font-semibold text-navy">Donor Name Screen</h3>
+                <p className="text-xs text-steel">
+                  Asks the donor for their name. Donors can type 1 to skip, and skipped
+                  or unnamed donations show as &quot;Anonymous&quot; on your public page.
+                </p>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-navy">
+                <input
+                  type="checkbox"
+                  checked={collectDonorName}
+                  onChange={(e) => setCollectDonorName(e.target.checked)}
+                  className="rounded border-navy/30 text-navy focus:ring-navy"
+                />
+                <span>Allow donors to enter their name</span>
+              </label>
+
+              {collectDonorName && (
+                <div>
+                  <div className="flex justify-between items-center text-xs text-steel mb-1">
+                    <label htmlFor="donor-name-prompt" className="font-medium text-navy">
+                      Prompt Text
+                    </label>
+                    <span>{donorNamePrompt.length}/120 chars</span>
+                  </div>
+                  <input
+                    id="donor-name-prompt"
+                    type="text"
+                    maxLength={120}
+                    value={donorNamePrompt}
+                    onChange={(e) => setDonorNamePrompt(e.target.value)}
+                    className="w-full rounded-xl border border-navy/20 bg-white px-3 py-2 text-sm text-navy focus:border-navy focus:outline-none"
+                  />
+                </div>
+              )}
+            </section>
+
             {/* Step 3: Confirmation Screen */}
             <section className="rounded-xl border border-navy/10 bg-white p-5 shadow-sm space-y-4">
               <div>
@@ -950,6 +1011,15 @@ function ConfigureStepsForm({
                       </p>
                       <p className="leading-relaxed font-semibold">
                         {amountPrompt || `Enter Amount in ${campaign.currency || "GHS"}:`}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Optional step: Donor name */}
+                  {simStep === 2.5 && (
+                    <div className="space-y-3 text-xs">
+                      <p className="leading-relaxed font-semibold">
+                        {donorNamePrompt || "Enter your name (or 1 to skip):"}
                       </p>
                     </div>
                   )}

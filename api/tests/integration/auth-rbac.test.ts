@@ -86,8 +86,15 @@ describe('Authentication & Role-Based Access Control (RBAC)', () => {
       .post('/api/v1/auth/request-otp')
       .send({ email: testUserEmail, phone: '0200000000' });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid phone or email');
     expect(mockSmsAdapter.sentMessages).toHaveLength(0);
+
+    const unknown = await request(app)
+      .post('/api/v1/auth/request-otp')
+      .send({ email: 'nobody@example.com', phone: '0200000000' });
+    expect(unknown.status).toBe(401);
+    expect(unknown.body.message).toBe('Invalid phone or email');
   });
 
   it('should reject a wrong code (401 Unauthorized)', async () => {

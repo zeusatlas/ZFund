@@ -118,8 +118,8 @@ export interface InitiateDonationInput {
 
 export interface InitiateDonationResult {
   authorizationUrl?: string;
-  /** RobsPay checkout URL for the on-page pop-up; authorizationUrl is the full-page fallback. */
-  modalUrl?: string;
+  /** Paystack access code that opens Paystack Inline on this page; authorizationUrl is only a fallback. */
+  accessCode?: string;
   paymentAttempt: {
     id: string;
     reference: string;
@@ -154,13 +154,6 @@ export async function getPublicHost(hostSlug: string): Promise<PublicHostProfile
 
 export async function initiatePublicDonation(input: InitiateDonationInput): Promise<InitiateDonationResult> {
   const { data } = await api.post("/payments/initiate", input);
-  return data.data;
-}
-
-export async function lookupMobileMoneyAccount(
-  msisdn: string
-): Promise<{ found: boolean; accountName: string | null; network: string | null }> {
-  const { data } = await api.post("/payments/account-lookup", { msisdn });
   return data.data;
 }
 

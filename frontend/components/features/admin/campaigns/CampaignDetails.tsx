@@ -23,7 +23,7 @@ import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { formatCount, formatMoney, formatPersonName } from "@/lib/format";
+import { formatCount, formatMoney, pickDonorName } from "@/lib/format";
 import { useCampaign, useCampaignContributions, useUpdateCampaignStatus } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 import { CampaignStatusBadge, progressPercent, ProgressBar } from "./campaign-status";
@@ -89,7 +89,7 @@ function Contributions({ campaignId }: Readonly<{ campaignId: string }>) {
                 <tr key={row.id} className="transition-colors hover:bg-stone-light/40">
                   <td className="px-4 py-3 font-mono text-xs text-navy">{row.reference}</td>
                   <td className="px-4 py-3 font-medium text-navy">
-                    {formatPersonName(row.accountName || row.contributorName) || "Anonymous"}
+                    {pickDonorName(row.accountName, row.donorName) || <span className="text-steel">Anonymous</span>}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-steel">{row.msisdn}</td>
                   <td className="px-4 py-3 text-xs text-navy">{row.paymentMethod ?? "–"}</td>

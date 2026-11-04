@@ -142,7 +142,7 @@ export function EditCampaignDrawer({ campaign, open, onClose, onUpdated }: Props
         welcomeMessage: computedWelcome.slice(0, 120),
         description: description || undefined,
         categoryId: selectedCategory?.value || undefined,
-        endDate: closing ? `${closing}T23:59:59.000Z` : undefined,
+        endDate: closing ? `${closing}T23:59:59.000Z` : null,
         enableWebPortal,
       };
 

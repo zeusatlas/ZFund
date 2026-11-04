@@ -80,7 +80,7 @@ export interface CreateProjectInput {
   maxAmount?: string;
   welcomeMessage?: string;
   startDate: string;
-  endDate?: string;
+  endDate?: string | null;
   acceptsContributions?: boolean;
   categoryId?: string;
   organizationId?: string;

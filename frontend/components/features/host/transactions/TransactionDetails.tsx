@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Info, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { dateLabel, money } from "@/components/features/host/shared/demo";
-import type { Transaction } from "@/components/features/host/transactions/transactions";
+import { providerLabel, type Transaction } from "@/components/features/host/transactions/transactions";
 import { useVerifyPaymentMutation } from "@/components/features/host/transactions/use-transactions";
 import { useCampaignsList } from "@/components/features/host/campaigns/use-campaigns";
 
@@ -215,9 +215,12 @@ export default function TransactionDetails({
           <dl className="mt-5 divide-y divide-navy/10">
             {[
               ["Campaign", campaignName],
-              ["Account name", currentTx.accountName ?? "Not available"],
-              ["Donor phone", currentTx.phone],
+              ["Donor name", (currentTx.donorName ?? "Anonymous") + (currentTx.isAnonymous ? " (anonymous donation)" : "")],
+              ["Payer name", currentTx.accountName ?? "Not available"],
+              ["Donor phone / email", currentTx.phone],
               ["Payment method", currentTx.method],
+              ["Payment provider", providerLabel(currentTx.provider)],
+              ["Reference", currentTx.reference],
               ["Date and time", dateLabel(currentTx.date) + ", " + currentTx.time + " GMT"],
               ["Currency", "Ghana cedi (GHS)"],
             ].map(([label, value]) => (

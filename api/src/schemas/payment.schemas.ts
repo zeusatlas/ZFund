@@ -20,17 +20,18 @@ export const initiatePaymentSchema = z
       if (data.channel === PaymentChannel.CARD) {
         return Boolean(data.email && data.email.length > 0);
       }
-      return Boolean(data.msisdn && data.msisdn.trim().length >= 9);
+      // Mobile money: Paystack collects the wallet number itself, so a phone is optional here.
+      return !data.msisdn || data.msisdn.trim().length >= 9;
     },
     {
-      message: 'Valid email is required for card payments, and phone number is required for mobile money.',
+      message: 'Valid email is required for card payments, and any phone number given must be valid.',
       path: ['email'],
     }
-  );
-
-export const accountLookupSchema = z.object({
-  msisdn: z.string().regex(/^(\+?233|0)?\d{9}$/, 'Enter a valid Ghana mobile money number'),
-});
+  )
+  .refine((data) => data.isAnonymous || Boolean(data.name && data.name.trim().length > 0), {
+    message: 'Please enter your name, or choose to donate anonymously.',
+    path: ['name'],
+  });
 
 export const verifyPaymentSchema = z.object({
   reference: z.string().min(3),

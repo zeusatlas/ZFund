@@ -73,8 +73,13 @@ export type ContributionRow = {
   id: string;
   reference: string;
   contributorName: string | null;
+  /** Public display name the donor typed. */
+  donorName?: string | null;
+  isAnonymous?: boolean;
+  /** Payer name reported by the payment provider; may be missing. */
   accountName?: string | null;
   paymentMethod?: string | null;
+  provider?: string | null;
   msisdn: string | null;
   amount: string;
   status: Transaction["status"];
@@ -96,8 +101,15 @@ export type Transaction = {
   projectName: string;
   hostName: string;
   contributorName: string | null;
+  /** Public display name the donor typed. */
+  donorName?: string | null;
+  isAnonymous?: boolean;
+  /** Donor's phone, or email for web donors. */
+  contact?: string | null;
+  /** Payer name reported by the payment provider; may be missing. */
   accountName?: string | null;
   paymentMethod?: string | null;
+  provider?: string | null;
   createdAt: string;
   settings?: {
     webPortalEnabled?: boolean;

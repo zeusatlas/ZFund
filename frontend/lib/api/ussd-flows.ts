@@ -60,6 +60,9 @@ export interface InitializeProjectFlowInput {
   confirmPrompt?: string;
   otpPrompt?: string;
   allowDirectAmount?: boolean;
+  /** Ask donors for the name to show on the supporter wall, right after the amount. */
+  collectDonorName?: boolean;
+  donorNamePrompt?: string;
   currency?: string;
   purposes?: PurposeFlowItem[];
 }

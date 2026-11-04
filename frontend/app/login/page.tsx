@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, KeyRound, Smartphone } from "lucide-react";
+import { ArrowLeft, ArrowRight, KeyRound, Smartphone } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import AuthShell from "@/components/auth/AuthShell";
 import OtpInput from "@/components/auth/OtpInput";
@@ -58,6 +58,18 @@ export default function LoginPage() {
       },
       onError: (err) => setError(messageOf(err)),
     });
+  }
+
+  // Going back is only allowed once the code can no longer be used (expired or locked out).
+  const canGoBack = cooldown === 0 || locked;
+
+  function backToLogin() {
+    if (!canGoBack) return;
+    setIdentity(null);
+    setCode("");
+    setError("");
+    setLocked(false);
+    setCooldown(0);
   }
 
   function submitIdentity(event: FormEvent<HTMLFormElement>) {
@@ -145,6 +157,15 @@ export default function LoginPage() {
               {cooldown > 0
                 ? `Resend code in ${formatTime(cooldown)}`
                 : "Resend code"}
+            </button>
+            <button
+              type="button"
+              disabled={!canGoBack}
+              onClick={backToLogin}
+              title={canGoBack ? undefined : "Available once the code expires"}
+              className="inline-flex items-center gap-1.5 font-medium text-steel hover:text-navy transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ArrowLeft size={15} aria-hidden="true" /> Back to login
             </button>
           </div>
         </>

@@ -246,22 +246,22 @@ export class ProjectService {
       })
     );
 
-    // Initialize default Mobile Money payment method (RobsPay)
+    // Initialize default Mobile Money payment method (Paystack)
     await this.paymentMethodRepo.save(
       this.paymentMethodRepo.create({
         projectId: savedProject.id,
         method: PaymentMethodType.MOBILE_MONEY,
-        provider: 'ROBSPAY',
+        provider: 'PAYSTACK',
         isEnabled: true,
       })
     );
 
-    // Initialize default Card payment method (RobsPay hosted checkout)
+    // Initialize default Card payment method (Paystack)
     await this.paymentMethodRepo.save(
       this.paymentMethodRepo.create({
         projectId: savedProject.id,
         method: PaymentMethodType.CARD,
-        provider: 'ROBSPAY',
+        provider: 'PAYSTACK',
         isEnabled: true,
       })
     );
@@ -1223,9 +1223,8 @@ export class ProjectService {
     // The donors wall is opt-in: without it nothing about individual contributions is exposed.
     const recentDonations = (showPublicTransactions ? recentContributions : []).map((c) => {
       const isAnon = Boolean((c.metadata as any)?.isAnonymous);
-      const name = isAnon
-        ? 'Anonymous Supporter'
-        : (c.metadata as any)?.donorName || c.contributor?.name || 'Kind Supporter';
+      // Only the name the donor chose to show; never the payer's account name or contributor profile.
+      const name = isAnon ? 'Anonymous' : String((c.metadata as any)?.donorName || '').trim() || 'Anonymous';
       return {
         id: c.id,
         donorName: name,
@@ -1243,9 +1242,7 @@ export class ProjectService {
       .filter((c) => (c.metadata as any)?.wordsOfSupport || (c.metadata as any)?.comment)
       .map((c) => {
         const isAnon = Boolean((c.metadata as any)?.isAnonymous);
-        const name = isAnon
-          ? 'Anonymous Supporter'
-          : (c.metadata as any)?.donorName || c.contributor?.name || 'Kind Supporter';
+        const name = isAnon ? 'Anonymous' : String((c.metadata as any)?.donorName || '').trim() || 'Anonymous';
         return {
           id: `cmt_c_${c.id}`,
           name,

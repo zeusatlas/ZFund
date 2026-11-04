@@ -64,6 +64,9 @@ export class PaystackProvider implements IPaymentProvider {
       };
     }
 
+    // Restrict Paystack to the channel the donor already chose in our modal so they never pick it twice.
+    const channels = params.channel === 'card' ? ['card'] : params.channel === 'mobile_money' ? ['mobile_money'] : undefined;
+
     const response = await this.httpClient.post(
       '/transaction/initialize',
       {
@@ -72,6 +75,7 @@ export class PaystackProvider implements IPaymentProvider {
         currency: params.currency || 'GHS',
         reference: params.reference,
         callback_url: params.callbackUrl,
+        ...(channels ? { channels } : {}),
         metadata: params.metadata,
       },
       { headers: this.authHeaders }
@@ -79,8 +83,9 @@ export class PaystackProvider implements IPaymentProvider {
 
     const data = response.data?.data || {};
     return {
-      providerReference: String(data.id || params.reference),
+      providerReference: String(data.reference || params.reference),
       authorizationUrl: data.authorization_url,
+      accessCode: data.access_code,
       status: 'pending',
       rawResponse: response.data,
     };

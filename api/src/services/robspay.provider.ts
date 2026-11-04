@@ -287,7 +287,6 @@ export class RobspayProvider implements IPaymentProvider {
         return {
           providerReference: orderId,
           authorizationUrl: checkout.authorizationUrl,
-          modalUrl: checkout.modalUrl,
           accessCode: checkout.accessCode,
           status: 'pending',
           rawResponse: checkout.data,

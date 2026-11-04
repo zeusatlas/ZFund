@@ -54,7 +54,8 @@ export class AuthService {
 
   /**
    * Starts a sign-in: when the email and phone match an account, texts a one-time code.
-   * The outcome is deliberately identical for unknown accounts to avoid user enumeration.
+   * Rejects with a single generic "invalid email or phone" error when the pair does not match an account,
+   * without saying which of the two was wrong.
    */
   async requestOtp(input: RequestOtpInput, ipAddress?: string, userAgent?: string): Promise<void> {
     const user = await this.findOtpUser(input.email);
@@ -79,7 +80,7 @@ export class AuthService {
         userAgent,
         metadata: { reason: 'OTP_REQUEST_NO_MATCH' },
       });
-      return;
+      throw new UnauthorizedError('Invalid phone or email');
     }
 
     if (user.status === UserStatus.SUSPENDED) {

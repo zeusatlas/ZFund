@@ -31,7 +31,7 @@ function PaymentCallbackContent() {
     let attempts = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    // RobsPay confirms by server callback, which can land a few seconds after the donor returns.
+    // Paystack confirms by server webhook as well, which can land a few seconds after the donor returns.
     const check = () => {
       verifyDonationPayment(reference)
         .then((data) => {

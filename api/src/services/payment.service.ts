@@ -71,10 +71,10 @@ export class PaymentService {
   }
 
   /**
-   * RobsPay handles every channel: hosted checkout for card, STK push for mobile money.
+   * All web payments (card and mobile money) go through Paystack Inline.
    */
   async getProviderForProject(_projectId?: string, _channel?: PaymentChannel): Promise<IPaymentProvider> {
-    return env.PAYMENT_PROVIDER === 'paystack' ? paystackProvider : robspayProvider;
+    return paystackProvider;
   }
 
   get currentProvider(): IPaymentProvider {
@@ -88,7 +88,7 @@ export class PaymentService {
     paymentAttempt: PaymentAttempt;
     contribution: Contribution;
     authorizationUrl?: string;
-    modalUrl?: string;
+    accessCode?: string;
   }> {
     const project = await this.projectRepo.findOne({
       where: { id: input.projectId },
@@ -156,7 +156,8 @@ export class PaymentService {
       status: ContributionStatus.INITIATED,
       metadata: {
         isAnonymous: Boolean(input.isAnonymous),
-        donorName: input.name,
+        // The public display name the donor typed. Never the payer's account/card name.
+        donorName: input.name?.trim() || undefined,
         wordsOfSupport: input.wordsOfSupport || input.comment,
       },
     });
@@ -169,7 +170,7 @@ export class PaymentService {
         const comments = Array.isArray(settings.comments) ? settings.comments : [];
         comments.unshift({
           id: `cmt_${savedContribution.id}`,
-          name: input.isAnonymous ? 'Anonymous Supporter' : (input.name?.trim() || 'Generous Supporter'),
+          name: input.isAnonymous ? 'Anonymous' : (input.name?.trim() || 'Anonymous'),
           message: supportMsg,
           amount: input.amount,
           currency: project.currency,
@@ -184,11 +185,11 @@ export class PaymentService {
       }
     }
 
-    // RobsPay handles both channels: hosted checkout for card, STK push for mobile money
+    // Paystack handles both channels; the web checkout opens on-page via Paystack Inline
     const provider = await this.getProviderForProject(project.id, input.channel);
 
     const paymentRef = CryptoUtil.generateReference('ZF-PAY');
-    const orderId = provider === paystackProvider ? paymentRef : RobspayProvider.generateTransactionId();
+    const orderId = paymentRef;
 
     const paymentAttempt = this.paymentAttemptRepo.create({
       reference: paymentRef,
@@ -201,6 +202,7 @@ export class PaymentService {
       status: PaymentStatus.INITIATED,
       fee: '0.00',
       providerReference: orderId,
+      metadata: { source: 'web' },
     });
     const savedAttempt = await this.paymentAttemptRepo.save(paymentAttempt);
 
@@ -208,27 +210,13 @@ export class PaymentService {
       input.email ||
       (input.msisdn ? `${input.msisdn}@contributors.raisefundz.com` : `donor_${paymentRef}@raisefundz.com`);
 
-    // Best-effort name enquiry so host and admin can see who owns the wallet even before the callback lands.
-    if (input.channel !== PaymentChannel.CARD && input.msisdn && provider === robspayProvider) {
-      const lookup = await Promise.race([
-        robspayProvider.lookupAccount(input.msisdn),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-      ]).catch(() => null);
-      if (lookup?.accountName) {
-        savedAttempt.metadata = { ...savedAttempt.metadata, accountName: lookup.accountName };
-        savedContribution.accountName = lookup.accountName;
-        savedContribution.accountNameSource = 'lookup';
-        await this.contributionRepo.save(savedContribution);
-      }
-    }
-
     try {
       const initResult = await provider.initializePayment({
         reference: paymentRef,
         amount: input.amount,
         currency: project.currency,
         email: customerEmail,
-        customerName: input.isAnonymous ? undefined : input.name,
+        customerName: input.name?.trim() || undefined,
         phone: input.msisdn,
         channel: input.channel,
         callbackUrl: input.callbackUrl,
@@ -252,7 +240,7 @@ export class PaymentService {
         paymentAttempt: savedAttempt,
         contribution: savedContribution,
         authorizationUrl: initResult.authorizationUrl,
-        modalUrl: initResult.modalUrl,
+        accessCode: initResult.accessCode,
       };
     } catch (err) {
       savedAttempt.status = PaymentStatus.FAILED;
@@ -320,6 +308,7 @@ export class PaymentService {
       amount: input.amount,
       currency: project.currency,
       status: ContributionStatus.INITIATED,
+      metadata: { isAnonymous: false, donorName: input.name?.trim() || undefined },
     });
     const savedContribution = await this.contributionRepo.save(contribution);
 
@@ -560,6 +549,7 @@ export class PaymentService {
         amount: input.amount,
         currency: project.currency,
         status: ContributionStatus.PENDING,
+        metadata: { isAnonymous: false, donorName: input.name?.trim() || undefined },
       })
     );
 
@@ -1212,6 +1202,27 @@ export class PaymentService {
 
       const contribution = paymentAttempt.contribution;
       contribution.status = ContributionStatus.CONFIRMED;
+
+      // Web payments only: record who actually paid, from Paystack's verified data. The name the donor typed
+      // stays in contribution.metadata.donorName; the USSD flow is left exactly as it was.
+      if (paymentAttempt.metadata?.source === 'web') {
+        const auth = (data.authorization || {}) as Record<string, unknown>;
+        const payerName = typeof auth.account_name === 'string' ? formatPersonName(auth.account_name.trim()) : '';
+        const brand = typeof auth.brand === 'string' ? auth.brand : undefined;
+        const bank = typeof auth.bank === 'string' ? auth.bank : undefined;
+        paymentAttempt.metadata = {
+          ...paymentAttempt.metadata,
+          ...(payerName ? { accountName: payerName } : {}),
+          ...(data.channel ? { paystackChannel: String(data.channel) } : {}),
+          ...(brand && data.channel === 'card' ? { cardBrand: brand } : {}),
+          ...(bank && data.channel === 'mobile_money' ? { network: bank } : {}),
+        };
+        await manager.save(paymentAttempt);
+        if (payerName) {
+          contribution.accountName = payerName.slice(0, 150);
+          contribution.accountNameSource = 'callback';
+        }
+      }
       await manager.save(contribution);
 
       // Create ProviderTransaction record

@@ -52,6 +52,12 @@ export interface BackendContribution {
   paymentAttempts?: BackendPaymentAttempt[];
 }
 
+/** The public display name the donor typed, kept apart from the payer's account name. */
+export function contributionDonorName(c: Pick<BackendContribution, "metadata">): string | undefined {
+  const name = c.metadata?.donorName;
+  return typeof name === "string" && name.trim() ? name.trim() : undefined;
+}
+
 export interface ContributionSummary {
   received: number; // in pesewas
   paid: number;

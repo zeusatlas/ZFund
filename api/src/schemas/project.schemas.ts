@@ -25,7 +25,7 @@ export const createProjectSchema = z.object({
   maxAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).default('10000.00'),
   welcomeMessage: z.string().max(120, 'Welcome message max 120 characters').optional(),
   startDate: z.string().datetime({ message: 'Valid start date is required' }),
-  endDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().nullable().optional(),
   acceptsContributions: z.boolean().default(true),
   enableWebPortal: z.boolean().default(false).optional(),
   /** Show the donors wall (recent contributions) on the public campaign page. Needs the web portal. */

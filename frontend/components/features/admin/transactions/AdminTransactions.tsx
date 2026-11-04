@@ -7,7 +7,7 @@ import MetricCard from "@/components/ui/MetricCard";
 import Pagination from "@/components/ui/Pagination";
 import { ErrorNote, Skeleton } from "@/components/ui/QueryState";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { formatCount, formatMoney, formatPersonName } from "@/lib/format";
+import { formatCount, formatMoney, pickDonorName } from "@/lib/format";
 import { useTransactions } from "../admin-api";
 import ListToolbar from "../ListToolbar";
 
@@ -66,33 +66,42 @@ export default function AdminTransactions() {
           <p className="p-8 text-center text-sm text-steel">{search || status ? "No transactions match your search." : "No transactions yet."}</p>
         ) : (
           <div className={`overflow-x-auto transition-opacity ${isPlaceholderData ? "opacity-60" : ""}`}>
-            <table className="w-full min-w-[680px] text-left">
-              <thead className="border-b border-navy/10 bg-stone-light text-[10px] font-semibold uppercase tracking-[0.1em] text-steel">
+            <table className="w-full min-w-[900px] text-left">
+              <thead className="border-b border-navy/10 bg-stone-light text-xs font-medium text-steel">
                 <tr>
-                  <th className="px-5 py-3 font-medium">Transaction</th>
-                  <th className="px-4 py-3 font-medium">Fund</th>
-                  <th className="px-4 py-3 font-medium">Amount</th>
+                  <th className="px-5 py-3 font-medium">Donor</th>
+                  <th className="px-4 py-3 font-medium">Campaign</th>
+                  <th className="px-4 py-3 text-right font-medium">Amount</th>
+                  <th className="px-4 py-3 font-medium">Payment method</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium">Date and time</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-navy/10">
                 {data.items.map((tx) => {
                   const badge = statusStyle[tx.status] ?? { label: tx.status, className: "bg-stone text-steel" };
+                  const created = new Date(tx.createdAt);
                   return (
                     <tr key={tx.id} className="text-sm">
                       <td className="px-5 py-4">
-                        <p className="font-medium text-ink">{tx.reference}</p>
-                        <p className="mt-0.5 text-xs text-steel">{formatPersonName(tx.accountName ?? tx.contributorName) || "Anonymous contributor"}</p>
-                        {tx.paymentMethod && <p className="mt-0.5 text-xs font-medium text-navy">{tx.paymentMethod}</p>}
+                        <p className="font-medium text-ink">
+                          {pickDonorName(tx.accountName, tx.donorName) || "Anonymous"}
+                        </p>
+                        {tx.contact && <p className="mt-0.5 text-xs text-steel">{tx.contact}</p>}
+                        <p className="mt-0.5 font-mono text-[11px] text-steel/80">{tx.reference}</p>
                       </td>
                       <td className="px-4 py-4">
                         <p className="text-ink">{tx.projectName}</p>
-                        <p className="mt-0.5 text-xs text-steel">{tx.hostName}</p>
                       </td>
-                      <td className="px-4 py-4 font-medium text-ink">{formatMoney(tx.amount)}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums text-ink">{formatMoney(tx.amount)}</td>
+                      <td className="px-4 py-4">
+                        <p className="text-ink">{tx.paymentMethod ?? "–"}</p>
+                      </td>
                       <td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${badge.className}`}>{badge.label}</span></td>
-                      <td className="px-4 py-4 text-xs text-steel">{format(new Date(tx.createdAt), "MMM d, yyyy, HH:mm")}</td>
+                      <td className="whitespace-nowrap px-4 py-4">
+                        <p className="text-ink">{format(created, "d MMM yyyy")}</p>
+                        <p className="mt-0.5 text-xs text-steel">{format(created, "HH:mm")}</p>
+                      </td>
                     </tr>
                   );
                 })}

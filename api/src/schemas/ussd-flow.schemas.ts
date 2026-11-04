@@ -47,6 +47,9 @@ export const initializeProjectFlowSchema = z.object({
   confirmPrompt: z.string().max(120).optional(),
   otpPrompt: z.string().max(120).optional(),
   allowDirectAmount: z.boolean().optional(),
+  /** Optional step after the amount: ask the donor for the name to show on the supporter wall. */
+  collectDonorName: z.boolean().optional(),
+  donorNamePrompt: z.string().max(120).optional(),
   currency: z.string().length(3).optional(),
   purposes: z
     .array(

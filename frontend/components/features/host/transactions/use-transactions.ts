@@ -5,6 +5,7 @@ import {
   getContributions,
   getContributionById,
   type BackendContribution,
+  contributionDonorName,
   verifyPayment,
   type GetContributionsParams,
 
@@ -40,12 +41,7 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
   const time = createdAt.length >= 19 ? createdAt.slice(11, 19) : "00:00:00";
 
   const firstAttempt = c.paymentAttempts?.[0];
-  const method =
-    firstAttempt?.channel === "card"
-      ? "Card"
-      : firstAttempt?.provider
-        ? `${firstAttempt.provider === "ROBSPAY" ? "Mobile money" : firstAttempt.provider}`
-        : "Mobile money";
+  const method = firstAttempt?.channel === "card" ? "Card" : "Mobile money";
 
   let note = "Awaiting payment confirmation. Not yet included in your total received.";
   if (c.status === "CONFIRMED") {
@@ -64,9 +60,14 @@ export function contributionToTransaction(c: BackendContribution): Transaction {
     campaignId: c.projectId,
     campaignName: c.project?.name,
     contributorId: c.contributorId,
-    donorName: c.contributor?.name || undefined,
+    donorName: contributionDonorName(c),
+    isAnonymous: Boolean(c.metadata?.isAnonymous),
     accountName: c.accountName || undefined,
-    phone: formatPhone(c.contributor?.msisdn),
+    provider: firstAttempt?.provider,
+    // Web donors have a placeholder "card_..." number, so show their email as the contact instead.
+    phone: c.contributor?.msisdn?.startsWith("card_")
+      ? c.contributor?.email || "—"
+      : formatPhone(c.contributor?.msisdn),
     amount: amountInPesewas,
     status,
     rawStatus: c.status,
