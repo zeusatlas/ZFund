@@ -102,10 +102,10 @@ export class AuthService {
       logger.info({ userId: user.id, email: user.email, code }, 'DEV sign-in OTP');
     }
 
-    const sms = await smsService.send({
-      recipient: normalizePhone(user.phone),
-      message: `Your RaiseFunds sign-in code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`,
-    });
+    const sms = await smsService.sendOTP(
+      normalizePhone(user.phone),
+      `Your RaiseFunds sign-in code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes. Do not share it with anyone.`
+    );
     if (!sms.success) {
       logger.error({ userId: user.id, error: sms.error }, 'Failed to send sign-in code');
       throw new AppError('We could not send your code. Please try again shortly.', 503);

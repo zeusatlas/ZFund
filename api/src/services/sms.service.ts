@@ -75,13 +75,28 @@ export class SmsService {
    * Dedicated normal / regular SMS dispatch
    */
   async sendMessage(
-    recipient: string | string[],
-    message: string,
+    recipientOrParams:
+      | string
+      | string[]
+      | { recipient: string | string[]; message: string; senderId?: string; notificationId?: string; skipDeliveryCheck?: boolean },
+    message?: string,
     options?: { senderId?: string; notificationId?: string; skipDeliveryCheck?: boolean }
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (typeof recipientOrParams === 'object' && !Array.isArray(recipientOrParams)) {
+      return this.send({
+        recipient: recipientOrParams.recipient,
+        message: recipientOrParams.message,
+        senderId: recipientOrParams.senderId,
+        notificationId: recipientOrParams.notificationId,
+        isOtp: false,
+        smsType: 'normal',
+        skipDeliveryCheck: recipientOrParams.skipDeliveryCheck,
+      });
+    }
+
     return this.send({
-      recipient,
-      message,
+      recipient: recipientOrParams,
+      message: message || '',
       senderId: options?.senderId,
       notificationId: options?.notificationId,
       isOtp: false,
@@ -94,13 +109,28 @@ export class SmsService {
    * Dedicated OTP SMS dispatch (routes with sms_type: 'otp')
    */
   async sendOTP(
-    recipient: string | string[],
-    message: string,
+    recipientOrParams:
+      | string
+      | string[]
+      | { recipient: string | string[]; message: string; senderId?: string; notificationId?: string; skipDeliveryCheck?: boolean },
+    message?: string,
     options?: { senderId?: string; notificationId?: string; skipDeliveryCheck?: boolean }
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (typeof recipientOrParams === 'object' && !Array.isArray(recipientOrParams)) {
+      return this.send({
+        recipient: recipientOrParams.recipient,
+        message: recipientOrParams.message,
+        senderId: recipientOrParams.senderId,
+        notificationId: recipientOrParams.notificationId,
+        isOtp: true,
+        smsType: 'otp',
+        skipDeliveryCheck: recipientOrParams.skipDeliveryCheck,
+      });
+    }
+
     return this.send({
-      recipient,
-      message,
+      recipient: recipientOrParams,
+      message: message || '',
       senderId: options?.senderId,
       notificationId: options?.notificationId,
       isOtp: true,
